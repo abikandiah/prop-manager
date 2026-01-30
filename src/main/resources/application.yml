@@ -1,0 +1,26 @@
+spring:
+  profiles:
+    default: dev
+  application:
+    name: prop-manager
+
+app:
+  jwt:
+    header-name: Authorization
+    header-prefix: "Bearer "
+  rate-limit:
+    cache-expire-minutes: 15
+
+server:
+  tomcat:
+    accesslog:
+      enabled: true
+      pattern: '%h %t "%r" %s %b %D ms'
+
+resilience4j:
+  ratelimiter:
+    configs:
+      default:
+        limitForPeriod: 100
+        limitRefreshPeriod: 1m
+        timeoutDuration: 0 # Don't wait; fail immediately

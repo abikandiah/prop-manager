@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    enabled: true
+
+  # Connect to Authentik instead of using a local secret
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUTH_ISSUER_URI}
+
+app:
+  jwt:
+    issuer: ${AUTH_ISSUER_URI}
+    secret: "NOT_USED_IN_PROD_USING_AUTHENTIK_INSTEAD"
+  rate-limit:
+    enabled: true
