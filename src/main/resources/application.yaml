@@ -1,6 +1,20 @@
 spring:
   application:
     name: prop-manager
+  # DEFAULT (Used if no profile is active)
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+
+  # DEV - Let Hibernate manage schema, PROD - Let Liquibase
+  jpa:
+    hibernate:
+      ddl-auto: update
+  liquibase:
+    enabled: false
+---
+# DOCKER PROFILE (Overrides the above when active)
+spring:
   config:
     activate:
       on-profile: docker
@@ -12,4 +26,6 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
+  liquibase:
+    enabled: true

@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "Debug Main App",
+            "request": "launch",
+            "mainClass": "com.akandiah.propmanager.PropManagerApplication",
+            "projectName": "prop-manager"
+        }
+    ]
+}

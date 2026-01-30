@@ -17,7 +17,8 @@
 				"vscjava.vscode-java-pack",
 				"vscjava.vscode-spring-boot-dashboard",
 				"vmware.vscode-boot-dev-pack",
-				"redhat.vscode-yaml"
+				"redhat.vscode-yaml",
+				"esbenp.prettier-vscode"
 			],
 			"settings": {
 				"java.configuration.updateBuildConfiguration": "automatic"
