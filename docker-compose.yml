@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: prop-manager-db
+    environment:
+      POSTGRES_DB: propmanager
+      POSTGRES_USER: propmanager
+      POSTGRES_PASSWORD: propmanager
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U propmanager -d propmanager"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build: .
+    container_name: prop-manager-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/propmanager
+      SPRING_DATASOURCE_USERNAME: propmanager
+      SPRING_DATASOURCE_PASSWORD: propmanager
+    ports:
+      - "9090:8080"
+
+volumes:
+  postgres_data:

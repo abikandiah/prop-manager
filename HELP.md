@@ -1,8 +1,3 @@
-# Read Me First
-The following was discovered as part of building this project:
-
-* The original package name 'com.abikandiah.prop-manager' is invalid and this project uses 'com.abikandiah.prop_manager' instead.
-
 # Getting Started
 
 ### Reference Documentation

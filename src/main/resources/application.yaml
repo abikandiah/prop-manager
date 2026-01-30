@@ -1,3 +1,15 @@
 spring:
   application:
     name: prop-manager
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:propmanager}
+    username: ${POSTGRES_USER:propmanager}
+    password: ${POSTGRES_PASSWORD:propmanager}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update

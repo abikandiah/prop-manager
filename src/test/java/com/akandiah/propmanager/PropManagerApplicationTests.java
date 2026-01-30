@@ -1,4 +1,4 @@
-package com.abikandiah.prop_manager;
+package com.akandiah.propmanager;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

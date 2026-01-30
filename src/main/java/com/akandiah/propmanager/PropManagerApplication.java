@@ -1,4 +1,4 @@
-package com.abikandiah.prop_manager;
+package com.akandiah.propmanager;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
