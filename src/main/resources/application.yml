@@ -10,6 +10,18 @@ app:
     header-prefix: "Bearer "
   rate-limit:
     cache-expire-minutes: 15
+  cors:
+    enabled: false
+    allowed-origins: []
+    allowed-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+    allowed-headers: "*"
+    exposed-headers: []
+    allow-credentials: true
+    max-age: 3600
+  audit:
+    enabled: true
+    include-query-string: true
+    include-client-info: true
 
 server:
   tomcat:

@@ -10,6 +10,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import com.akandiah.propmanager.security.RateLimitFilter;
 
@@ -26,14 +27,19 @@ public class SecurityConfig {
 	private final RateLimitFilter rateLimitFilter;
 	private final JwtAuthenticationConverter jwtAuthenticationConverter;
 
-	public SecurityConfig(RateLimitFilter rateLimitFilter, JwtAuthenticationConverter jwtAuthenticationConverter) {
+	private final CorsConfigurationSource corsConfigurationSource;
+
+	public SecurityConfig(RateLimitFilter rateLimitFilter, JwtAuthenticationConverter jwtAuthenticationConverter,
+			CorsConfigurationSource corsConfigurationSource) {
 		this.rateLimitFilter = rateLimitFilter;
 		this.jwtAuthenticationConverter = jwtAuthenticationConverter;
+		this.corsConfigurationSource = corsConfigurationSource;
 	}
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
+				.cors(cors -> cors.configurationSource(corsConfigurationSource))
 				.csrf(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session
 						.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

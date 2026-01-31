@@ -2,7 +2,6 @@ package com.akandiah.propmanager.config;
 
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,7 +12,6 @@ import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 
 @Configuration
-@EnableConfigurationProperties(RateLimitProperties.class)
 public class RateLimitConfig {
 
 	@Bean

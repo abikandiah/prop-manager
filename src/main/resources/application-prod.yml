@@ -24,3 +24,13 @@ app:
     secret: "NOT_USED_IN_PROD_USING_AUTHENTIK_INSTEAD"
   rate-limit:
     enabled: true
+  cors:
+    enabled: true
+    allowed-origins:
+      - ${CORS_ALLOWED_ORIGIN:https://your-app.example.com}
+    allow-credentials: true
+    max-age: 3600
+  audit:
+    enabled: true
+    include-query-string: false
+    include-client-info: true
