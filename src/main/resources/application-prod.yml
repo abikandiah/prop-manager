@@ -1,3 +1,4 @@
+# Prod profile: docker-compose + PostgreSQL + Authentik (OIDC only). No internal JWT.
 spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST}:5432/${POSTGRES_DB}
@@ -11,7 +12,6 @@ spring:
   liquibase:
     enabled: true
 
-  # Connect to Authentik instead of using a local secret
   security:
     oauth2:
       resourceserver:
@@ -21,7 +21,7 @@ spring:
 app:
   jwt:
     issuer: ${AUTH_ISSUER_URI}
-    secret: "NOT_USED_IN_PROD_USING_AUTHENTIK_INSTEAD"
+    secret: "NOT_USED_IN_PROD_AUTHENTIK_OIDC"
   rate-limit:
     enabled: true
   cors:

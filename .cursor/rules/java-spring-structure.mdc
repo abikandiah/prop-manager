@@ -1,0 +1,30 @@
+---
+description: Java/Spring project structure — features, config, common, security
+globs: "**/*.java"
+alwaysApply: false
+---
+
+# Java/Spring Code Structure
+
+## Top-level packages (under `com.akandiah.propmanager`)
+
+- **config/** — Spring configuration and `@ConfigurationProperties` (e.g. SecurityConfig, JwtConfig, CorsConfig, RateLimitConfig, AuditConfig). One config class per concern; properties in a matching `*Properties` record/class.
+- **common/** — Shared code used across features (e.g. `exception/`: GlobalExceptionHandler, ResourceNotFoundException). No feature-specific logic.
+- **features/** — Feature modules. Each feature is a subpackage (e.g. `features.prop`).
+- **security/** — Security filters, token utilities, etc. (e.g. RateLimitFilter, AuditLoggingFilter, DevTokenGenerator).
+- **PropManagerApplication.java** — Stays at the root.
+
+## Feature layout (e.g. `features.prop`)
+
+Each feature package contains:
+
+- **domain/** — JPA entity and Spring Data repository (e.g. `Prop`, `PropRepository`). Entity maps to a single table; use `@PrePersist` / `@PreUpdate` for timestamps.
+- **service/** — Application logic and transactions. Services depend on the feature’s repository and common exceptions; return DTOs, not entities.
+- **api/** — REST controller for that feature (e.g. `PropController` under `/api/props`).
+- **api/dto/** — Request/response records: `CreateXxxRequest`, `UpdateXxxRequest`, `XxxResponse` with a static `from(Entity)` on the response.
+
+Controllers are thin: validate input, call service, return DTOs. No business logic in controllers.
+
+## New features
+
+Add a new subpackage under `features` (e.g. `features.location`) and mirror this layout: `domain/`, `service/`, `api/`, `api/dto/`.

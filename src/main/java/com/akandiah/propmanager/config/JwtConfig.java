@@ -20,8 +20,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 public class JwtConfig {
 
 	/**
-	 * PRODUCTION: Only active when 'prod' profile is set.
-	 * Connects to Authentik for Public Keys.
+	 * PRODUCTION: OIDC only (e.g. Authentik). Requires AUTH_ISSUER_URI.
+	 * Prod is run with docker-compose + PostgreSQL + Authentik; no internal JWT.
 	 */
 	@Bean
 	@Profile("prod")
@@ -31,8 +31,7 @@ public class JwtConfig {
 	}
 
 	/**
-	 * DEVELOPMENT: Only active when 'dev' profile is set.
-	 * Uses local Secret Key for offline testing.
+	 * DEVELOPMENT: Internal JWT + H2 only. For local offline testing.
 	 */
 	@Bean
 	@Profile("dev")

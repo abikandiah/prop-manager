@@ -1,34 +1,28 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "java",
-            "name": "Current File",
-            "request": "launch",
-            "mainClass": "${file}"
-        },
-		{
-            "type": "java",
-            "name": "Spring: Dev (Local)",
-            "request": "launch",
-            "mainClass": "com.akandiah.propmanager.PropManagerApplication",
-            "projectName": "prop-manager",
-            "vmArgs": "-Dspring.profiles.active=dev"
-        },
-		{
-            "type": "java",
-            "name": "Spring: Prod (Authentik)",
-            "request": "launch",
-            "mainClass": "com.yourpackage.PropManagerApplication",
-            "projectName": "prop-manager",
-            "vmArgs": "-Dspring.profiles.active=prod",
-            "env": {
-                "POSTGRES_HOST": "localhost",
-                "POSTGRES_DB": "propmanager",
-                "POSTGRES_USER": "admin",
-                "POSTGRES_PASSWORD": "password123",
-                "AUTH_ISSUER_URI": "https://authentik.your-domain.com/application/o/app-slug/"
-            }
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring: Dev (Local)",
+      "request": "launch",
+      "mainClass": "com.akandiah.propmanager.PropManagerApplication",
+      "projectName": "prop-manager",
+      "vmArgs": "-Dspring.profiles.active=dev"
+    },
+    {
+      "type": "java",
+      "name": "Spring: Prod (Authentik)",
+      "request": "launch",
+      "mainClass": "com.yourpackage.PropManagerApplication",
+      "projectName": "prop-manager",
+      "vmArgs": "-Dspring.profiles.active=prod",
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_DB": "propmanager",
+        "POSTGRES_USER": "admin",
+        "POSTGRES_PASSWORD": "password123",
+        "AUTH_ISSUER_URI": "https://authentik.your-domain.com/application/o/app-slug/"
+      }
+    }
+  ]
 }
