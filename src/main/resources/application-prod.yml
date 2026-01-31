@@ -1,4 +1,4 @@
-# Prod profile: docker-compose + PostgreSQL + Authentik (OIDC only). No internal JWT.
+# Prod profile: docker-compose + PostgreSQL + Authentik (OIDC only).
 spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST}:5432/${POSTGRES_DB}
@@ -12,16 +12,7 @@ spring:
   liquibase:
     enabled: true
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${AUTH_ISSUER_URI}
-
 app:
-  jwt:
-    issuer: ${AUTH_ISSUER_URI}
-    secret: "NOT_USED_IN_PROD_AUTHENTIK_OIDC"
   rate-limit:
     enabled: true
   cors:

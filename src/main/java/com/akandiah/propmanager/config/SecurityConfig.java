@@ -51,9 +51,8 @@ public class SecurityConfig {
 						// 2. Swagger / OpenAPI (Standard paths)
 						.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
-						// 3. Public API & Dev Tools
+						// 3. Public API
 						.requestMatchers("/api/public/**").permitAll()
-						.requestMatchers("/dev/**").permitAll()
 
 						// 4. Secure Everything Else
 						.requestMatchers("/api/**").authenticated()

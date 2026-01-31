@@ -3,11 +3,13 @@ spring:
     default: dev
   application:
     name: prop-manager
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUTH_ISSUER_URI}
 
 app:
-  jwt:
-    header-name: Authorization
-    header-prefix: "Bearer "
   rate-limit:
     cache-expire-minutes: 15
   cors:

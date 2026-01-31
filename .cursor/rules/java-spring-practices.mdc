@@ -34,7 +34,7 @@ All Java code in this project must follow these practices so agents and humans p
 ## Spring configuration and beans
 
 - Use `@Configuration` for config classes; define beans with `@Bean` methods.
-- Prefer `@ConfigurationProperties` records (e.g. `JwtProperties`) for typed configuration; use `@Value` only for one-off values when appropriate.
+- Prefer `@ConfigurationProperties` records (e.g. `CorsProperties`, `RateLimitProperties`) for typed configuration; use `@Value` only for one-off values when appropriate.
 - Use `@Profile("dev")` / `@Profile("prod")` for profile-specific beans and controllers; do not rely on ad-hoc conditionals for environment behavior.
 
 ## General

@@ -11,7 +11,7 @@ alwaysApply: false
 - **config/** — Spring configuration and `@ConfigurationProperties` (e.g. SecurityConfig, JwtConfig, CorsConfig, RateLimitConfig, AuditConfig). One config class per concern; properties in a matching `*Properties` record/class.
 - **common/** — Shared code used across features (e.g. `exception/`: GlobalExceptionHandler, ResourceNotFoundException). No feature-specific logic.
 - **features/** — Feature modules. Each feature is a subpackage (e.g. `features.prop`).
-- **security/** — Security filters, token utilities, dev-only auth (e.g. RateLimitFilter, AuditLoggingFilter, DevAuthController).
+- **security/** — Security filters and token utilities (e.g. RateLimitFilter, AuditLoggingFilter).
 - **PropManagerApplication.java** — Stays at the root.
 
 ## Feature layout (e.g. `features.prop`)
