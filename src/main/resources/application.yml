@@ -23,6 +23,12 @@ app:
     include-query-string: true
     include-client-info: true
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
 server:
   tomcat:
     accesslog:

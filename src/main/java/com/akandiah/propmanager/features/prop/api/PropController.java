@@ -18,10 +18,13 @@ import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
 import com.akandiah.propmanager.features.prop.service.PropService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/props")
+@Tag(name = "Props", description = "Prop resource CRUD")
 public class PropController {
 
 	private final PropService propService;
@@ -31,27 +34,32 @@ public class PropController {
 	}
 
 	@GetMapping
+	@Operation(summary = "List all props")
 	public List<PropResponse> list() {
 		return propService.findAll();
 	}
 
 	@GetMapping("/{id}")
+	@Operation(summary = "Get prop by ID")
 	public PropResponse getById(@PathVariable Long id) {
 		return propService.findById(id);
 	}
 
 	@PostMapping
+	@Operation(summary = "Create a prop")
 	public ResponseEntity<PropResponse> create(@Valid @RequestBody CreatePropRequest request) {
 		PropResponse created = propService.create(request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
 	}
 
 	@PatchMapping("/{id}")
+	@Operation(summary = "Update a prop")
 	public PropResponse update(@PathVariable Long id, @Valid @RequestBody UpdatePropRequest request) {
 		return propService.update(id, request);
 	}
 
 	@DeleteMapping("/{id}")
+	@Operation(summary = "Delete a prop")
 	public ResponseEntity<Void> delete(@PathVariable Long id) {
 		propService.deleteById(id);
 		return ResponseEntity.noContent().build();
