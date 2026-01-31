@@ -11,7 +11,7 @@ alwaysApply: false
 - **config/** — Spring configuration and `@ConfigurationProperties` (e.g. SecurityConfig, JwtConfig, CorsConfig, RateLimitConfig, AuditConfig). One config class per concern; properties in a matching `*Properties` record/class.
 - **common/** — Shared code used across features (e.g. `exception/`: GlobalExceptionHandler, ResourceNotFoundException). No feature-specific logic.
 - **features/** — Feature modules. Each feature is a subpackage (e.g. `features.prop`).
-- **security/** — Security filters, token utilities, etc. (e.g. RateLimitFilter, AuditLoggingFilter, DevTokenGenerator).
+- **security/** — Security filters, token utilities, dev-only auth (e.g. RateLimitFilter, AuditLoggingFilter, DevAuthController).
 - **PropManagerApplication.java** — Stays at the root.
 
 ## Feature layout (e.g. `features.prop`)
@@ -28,3 +28,5 @@ Controllers are thin: validate input, call service, return DTOs. No business log
 ## New features
 
 Add a new subpackage under `features` (e.g. `features.location`) and mirror this layout: `domain/`, `service/`, `api/`, `api/dto/`.
+
+**See also:** `java-spring-practices.mdc` for Spring standard methods, Lombok (`@Slf4j`, `@RequiredArgsConstructor`), and SLF4J logging — use those practices in all Java code.

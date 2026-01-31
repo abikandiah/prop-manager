@@ -1,0 +1,44 @@
+---
+description: Spring standard methods, recommended practices, Lombok, and SLF4J for Java code
+globs: "**/*.java"
+alwaysApply: false
+---
+
+# Spring, Lombok, and SLF4J Practices
+
+All Java code in this project must follow these practices so agents and humans produce consistent code.
+
+## Logging (SLF4J + Lombok)
+
+- **Use Lombok `@Slf4j`** on any class that needs logging. Do **not** use `LoggerFactory.getLogger(MyClass.class)` or manual `private static final Logger log` fields.
+- Import: `lombok.extern.slf4j.Slf4j`. The annotation generates a `log` field (SLF4J) automatically.
+- For a named logger (e.g. topic): use `@Slf4j(topic = "AUDIT")` or similar when needed.
+- Use parameterized messages: `log.info("User {} created", id)` — never string concatenation for log messages.
+
+## Constructor injection (Lombok)
+
+- **Use `@RequiredArgsConstructor`** for classes that have only `final` fields and a single constructor (e.g. controllers, services, config that inject dependencies). Do not write explicit constructors for dependency injection when Lombok can generate them.
+- Import: `lombok.RequiredArgsConstructor`.
+- Keep constructor injection; do not switch to field injection for these cases.
+
+## Spring REST and HTTP
+
+- **ResponseEntity**: Prefer Spring’s factory/static methods:
+  - `ResponseEntity.ok(body)`
+  - `ResponseEntity.status(HttpStatus.XXX).body(body)` or `.build()` for no body
+  - `ResponseEntity.noContent().build()` for 204
+  - `ResponseEntity.created(uri).body(body)` for 201 with Location
+- Use `@Valid` on request bodies that have validation annotations.
+- Prefer standard Spring Security and Spring Web APIs over custom or third-party equivalents where the standard covers the use case.
+
+## Spring configuration and beans
+
+- Use `@Configuration` for config classes; define beans with `@Bean` methods.
+- Prefer `@ConfigurationProperties` records (e.g. `JwtProperties`) for typed configuration; use `@Value` only for one-off values when appropriate.
+- Use `@Profile("dev")` / `@Profile("prod")` for profile-specific beans and controllers; do not rely on ad-hoc conditionals for environment behavior.
+
+## General
+
+- Prefer records for DTOs, request/response types, and configuration properties.
+- Use `jakarta.validation` annotations on request DTOs; validate in the controller with `@Valid`.
+- When adding new code, follow existing project patterns (see `java-spring-structure.mdc`, `java-naming.mdc`, `java-error-handling.mdc`).
