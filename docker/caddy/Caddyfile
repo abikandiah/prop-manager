@@ -46,8 +46,10 @@
 		reverse_proxy app:8080
 	}
 
-	# Default: serve Authentik (so / goes to login)
+	# Default: serve the UI static build files
 	handle {
-		reverse_proxy authentik:9000
+		root * /usr/share/caddy
+		file_server
+		try_files {path} /index.html
 	}
 }

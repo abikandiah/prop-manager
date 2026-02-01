@@ -79,7 +79,9 @@ services:
 
   # --- Caddy (reverse proxy + forward auth to Authentik) ---
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: ..
+      dockerfile: prop-manager/docker/caddy/Dockerfile
     container_name: prop-manager-caddy
     ports:
       - "4080:80"
