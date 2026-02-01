@@ -1,0 +1,4 @@
+# Test run: activate test profile (no real JWT issuer required).
+spring:
+  profiles:
+    active: test

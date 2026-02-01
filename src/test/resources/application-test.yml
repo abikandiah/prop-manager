@@ -1,0 +1,21 @@
+# Test profile: H2, no real JWT issuer. JwtDecoder is provided by TestSecurityConfig.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  liquibase:
+    enabled: false
+
+app:
+  rate-limit:
+    enabled: false
+  cors:
+    enabled: false
+  audit:
+    enabled: false
