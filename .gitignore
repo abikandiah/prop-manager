@@ -2,6 +2,8 @@ Created .gitignore file for flag type java.
 # Compiled class file
 *.class
 
+.env
+
 # Log file
 *.log
 

@@ -22,7 +22,7 @@ WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/prop-manager-*.jar app.jar
 
 ENV SPRING_PROFILES_ACTIVE=prod
 
