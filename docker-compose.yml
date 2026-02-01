@@ -84,8 +84,8 @@ services:
       dockerfile: prop-manager/docker/caddy/Dockerfile
     container_name: prop-manager-caddy
     ports:
-      - "4080:80"
-      - "4443:443"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -106,9 +106,9 @@ services:
       POSTGRES_DB: propmanager
       POSTGRES_USER: propmanager
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      # Set after creating OIDC provider in Authentik (e.g. http://authentik:9000/application/o/prop-manager/)
-      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI:-}
-      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost}
+      # Set after creating OIDC provider in Authentik (e.g. https://propmanager.example.com/application/o/prop-manager-api/)
+      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI:?set AUTH_ISSUER_URI in .env}
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-https://localhost}
     restart: unless-stopped
 
 volumes:

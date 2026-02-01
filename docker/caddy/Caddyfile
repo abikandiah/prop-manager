@@ -1,12 +1,8 @@
-# Caddy reverse proxy with Authentik forward auth.
-# All services use internal Docker hostnames (authentik:9000, app:8080).
-# For TLS in production, use a real hostname and uncomment the first line.
+# Caddy reverse proxy with Authentik forward auth for public-facing production.
+# UI is PUBLIC (Landing Page). API and Swagger are PROTECTED.
 
-# :80 {
-# Replace with your domain for TLS, e.g.:
-# api.example.com {
-:80 {
-	# Authentik outpost and UI: required for login and forward_auth (path preserved)
+{$DOMAIN:localhost} {
+	# 1. PUBLIC: Authentik requirements (must be public for login to work)
 	handle /outpost.goauthentik.io/* {
 		reverse_proxy authentik:9000
 	}
@@ -16,40 +12,53 @@
 	handle /application/* {
 		reverse_proxy authentik:9000
 	}
-
-	# Authentik API: ensure Authentik's own API calls reach Authentik, not the app
 	handle /api/v3/* {
 		reverse_proxy authentik:9000
 	}
 
-	# API: forward auth then proxy to app. Authentik sets X-Authentik-* headers.
-	# App validates JWT (Bearer or, if implemented, X-Authentik-Jwt).
-	handle /api/* {
+	# 2. PROTECTED: API and Internal Tools
+	# Use a matcher to group all paths that require authentication
+	@protected {
+		path /api/*
+		path /swagger-ui*
+		path /actuator/*
+		path /v3/api-docs*
+	}
+
+	handle @protected {
+		# Forward Auth to Authentik
 		forward_auth authentik:9000 {
 			uri /outpost.goauthentik.io/auth/caddy
 			copy_headers X-Authentik-Username X-Authentik-Groups X-Authentik-Email X-Authentik-Name X-Authentik-Uid X-Authentik-Jwt
 			trusted_proxies private_ranges
 		}
-		reverse_proxy app:8080 {
-			header_up Authorization "Bearer {header.X-Authentik-Jwt}"
+
+		# Inside here, the user IS authenticated.
+		handle /api/* {
+			reverse_proxy app:8080 {
+				header_up Authorization "Bearer {header.X-Authentik-Jwt}"
+			}
+		}
+
+		# Default handler for @protected (Swagger, Actuator, etc.)
+		handle {
+			reverse_proxy app:8080
 		}
 	}
 
-	# Health/actuator and Swagger: proxy to app (optional; tighten in production)
-	handle /actuator/* {
-		reverse_proxy app:8080
-	}
-	handle /v3/api-docs* {
-		reverse_proxy app:8080
-	}
-	handle /swagger-ui* {
-		reverse_proxy app:8080
-	}
-
-	# Default: serve the UI static build files
+	# 3. PUBLIC: Serve the UI static build files (SPA)
+	# This handles the landing page and all other frontend routes
 	handle {
 		root * /usr/share/caddy
 		file_server
 		try_files {path} /index.html
+	}
+
+	# 4. SECURITY HEADERS
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer-when-downgrade
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 	}
 }

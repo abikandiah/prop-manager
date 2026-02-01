@@ -16,7 +16,8 @@
         "vscjava.vscode-spring-boot-dashboard",
         "vmware.vscode-boot-dev-pack",
         "redhat.vscode-yaml",
-        "esbenp.prettier-vscode"
+        "esbenp.prettier-vscode",
+		"matthewpi.caddyfile-support"
       ],
       "settings": {
         "java.configuration.updateBuildConfiguration": "automatic"
