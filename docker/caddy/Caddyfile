@@ -17,6 +17,11 @@
 		reverse_proxy authentik:9000
 	}
 
+	# Authentik API: ensure Authentik's own API calls reach Authentik, not the app
+	handle /api/v3/* {
+		reverse_proxy authentik:9000
+	}
+
 	# API: forward auth then proxy to app. Authentik sets X-Authentik-* headers.
 	# App validates JWT (Bearer or, if implemented, X-Authentik-Jwt).
 	handle /api/* {
@@ -25,7 +30,9 @@
 			copy_headers X-Authentik-Username X-Authentik-Groups X-Authentik-Email X-Authentik-Name X-Authentik-Uid X-Authentik-Jwt
 			trusted_proxies private_ranges
 		}
-		reverse_proxy app:8080
+		reverse_proxy app:8080 {
+			header_up Authorization "Bearer {header.X-Authentik-Jwt}"
+		}
 	}
 
 	# Health/actuator and Swagger: proxy to app (optional; tighten in production)
