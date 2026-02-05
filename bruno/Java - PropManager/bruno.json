@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Java - PropManager",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

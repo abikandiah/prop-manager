@@ -60,7 +60,7 @@ public class DevAuthController {
 				.expirationTime(new Date(new Date().getTime() + 3600 * 1000)) // 1 hour
 				.claim("name", request.username())
 				.claim("email", request.username() + "@example.com")
-				.claim("groups", request.roles()) // Matches JwtConfig
+				.claim("groups", request.roles())
 				.build();
 
 		SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
