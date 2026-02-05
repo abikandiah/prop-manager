@@ -6,10 +6,21 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   liquibase:
     enabled: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: null
 
 app:
+  jwt:
+    secret: "dev-secret-key-at-least-32-chars-long-123456"
   rate-limit:
     enabled: ${RATE_LIMIT_ENABLED:false}
   cors:
