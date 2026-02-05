@@ -48,9 +48,10 @@ services:
       - authentik_media:/media
       - authentik_templates:/templates
     env_file: .env
-    ports:
-      - "${AUTHENTIK_HTTP_PORT:-9000}:9000"
-      - "${AUTHENTIK_HTTPS_PORT:-9443}:9443"
+    # Removed direct port mapping (9000/9443) to force all traffic through Caddy
+    # ports:
+    #   - "${AUTHENTIK_HTTP_PORT:-9000}:9000"
+    #   - "${AUTHENTIK_HTTPS_PORT:-9443}:9443"
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
