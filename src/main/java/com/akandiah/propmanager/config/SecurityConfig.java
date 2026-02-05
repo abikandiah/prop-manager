@@ -64,12 +64,15 @@ public class SecurityConfig {
 					// 3. Public API
 					auth.requestMatchers("/api/public/**").permitAll();
 
-					// 4. H2 Console (Dev only)
+					// 4. Dev Utilities (Login for JWT generation)
+					auth.requestMatchers("/api/dev/login").permitAll();
+
+					// 5. H2 Console (Dev only)
 					if (h2ConsoleEnabled) {
 						auth.requestMatchers("/h2-console/**").permitAll();
 					}
 
-					// 5. Secure Everything Else
+					// 6. Secure Everything Else
 					auth.requestMatchers("/api/**").authenticated()
 							.anyRequest().authenticated();
 				})

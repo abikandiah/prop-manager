@@ -16,6 +16,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +79,14 @@ public class GlobalExceptionHandler {
 		return problem(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage(), request.getRequestURI(), null, null);
 	}
 
+	/** Handle ResponseStatusException from Spring */
+	@ExceptionHandler(ResponseStatusException.class)
+	public ResponseEntity<ProblemDetail> handleResponseStatus(ResponseStatusException ex, HttpServletRequest request) {
+		HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+		String reason = ex.getReason() != null ? ex.getReason() : status.getReasonPhrase();
+		return problem(status, reason, reason, request.getRequestURI(), null, null);
+	}
+
 	/** 500: Catch-all for Unhandled Exceptions */
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ProblemDetail> handleGeneric(Exception ex, HttpServletRequest request) {
@@ -90,7 +99,7 @@ public class GlobalExceptionHandler {
 		return problem(
 				HttpStatus.INTERNAL_SERVER_ERROR,
 				"Internal Server Error",
-				"An unexpected error occurred. Please contact support.",
+				"An unexpected error occurred.",
 				request.getRequestURI(),
 				null,
 				stackTrace);

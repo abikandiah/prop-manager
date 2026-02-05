@@ -32,7 +32,7 @@ public class DevJwtConfig {
 		byte[] bytes = new byte[16];
 		new SecureRandom().nextBytes(bytes);
 		this.devLoginSecret = HexFormat.of().formatHex(bytes);
-		log.info("\n" + "=".repeat(60) + "\n" + "DEV LOGIN SECRET (HEX): {}\n" + "=".repeat(60), devLoginSecret);
+		log.info("\n" + "=".repeat(60) + "\n" + "DEV SECRET: {}\n" + "=".repeat(60), devLoginSecret);
 	}
 
 	/**

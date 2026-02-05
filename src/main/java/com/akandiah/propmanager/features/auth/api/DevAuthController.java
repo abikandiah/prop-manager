@@ -6,12 +6,11 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
-import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.akandiah.propmanager.config.DevJwtConfig;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -50,7 +49,7 @@ public class DevAuthController {
 
 		if (!devJwtConfig.getDevLoginSecret().equals(request.password())) {
 			log.error("DEV LOGIN FAILED - Invalid password for user: {}", request.username());
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid dev secret");
+			throw new BadCredentialsException("Invalid dev secret");
 		}
 
 		JWSSigner signer = new MACSigner(jwtSecret.getBytes());
@@ -67,7 +66,7 @@ public class DevAuthController {
 		SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
 		signedJWT.sign(signer);
 
-		return Map.of("access_token", signedJWT.serialize());
+		return Map.of("token", signedJWT.serialize());
 	}
 
 	public record DevLoginRequest(String username, String password, List<String> roles) {
