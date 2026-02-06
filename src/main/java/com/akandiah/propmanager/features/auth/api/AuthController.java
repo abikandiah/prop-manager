@@ -1,7 +1,6 @@
 package com.akandiah.propmanager.features.auth.api;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -23,7 +22,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 import com.akandiah.propmanager.features.user.service.UserService;
-import com.akandiah.propmanager.features.user.domain.User;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -45,16 +43,14 @@ public class AuthController {
 		String email = jwt.hasClaim("email") ? jwt.getClaimAsString("email") : null;
 
 		// Update if exists, but do not auto-create
-		Optional<User> dbUser = userService.syncUserIfExists(sub, name, email);
+		userService.syncUserIfExists(sub, name, email)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not registered"));
 
 		List<String> roles = auth.getAuthorities().stream()
 				.map(GrantedAuthority::getAuthority)
 				.toList();
 
-		String dbRole = dbUser.map(user -> user.getRole().name()).orElse(null);
-		String dbStatus = dbUser.map(user -> user.getStatus().name()).orElse(null);
-
-		return new UserInfoResponse(sub, name, email, roles, dbRole, dbStatus);
+		return new UserInfoResponse(sub, name, email, roles);
 	}
 
 	@PostMapping("/register")
@@ -76,12 +72,12 @@ public class AuthController {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required for registration");
 		}
 
-		User dbUser = userService.registerUser(sub, name, email);
+		userService.registerUser(sub, name, email);
 
 		List<String> roles = auth.getAuthorities().stream()
 				.map(GrantedAuthority::getAuthority)
 				.toList();
 
-		return new UserInfoResponse(sub, name, email, roles, dbUser.getRole().name(), dbUser.getStatus().name());
+		return new UserInfoResponse(sub, name, email, roles);
 	}
 }

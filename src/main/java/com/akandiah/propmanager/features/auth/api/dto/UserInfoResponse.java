@@ -10,7 +10,5 @@ public record UserInfoResponse(
 		String sub,
 	String name,
 	String email,
-	List<String> roles,
-	String dbRole,
-	String dbStatus) {
+	List<String> roles) {
 }

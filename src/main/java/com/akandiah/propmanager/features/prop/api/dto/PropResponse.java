@@ -1,11 +1,12 @@
 package com.akandiah.propmanager.features.prop.api.dto;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import com.akandiah.propmanager.features.prop.domain.Prop;
 
 public record PropResponse(
-		Long id,
+		UUID id,
 		String name,
 		String description,
 		Instant createdAt,

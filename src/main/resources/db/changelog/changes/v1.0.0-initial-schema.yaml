@@ -8,7 +8,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  type: bigserial
+                  type: uuid
                   constraints:
                     primaryKey: true
                     nullable: false
@@ -39,9 +39,15 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  type: bigserial
+                  type: uuid
                   constraints:
                     primaryKey: true
+                    nullable: false
+              - column:
+                  name: idp_sub
+                  type: varchar(255)
+                  constraints:
+                    unique: true
                     nullable: false
               - column:
                   name: name
@@ -55,23 +61,8 @@ databaseChangeLog:
                     nullable: false
                     unique: true
               - column:
-                  name: provider_id
-                  type: varchar(255)
-                  constraints:
-                    unique: true
-              - column:
                   name: phone_number
                   type: varchar(50)
-              - column:
-                  name: role
-                  type: varchar(50)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: status
-                  type: varchar(50)
-                  constraints:
-                    nullable: false
               - column:
                   name: created_at
                   type: timestamptz

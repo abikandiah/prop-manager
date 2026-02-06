@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.features.prop.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +30,7 @@ public class PropService {
 	}
 
 	@Transactional(readOnly = true)
-	public PropResponse findById(Long id) {
+	public PropResponse findById(UUID id) {
 		Prop prop = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", id));
 		return PropResponse.from(prop);
@@ -46,7 +47,7 @@ public class PropService {
 	}
 
 	@Transactional
-	public PropResponse update(Long id, UpdatePropRequest request) {
+	public PropResponse update(UUID id, UpdatePropRequest request) {
 		Prop prop = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", id));
 		if (request.name() != null)
@@ -58,7 +59,7 @@ public class PropService {
 	}
 
 	@Transactional
-	public void deleteById(Long id) {
+	public void deleteById(UUID id) {
 		if (!repository.existsById(id))
 			throw new ResourceNotFoundException("Prop", id);
 		repository.deleteById(id);

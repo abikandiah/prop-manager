@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.features.prop.api;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,7 +44,7 @@ public class PropController {
 
 	@GetMapping("/{id}")
 	@Operation(summary = "Get prop by ID")
-	public PropResponse getById(@PathVariable Long id) {
+	public PropResponse getById(@PathVariable UUID id) {
 		return propService.findById(id);
 	}
 
@@ -56,13 +57,13 @@ public class PropController {
 
 	@PatchMapping("/{id}")
 	@Operation(summary = "Update a prop")
-	public PropResponse update(@PathVariable Long id, @Valid @RequestBody UpdatePropRequest request) {
+	public PropResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePropRequest request) {
 		return propService.update(id, request);
 	}
 
 	@DeleteMapping("/{id}")
 	@Operation(summary = "Delete a prop")
-	public ResponseEntity<Void> delete(@PathVariable Long id) {
+	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		propService.deleteById(id);
 		return ResponseEntity.noContent().build();
 	}
