@@ -2,15 +2,18 @@ package com.akandiah.propmanager.features.prop.api.dto;
 
 import java.util.UUID;
 
+import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest.AddressInput;
 import com.akandiah.propmanager.features.prop.domain.PropertyType;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 
 public record UpdatePropRequest(
 		@Size(max = 255)
 		String legalName,
 
-		UUID addressId,
+		@Valid
+		AddressInput address,
 
 		PropertyType propertyType,
 

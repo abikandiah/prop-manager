@@ -10,6 +10,7 @@ import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.address.domain.Address;
 import com.akandiah.propmanager.features.address.domain.AddressRepository;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
+import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest.AddressInput;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
 import com.akandiah.propmanager.features.prop.domain.Prop;
@@ -42,8 +43,8 @@ public class PropService {
 
 	@Transactional
 	public PropResponse create(CreatePropRequest request) {
-		Address address = addressRepository.findById(request.addressId())
-				.orElseThrow(() -> new ResourceNotFoundException("Address", request.addressId()));
+		Address address = mapToAddress(request.address());
+		address = addressRepository.save(address);
 		Prop prop = Prop.builder()
 				.legalName(request.legalName())
 				.address(address)
@@ -58,15 +59,28 @@ public class PropService {
 		return PropResponse.from(prop);
 	}
 
+	private static Address mapToAddress(AddressInput in) {
+		return Address.builder()
+				.addressLine1(in.addressLine1())
+				.addressLine2(in.addressLine2())
+				.city(in.city())
+				.stateProvinceRegion(in.stateProvinceRegion())
+				.postalCode(in.postalCode())
+				.countryCode(in.countryCode())
+				.latitude(in.latitude())
+				.longitude(in.longitude())
+				.build();
+	}
+
 	@Transactional
 	public PropResponse update(UUID id, UpdatePropRequest request) {
 		Prop prop = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", id));
 		if (request.legalName() != null)
 			prop.setLegalName(request.legalName());
-		if (request.addressId() != null) {
-			Address address = addressRepository.findById(request.addressId())
-					.orElseThrow(() -> new ResourceNotFoundException("Address", request.addressId()));
+		if (request.address() != null) {
+			Address address = mapToAddress(request.address());
+			address = addressRepository.save(address);
 			prop.setAddress(address);
 		}
 		if (request.propertyType() != null)
