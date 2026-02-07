@@ -44,7 +44,7 @@ public class AuthController {
 				.map(GrantedAuthority::getAuthority)
 				.toList();
 
-		return new UserInfoResponse(dbUser.getId(), name, email, roles);
+		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, roles);
 	}
 
 	@PostMapping("/register")
@@ -64,6 +64,6 @@ public class AuthController {
 				.map(GrantedAuthority::getAuthority)
 				.toList();
 
-		return new UserInfoResponse(dbUser.getId(), name, email, roles);
+		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, roles);
 	}
 }

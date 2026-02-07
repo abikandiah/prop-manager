@@ -1,14 +1,19 @@
-package com.akandiah.propmanager.features.user.domain;
+package com.akandiah.propmanager.features.tenant.domain;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
+import com.akandiah.propmanager.features.user.domain.User;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -18,33 +23,40 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "users")
+@Table(name = "tenants")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class Tenant {
 
 	@Id
 	@GeneratedValue
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
-	@Column(name = "idp_sub", unique = true, nullable = false, length = 255)
-	private String idpSub;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id", nullable = false)
+	private User user;
 
-	@Column(nullable = false, length = 255)
-	private String name;
+	@Column(name = "emergency_contact_name", length = 255)
+	private String emergencyContactName;
 
-	@Column(nullable = false, unique = true, length = 255)
-	private String email;
+	@Column(name = "emergency_contact_phone", length = 50)
+	private String emergencyContactPhone;
 
-	@Column(name = "phone_number", length = 50)
-	private String phoneNumber;
+	@Column(name = "has_pets")
+	private Boolean hasPets;
 
-	@Column(name = "avatar_url", length = 512)
-	private String avatarUrl;
+	@Column(name = "pet_description", columnDefinition = "text")
+	private String petDescription;
+
+	@Column(name = "vehicle_info", length = 255)
+	private String vehicleInfo;
+
+	@Column(name = "notes", columnDefinition = "text")
+	private String notes;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	@Setter(AccessLevel.NONE)

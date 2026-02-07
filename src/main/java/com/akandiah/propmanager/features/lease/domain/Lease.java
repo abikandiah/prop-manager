@@ -1,0 +1,103 @@
+package com.akandiah.propmanager.features.lease.domain;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
+
+import org.hibernate.annotations.UuidGenerator;
+
+import com.akandiah.propmanager.features.prop.domain.Prop;
+import com.akandiah.propmanager.features.unit.domain.Unit;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Entity
+@Table(name = "leases")
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Lease {
+
+	@Id
+	@GeneratedValue
+	@UuidGenerator(style = UuidGenerator.Style.TIME)
+	private UUID id;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "unit_id", nullable = false)
+	private Unit unit;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "property_id", nullable = false)
+	private Prop property;
+
+	@Column(nullable = false, length = 32)
+	@Enumerated(EnumType.STRING)
+	private LeaseStatus status;
+
+	@Column(name = "start_date", nullable = false)
+	private LocalDate startDate;
+
+	@Column(name = "end_date", nullable = false)
+	private LocalDate endDate;
+
+	@Column(name = "rent_amount", precision = 19, scale = 4, nullable = false)
+	private BigDecimal rentAmount;
+
+	@Column(name = "rent_due_day", nullable = false)
+	private Integer rentDueDay;
+
+	@Column(name = "security_deposit_held", precision = 19, scale = 4)
+	private BigDecimal securityDepositHeld;
+
+	@Column(name = "late_fee_type", length = 32)
+	@Enumerated(EnumType.STRING)
+	private LateFeeType lateFeeType;
+
+	@Column(name = "late_fee_amount", precision = 19, scale = 4)
+	private BigDecimal lateFeeAmount;
+
+	@Column(name = "notice_period_days")
+	private Integer noticePeriodDays;
+
+	@Column(name = "lease_document_url", length = 512)
+	private String leaseDocumentUrl;
+
+	@Column(name = "created_at", nullable = false, updatable = false)
+	@Setter(AccessLevel.NONE)
+	private Instant createdAt;
+
+	@Column(name = "updated_at", nullable = false)
+	private Instant updatedAt;
+
+	@jakarta.persistence.PrePersist
+	void prePersist() {
+		Instant now = Instant.now();
+		if (createdAt == null)
+			createdAt = now;
+		updatedAt = now;
+	}
+
+	@jakarta.persistence.PreUpdate
+	void preUpdate() {
+		updatedAt = Instant.now();
+	}
+}

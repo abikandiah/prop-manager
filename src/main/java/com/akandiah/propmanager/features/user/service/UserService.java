@@ -47,14 +47,14 @@ public class UserService {
 		return userRepository.save(user);
 	}
 
-	@Transactional
 	public User registerUser(String idpSub, String name, String email) {
 		return syncUserIfExists(idpSub, name, email)
 				.orElseGet(() -> {
 					log.info("Registering new user: {}", email);
+					String displayName = (name != null && !name.isBlank()) ? name.trim() : "User " + idpSub;
 					User newUser = User.builder()
 							.idpSub(idpSub)
-							.name(name != null ? name : "User " + idpSub)
+							.name(displayName)
 							.email(email)
 							.build();
 					return userRepository.save(newUser);

@@ -9,7 +9,7 @@ import java.util.UUID;
  */
 public record UserInfoResponse(
 		UUID id,
-	String name,
-	String email,
-	List<String> roles) {
+		String name,
+		String email,
+		List<String> roles) {
 }
