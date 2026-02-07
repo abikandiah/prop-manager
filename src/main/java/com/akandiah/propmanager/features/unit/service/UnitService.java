@@ -1,0 +1,110 @@
+package com.akandiah.propmanager.features.unit.service;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.features.prop.domain.Prop;
+import com.akandiah.propmanager.features.prop.domain.PropRepository;
+import com.akandiah.propmanager.features.unit.api.dto.CreateUnitRequest;
+import com.akandiah.propmanager.features.unit.api.dto.UnitResponse;
+import com.akandiah.propmanager.features.unit.api.dto.UpdateUnitRequest;
+import com.akandiah.propmanager.features.unit.domain.Unit;
+import com.akandiah.propmanager.features.unit.domain.UnitRepository;
+
+@Service
+public class UnitService {
+
+	private final UnitRepository unitRepository;
+	private final PropRepository propRepository;
+
+	public UnitService(UnitRepository unitRepository, PropRepository propRepository) {
+		this.unitRepository = unitRepository;
+		this.propRepository = propRepository;
+	}
+
+	@Transactional(readOnly = true)
+	public List<UnitResponse> findAll() {
+		return unitRepository.findAll().stream()
+				.map(UnitResponse::from)
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public List<UnitResponse> findByPropId(UUID propId) {
+		return unitRepository.findByProp_IdOrderByUnitNumberAsc(propId).stream()
+				.map(UnitResponse::from)
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public UnitResponse findById(UUID id) {
+		Unit unit = unitRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Unit", id));
+		return UnitResponse.from(unit);
+	}
+
+	@Transactional
+	public UnitResponse create(CreateUnitRequest request) {
+		Prop prop = propRepository.findById(request.propertyId())
+				.orElseThrow(() -> new ResourceNotFoundException("Prop", request.propertyId()));
+		Unit unit = Unit.builder()
+				.prop(prop)
+				.unitNumber(request.unitNumber())
+				.status(request.status())
+				.rentAmount(request.rentAmount())
+				.securityDeposit(request.securityDeposit())
+				.bedrooms(request.bedrooms())
+				.bathrooms(request.bathrooms())
+				.squareFootage(request.squareFootage())
+				.balcony(request.balcony())
+				.laundryInUnit(request.laundryInUnit())
+				.hardwoodFloors(request.hardwoodFloors())
+				.build();
+		unit = unitRepository.save(unit);
+		return UnitResponse.from(unit);
+	}
+
+	@Transactional
+	public UnitResponse update(UUID id, UpdateUnitRequest request) {
+		Unit unit = unitRepository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Unit", id));
+		if (request.propertyId() != null) {
+			Prop prop = propRepository.findById(request.propertyId())
+					.orElseThrow(() -> new ResourceNotFoundException("Prop", request.propertyId()));
+			unit.setProp(prop);
+		}
+		if (request.unitNumber() != null)
+			unit.setUnitNumber(request.unitNumber());
+		if (request.status() != null)
+			unit.setStatus(request.status());
+		if (request.rentAmount() != null)
+			unit.setRentAmount(request.rentAmount());
+		if (request.securityDeposit() != null)
+			unit.setSecurityDeposit(request.securityDeposit());
+		if (request.bedrooms() != null)
+			unit.setBedrooms(request.bedrooms());
+		if (request.bathrooms() != null)
+			unit.setBathrooms(request.bathrooms());
+		if (request.squareFootage() != null)
+			unit.setSquareFootage(request.squareFootage());
+		if (request.balcony() != null)
+			unit.setBalcony(request.balcony());
+		if (request.laundryInUnit() != null)
+			unit.setLaundryInUnit(request.laundryInUnit());
+		if (request.hardwoodFloors() != null)
+			unit.setHardwoodFloors(request.hardwoodFloors());
+		unit = unitRepository.save(unit);
+		return UnitResponse.from(unit);
+	}
+
+	@Transactional
+	public void deleteById(UUID id) {
+		if (!unitRepository.existsById(id))
+			throw new ResourceNotFoundException("Unit", id);
+		unitRepository.deleteById(id);
+	}
+}

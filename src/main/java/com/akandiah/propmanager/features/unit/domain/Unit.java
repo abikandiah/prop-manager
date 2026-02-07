@@ -1,11 +1,12 @@
-package com.akandiah.propmanager.features.prop.domain;
+package com.akandiah.propmanager.features.unit.domain;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
-import com.akandiah.propmanager.features.address.domain.Address;
+import com.akandiah.propmanager.features.prop.domain.Prop;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,45 +26,53 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "prop")
+@Table(name = "units")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Prop {
+public class Unit {
 
 	@Id
 	@GeneratedValue
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
-	@Column(name = "legal_name", nullable = false, length = 255)
-	private String legalName;
-
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "address_id", nullable = false)
-	private Address address;
+	@JoinColumn(name = "property_id", nullable = false)
+	private Prop prop;
 
-	@Column(name = "property_type", nullable = false, length = 32)
+	@Column(name = "unit_number", nullable = false, length = 64)
+	private String unitNumber;
+
+	@Column(nullable = false, length = 32)
 	@Enumerated(EnumType.STRING)
-	private PropertyType propertyType;
+	private UnitStatus status;
 
-	@Column(name = "parcel_number", length = 64)
-	private String parcelNumber;
+	@Column(name = "rent_amount", precision = 19, scale = 4)
+	private BigDecimal rentAmount;
 
-	@Column(name = "owner_id")
-	private UUID ownerId;
+	@Column(name = "security_deposit", precision = 19, scale = 4)
+	private BigDecimal securityDeposit;
 
-	@Column(name = "total_area")
-	private Integer totalArea;
+	@Column(name = "bedrooms")
+	private Integer bedrooms;
 
-	@Column(name = "year_built")
-	private Integer yearBuilt;
+	@Column(name = "bathrooms")
+	private Integer bathrooms;
 
-	@Column(name = "is_active", nullable = false)
-	@Builder.Default
-	private Boolean isActive = true;
+	@Column(name = "square_footage")
+	private Integer squareFootage;
+
+	@Column(name = "balcony")
+	private Boolean balcony;
+
+	@Column(name = "laundry_in_unit")
+	private Boolean laundryInUnit;
+
+	@Column(name = "hardwood_floors")
+	private Boolean hardwoodFloors;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	@Setter(AccessLevel.NONE)

@@ -18,6 +18,8 @@ import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
 import com.akandiah.propmanager.features.prop.service.PropService;
+import com.akandiah.propmanager.features.unit.api.dto.UnitResponse;
+import com.akandiah.propmanager.features.unit.service.UnitService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,9 +33,11 @@ import lombok.extern.slf4j.Slf4j;
 public class PropController {
 
 	private final PropService propService;
+	private final UnitService unitService;
 
-	public PropController(PropService propService) {
+	public PropController(PropService propService, UnitService unitService) {
 		this.propService = propService;
+		this.unitService = unitService;
 	}
 
 	@GetMapping
@@ -46,6 +50,12 @@ public class PropController {
 	@Operation(summary = "Get prop by ID")
 	public PropResponse getById(@PathVariable UUID id) {
 		return propService.findById(id);
+	}
+
+	@GetMapping("/{id}/units")
+	@Operation(summary = "List units for a prop")
+	public List<UnitResponse> listUnits(@PathVariable UUID id) {
+		return unitService.findByPropId(id);
 	}
 
 	@PostMapping

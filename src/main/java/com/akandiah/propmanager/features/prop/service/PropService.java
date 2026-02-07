@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.features.address.domain.Address;
+import com.akandiah.propmanager.features.address.domain.AddressRepository;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
@@ -17,9 +19,11 @@ import com.akandiah.propmanager.features.prop.domain.PropRepository;
 public class PropService {
 
 	private final PropRepository repository;
+	private final AddressRepository addressRepository;
 
-	public PropService(PropRepository repository) {
+	public PropService(PropRepository repository, AddressRepository addressRepository) {
 		this.repository = repository;
+		this.addressRepository = addressRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -38,9 +42,17 @@ public class PropService {
 
 	@Transactional
 	public PropResponse create(CreatePropRequest request) {
+		Address address = addressRepository.findById(request.addressId())
+				.orElseThrow(() -> new ResourceNotFoundException("Address", request.addressId()));
 		Prop prop = Prop.builder()
-				.name(request.name())
-				.description(request.description())
+				.legalName(request.legalName())
+				.address(address)
+				.propertyType(request.propertyType())
+				.parcelNumber(request.parcelNumber())
+				.ownerId(request.ownerId())
+				.totalArea(request.totalArea())
+				.yearBuilt(request.yearBuilt())
+				.isActive(request.isActive() != null ? request.isActive() : true)
 				.build();
 		prop = repository.save(prop);
 		return PropResponse.from(prop);
@@ -50,10 +62,25 @@ public class PropService {
 	public PropResponse update(UUID id, UpdatePropRequest request) {
 		Prop prop = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", id));
-		if (request.name() != null)
-			prop.setName(request.name());
-		if (request.description() != null)
-			prop.setDescription(request.description());
+		if (request.legalName() != null)
+			prop.setLegalName(request.legalName());
+		if (request.addressId() != null) {
+			Address address = addressRepository.findById(request.addressId())
+					.orElseThrow(() -> new ResourceNotFoundException("Address", request.addressId()));
+			prop.setAddress(address);
+		}
+		if (request.propertyType() != null)
+			prop.setPropertyType(request.propertyType());
+		if (request.parcelNumber() != null)
+			prop.setParcelNumber(request.parcelNumber());
+		if (request.ownerId() != null)
+			prop.setOwnerId(request.ownerId());
+		if (request.totalArea() != null)
+			prop.setTotalArea(request.totalArea());
+		if (request.yearBuilt() != null)
+			prop.setYearBuilt(request.yearBuilt());
+		if (request.isActive() != null)
+			prop.setIsActive(request.isActive());
 		prop = repository.save(prop);
 		return PropResponse.from(prop);
 	}

@@ -1,11 +1,13 @@
-package com.akandiah.propmanager.features.prop.domain;
+package com.akandiah.propmanager.features.asset.domain;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
-import com.akandiah.propmanager.features.address.domain.Address;
+import com.akandiah.propmanager.features.prop.domain.Prop;
+import com.akandiah.propmanager.features.unit.domain.Unit;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,45 +27,45 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "prop")
+@Table(name = "assets")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Prop {
+public class Asset {
 
 	@Id
 	@GeneratedValue
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
-	@Column(name = "legal_name", nullable = false, length = 255)
-	private String legalName;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "property_id")
+	private Prop prop;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "address_id", nullable = false)
-	private Address address;
+	@JoinColumn(name = "unit_id")
+	private Unit unit;
 
-	@Column(name = "property_type", nullable = false, length = 32)
+	@Column(nullable = false, length = 32)
 	@Enumerated(EnumType.STRING)
-	private PropertyType propertyType;
+	private AssetCategory category;
 
-	@Column(name = "parcel_number", length = 64)
-	private String parcelNumber;
+	@Column(name = "make_model", length = 255)
+	private String makeModel;
 
-	@Column(name = "owner_id")
-	private UUID ownerId;
+	@Column(name = "serial_number", length = 128)
+	private String serialNumber;
 
-	@Column(name = "total_area")
-	private Integer totalArea;
+	@Column(name = "install_date")
+	private LocalDate installDate;
 
-	@Column(name = "year_built")
-	private Integer yearBuilt;
+	@Column(name = "warranty_expiry")
+	private LocalDate warrantyExpiry;
 
-	@Column(name = "is_active", nullable = false)
-	@Builder.Default
-	private Boolean isActive = true;
+	@Column(name = "last_service_date")
+	private LocalDate lastServiceDate;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	@Setter(AccessLevel.NONE)

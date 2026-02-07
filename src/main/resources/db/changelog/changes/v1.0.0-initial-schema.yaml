@@ -13,13 +13,32 @@ databaseChangeLog:
                     primaryKey: true
                     nullable: false
               - column:
-                  name: name
+                  name: legal_name
                   type: varchar(255)
                   constraints:
                     nullable: false
               - column:
-                  name: description
-                  type: text
+                  name: property_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: parcel_number
+                  type: varchar(64)
+              - column:
+                  name: owner_id
+                  type: uuid
+              - column:
+                  name: total_area
+                  type: int
+              - column:
+                  name: year_built
+                  type: int
+              - column:
+                  name: is_active
+                  type: boolean
+                  constraints:
+                    nullable: false
               - column:
                   name: created_at
                   type: timestamptz
