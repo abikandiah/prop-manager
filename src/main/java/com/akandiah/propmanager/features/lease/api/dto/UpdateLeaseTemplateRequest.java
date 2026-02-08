@@ -1,0 +1,33 @@
+package com.akandiah.propmanager.features.lease.api.dto;
+
+import java.math.BigDecimal;
+
+import com.akandiah.propmanager.features.lease.domain.LateFeeType;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
+
+public record UpdateLeaseTemplateRequest(
+		@Size(max = 255) String name,
+
+		@Size(max = 50) String versionTag,
+
+		String templateMarkdown,
+
+		LateFeeType defaultLateFeeType,
+
+		@PositiveOrZero(message = "Late fee amount must be zero or positive") BigDecimal defaultLateFeeAmount,
+
+		@Min(value = 1, message = "Notice period must be at least 1 day") Integer defaultNoticePeriodDays,
+
+		Boolean active,
+
+		/**
+		 * Required for optimistic-lock verification.
+		 * Must match the current version on the server; if stale,
+		 * the update is rejected with 409 Conflict.
+		 */
+		@NotNull(message = "version is required for optimistic-lock verification") Integer version) {
+}

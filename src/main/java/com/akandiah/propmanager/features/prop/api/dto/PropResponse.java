@@ -18,6 +18,7 @@ public record PropResponse(
 		UUID ownerId,
 		Integer totalArea,
 		Integer yearBuilt,
+		Integer version,
 		Instant createdAt,
 		Instant updatedAt) {
 
@@ -33,6 +34,7 @@ public record PropResponse(
 				prop.getOwnerId(),
 				prop.getTotalArea(),
 				prop.getYearBuilt(),
+				prop.getVersion(),
 				prop.getCreatedAt(),
 				prop.getUpdatedAt());
 	}

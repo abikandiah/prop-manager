@@ -16,6 +16,8 @@ import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 
+import jakarta.persistence.OptimisticLockException;
+
 @Service
 public class PropService {
 
@@ -76,6 +78,7 @@ public class PropService {
 	public PropResponse update(UUID id, UpdatePropRequest request) {
 		Prop prop = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", id));
+		requireVersionMatch(prop, request.version());
 		if (request.legalName() != null)
 			prop.setLegalName(request.legalName());
 		if (request.address() != null) {
@@ -104,5 +107,14 @@ public class PropService {
 		if (!repository.existsById(id))
 			throw new ResourceNotFoundException("Prop", id);
 		repository.deleteById(id);
+	}
+
+	private void requireVersionMatch(Prop prop, Integer clientVersion) {
+		if (!prop.getVersion().equals(clientVersion)) {
+			throw new OptimisticLockException(
+					"Prop " + prop.getId() + " has been modified by another user. "
+							+ "Expected version " + clientVersion
+							+ " but current version is " + prop.getVersion());
+		}
 	}
 }

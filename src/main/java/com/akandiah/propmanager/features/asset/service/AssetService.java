@@ -3,10 +3,8 @@ package com.akandiah.propmanager.features.asset.service;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.asset.api.dto.AssetResponse;
@@ -18,6 +16,8 @@ import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
+
+import jakarta.persistence.OptimisticLockException;
 
 @Service
 public class AssetService {
@@ -91,11 +91,12 @@ public class AssetService {
 	public AssetResponse update(UUID id, UpdateAssetRequest request) {
 		Asset asset = assetRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Asset", id));
+		requireVersionMatch(asset, request.version());
 		if (request.propertyId() != null || request.unitId() != null) {
 			boolean hasProp = request.propertyId() != null;
 			boolean hasUnit = request.unitId() != null;
 			if (hasProp == hasUnit)
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+				throw new IllegalArgumentException(
 						"Exactly one of propertyId or unitId must be set");
 			if (hasProp) {
 				Prop prop = propRepository.findById(request.propertyId())
@@ -136,10 +137,19 @@ public class AssetService {
 		boolean hasProp = propertyId != null;
 		boolean hasUnit = unitId != null;
 		if (!hasProp && !hasUnit)
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+			throw new IllegalArgumentException(
 					"Exactly one of propertyId or unitId is required");
 		if (hasProp && hasUnit)
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+			throw new IllegalArgumentException(
 					"Only one of propertyId or unitId may be set, not both");
+	}
+
+	private void requireVersionMatch(Asset asset, Integer clientVersion) {
+		if (!asset.getVersion().equals(clientVersion)) {
+			throw new OptimisticLockException(
+					"Asset " + asset.getId() + " has been modified by another user. "
+							+ "Expected version " + clientVersion
+							+ " but current version is " + asset.getVersion());
+		}
 	}
 }

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,6 +78,30 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(AuthenticationException.class)
 	public ResponseEntity<ProblemDetail> handleAuthentication(AuthenticationException ex, HttpServletRequest request) {
 		return problem(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage(), request.getRequestURI(), null, null);
+	}
+
+	/** 400: Invalid arguments (e.g. mutually exclusive fields) */
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<ProblemDetail> handleIllegalArgument(IllegalArgumentException ex,
+			HttpServletRequest request) {
+		return problem(HttpStatus.BAD_REQUEST, "Bad Request",
+				ex.getMessage(), request.getRequestURI(), null, null);
+	}
+
+	/** 422: Illegal state transition (e.g. editing a non-DRAFT lease) */
+	@ExceptionHandler(IllegalStateException.class)
+	public ResponseEntity<ProblemDetail> handleIllegalState(IllegalStateException ex, HttpServletRequest request) {
+		return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Unprocessable Entity",
+				ex.getMessage(), request.getRequestURI(), null, null);
+	}
+
+	/** 409: Optimistic Lock Conflict */
+	@ExceptionHandler(OptimisticLockException.class)
+	public ResponseEntity<ProblemDetail> handleOptimisticLock(OptimisticLockException ex, HttpServletRequest request) {
+		return problem(HttpStatus.CONFLICT, "Conflict",
+				ex.getMessage() != null ? ex.getMessage()
+						: "The resource was modified by another request. Please refresh and try again.",
+				request.getRequestURI(), null, null);
 	}
 
 	/** Handle ResponseStatusException from Spring */

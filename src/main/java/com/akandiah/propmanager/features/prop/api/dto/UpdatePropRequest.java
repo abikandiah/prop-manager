@@ -6,6 +6,7 @@ import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest.AddressI
 import com.akandiah.propmanager.features.prop.domain.PropertyType;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record UpdatePropRequest(
@@ -23,5 +24,7 @@ public record UpdatePropRequest(
 
 		Integer totalArea,
 
-		Integer yearBuilt) {
+		Integer yearBuilt,
+
+		@NotNull(message = "version is required for optimistic-lock verification") Integer version) {
 }

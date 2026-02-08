@@ -3,9 +3,12 @@ package com.akandiah.propmanager.features.lease.domain;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.unit.domain.Unit;
@@ -18,8 +21,12 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -41,6 +48,19 @@ public class Lease {
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
+	// Optional FK — may be null if the template was deleted after stamping.
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "lease_template_id")
+	private LeaseTemplate leaseTemplate;
+
+	// Denormalized snapshot so the lease carries its own provenance
+	// even after the template is deleted.
+	@Column(name = "lease_template_name", length = 255)
+	private String leaseTemplateName;
+
+	@Column(name = "lease_template_version_tag", length = 50)
+	private String leaseTemplateVersionTag;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "unit_id", nullable = false)
 	private Unit unit;
@@ -48,6 +68,10 @@ public class Lease {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "property_id", nullable = false)
 	private Prop property;
+
+	@Version
+	@Column(nullable = false)
+	private Integer version;
 
 	@Column(nullable = false, length = 32)
 	@Enumerated(EnumType.STRING)
@@ -61,6 +85,13 @@ public class Lease {
 
 	@Column(name = "rent_amount", precision = 19, scale = 4, nullable = false)
 	private BigDecimal rentAmount;
+
+	@Lob // Uses Large Object storage for long contracts
+	@Column(name = "executed_content_markdown", columnDefinition = "TEXT")
+	private String executedContentMarkdown;
+
+	@Column(name = "signed_pdf_url", length = 512)
+	private String signedPdfUrl;
 
 	@Column(name = "rent_due_day", nullable = false)
 	private Integer rentDueDay;
@@ -78,25 +109,26 @@ public class Lease {
 	@Column(name = "notice_period_days")
 	private Integer noticePeriodDays;
 
-	@Column(name = "lease_document_url", length = 512)
-	private String leaseDocumentUrl;
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "additional_metadata")
+	private Map<String, Object> additionalMetadata;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	@Setter(AccessLevel.NONE)
 	private Instant createdAt;
 
 	@Column(name = "updated_at", nullable = false)
+	@Setter(AccessLevel.NONE)
 	private Instant updatedAt;
 
-	@jakarta.persistence.PrePersist
+	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();
-		if (createdAt == null)
-			createdAt = now;
+		createdAt = (createdAt == null) ? now : createdAt;
 		updatedAt = now;
 	}
 
-	@jakarta.persistence.PreUpdate
+	@PreUpdate
 	void preUpdate() {
 		updatedAt = Instant.now();
 	}

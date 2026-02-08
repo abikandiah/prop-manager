@@ -438,3 +438,49 @@ databaseChangeLog:
             constraintName: fk_leases_property
             referencedTableName: prop
             referencedColumnNames: id
+
+  # lease_tenants - join lease ↔ tenants with role (e.g. primary vs occupant)
+  - changeSet:
+      id: "initial-lease-tenants"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: lease_tenants
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: lease_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: lease_tenants
+            columnNames: lease_id, tenant_id
+            constraintName: uk_lease_tenants_lease_tenant
+        - addForeignKeyConstraint:
+            baseTableName: lease_tenants
+            baseColumnNames: lease_id
+            constraintName: fk_lease_tenants_lease
+            referencedTableName: leases
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: lease_tenants
+            baseColumnNames: tenant_id
+            constraintName: fk_lease_tenants_tenant
+            referencedTableName: tenants
+            referencedColumnNames: id

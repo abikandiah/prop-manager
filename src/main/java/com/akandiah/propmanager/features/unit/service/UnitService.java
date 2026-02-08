@@ -15,6 +15,8 @@ import com.akandiah.propmanager.features.unit.api.dto.UpdateUnitRequest;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
+import jakarta.persistence.OptimisticLockException;
+
 @Service
 public class UnitService {
 
@@ -73,6 +75,7 @@ public class UnitService {
 	public UnitResponse update(UUID id, UpdateUnitRequest request) {
 		Unit unit = unitRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Unit", id));
+		requireVersionMatch(unit, request.version());
 		if (request.propertyId() != null) {
 			Prop prop = propRepository.findById(request.propertyId())
 					.orElseThrow(() -> new ResourceNotFoundException("Prop", request.propertyId()));
@@ -109,5 +112,14 @@ public class UnitService {
 		if (!unitRepository.existsById(id))
 			throw new ResourceNotFoundException("Unit", id);
 		unitRepository.deleteById(id);
+	}
+
+	private void requireVersionMatch(Unit unit, Integer clientVersion) {
+		if (!unit.getVersion().equals(clientVersion)) {
+			throw new OptimisticLockException(
+					"Unit " + unit.getId() + " has been modified by another user. "
+							+ "Expected version " + clientVersion
+							+ " but current version is " + unit.getVersion());
+		}
 	}
 }

@@ -21,6 +21,7 @@ public record UnitResponse(
 		Boolean balcony,
 		Boolean laundryInUnit,
 		Boolean hardwoodFloors,
+		Integer version,
 		Instant createdAt,
 		Instant updatedAt) {
 
@@ -39,6 +40,7 @@ public record UnitResponse(
 				unit.getBalcony(),
 				unit.getLaundryInUnit(),
 				unit.getHardwoodFloors(),
+				unit.getVersion(),
 				unit.getCreatedAt(),
 				unit.getUpdatedAt());
 	}

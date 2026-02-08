@@ -17,7 +17,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -77,14 +80,19 @@ public class Unit {
 	@Column(name = "hardwood_floors")
 	private Boolean hardwoodFloors;
 
+	@Version
+	@Column(nullable = false)
+	private Integer version;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	@Setter(AccessLevel.NONE)
 	private Instant createdAt;
 
 	@Column(name = "updated_at", nullable = false)
+	@Setter(AccessLevel.NONE)
 	private Instant updatedAt;
 
-	@jakarta.persistence.PrePersist
+	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();
 		if (createdAt == null)
@@ -92,7 +100,7 @@ public class Unit {
 		updatedAt = now;
 	}
 
-	@jakarta.persistence.PreUpdate
+	@PreUpdate
 	void preUpdate() {
 		updatedAt = Instant.now();
 	}

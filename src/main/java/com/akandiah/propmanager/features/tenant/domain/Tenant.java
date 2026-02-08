@@ -14,6 +14,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -63,9 +65,10 @@ public class Tenant {
 	private Instant createdAt;
 
 	@Column(name = "updated_at", nullable = false)
+	@Setter(AccessLevel.NONE)
 	private Instant updatedAt;
 
-	@jakarta.persistence.PrePersist
+	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();
 		if (createdAt == null)
@@ -73,7 +76,7 @@ public class Tenant {
 		updatedAt = now;
 	}
 
-	@jakarta.persistence.PreUpdate
+	@PreUpdate
 	void preUpdate() {
 		updatedAt = Instant.now();
 	}

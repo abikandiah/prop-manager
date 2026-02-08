@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.akandiah.propmanager.features.asset.domain.AssetCategory;
 
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record UpdateAssetRequest(
@@ -24,5 +25,7 @@ public record UpdateAssetRequest(
 
 		LocalDate warrantyExpiry,
 
-		LocalDate lastServiceDate) {
+		LocalDate lastServiceDate,
+
+		@NotNull(message = "version is required for optimistic-lock verification") Integer version) {
 }

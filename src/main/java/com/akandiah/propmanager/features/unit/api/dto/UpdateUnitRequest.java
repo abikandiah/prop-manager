@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.akandiah.propmanager.features.unit.domain.UnitStatus;
 
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record UpdateUnitRequest(
@@ -30,5 +31,7 @@ public record UpdateUnitRequest(
 
 		Boolean laundryInUnit,
 
-		Boolean hardwoodFloors) {
+		Boolean hardwoodFloors,
+
+		@NotNull(message = "version is required for optimistic-lock verification") Integer version) {
 }

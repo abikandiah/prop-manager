@@ -17,6 +17,7 @@ public record AssetResponse(
 		LocalDate installDate,
 		LocalDate warrantyExpiry,
 		LocalDate lastServiceDate,
+		Integer version,
 		Instant createdAt,
 		Instant updatedAt) {
 
@@ -31,6 +32,7 @@ public record AssetResponse(
 				asset.getInstallDate(),
 				asset.getWarrantyExpiry(),
 				asset.getLastServiceDate(),
+				asset.getVersion(),
 				asset.getCreatedAt(),
 				asset.getUpdatedAt());
 	}
