@@ -17,6 +17,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -67,6 +68,10 @@ public class Tenant {
 	@Column(name = "updated_at", nullable = false)
 	@Setter(AccessLevel.NONE)
 	private Instant updatedAt;
+
+	@Version
+	@Column(nullable = false)
+	private Integer version;
 
 	@PrePersist
 	void prePersist() {

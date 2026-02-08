@@ -14,6 +14,10 @@ public interface LeaseRepository extends JpaRepository<Lease, UUID> {
 
 	List<Lease> findByProperty_IdOrderByStartDateDesc(UUID propertyId);
 
+	long countByUnit_Id(UUID unitId);
+
+	long countByProperty_Id(UUID propertyId);
+
 	/** Nulls out the template FK on all leases that reference the given template. */
 	@Modifying
 	@Query("UPDATE Lease l SET l.leaseTemplate = null WHERE l.leaseTemplate.id = :templateId")

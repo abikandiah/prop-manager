@@ -14,6 +14,7 @@ import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
@@ -28,15 +29,18 @@ public class LeaseService {
 	private final LeaseTemplateService templateService;
 	private final UnitRepository unitRepository;
 	private final PropRepository propRepository;
+	private final LeaseTenantRepository leaseTenantRepository;
 
 	public LeaseService(LeaseRepository leaseRepository,
 			LeaseTemplateService templateService,
 			UnitRepository unitRepository,
-			PropRepository propRepository) {
+			PropRepository propRepository,
+			LeaseTenantRepository leaseTenantRepository) {
 		this.leaseRepository = leaseRepository;
 		this.templateService = templateService;
 		this.unitRepository = unitRepository;
 		this.propRepository = propRepository;
+		this.leaseTenantRepository = leaseTenantRepository;
 	}
 
 	// ───────────────────────── Queries ─────────────────────────
@@ -187,6 +191,13 @@ public class LeaseService {
 	public void deleteById(UUID id) {
 		Lease lease = getEntity(id);
 		requireDraft(lease);
+
+		// Guard against orphaning LeaseTenant records
+		long tenantCount = leaseTenantRepository.countByLease_Id(id);
+		if (tenantCount > 0)
+			throw new IllegalStateException(
+					"Cannot delete Lease " + id + ": it has " + tenantCount + " tenant assignment(s). Remove those first.");
+
 		leaseRepository.delete(lease);
 	}
 

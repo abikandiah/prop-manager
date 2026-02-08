@@ -9,12 +9,15 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.address.domain.Address;
 import com.akandiah.propmanager.features.address.domain.AddressRepository;
+import com.akandiah.propmanager.features.asset.domain.AssetRepository;
+import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest.AddressInput;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
+import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
 import jakarta.persistence.OptimisticLockException;
 
@@ -23,10 +26,18 @@ public class PropService {
 
 	private final PropRepository repository;
 	private final AddressRepository addressRepository;
+	private final UnitRepository unitRepository;
+	private final AssetRepository assetRepository;
+	private final LeaseRepository leaseRepository;
 
-	public PropService(PropRepository repository, AddressRepository addressRepository) {
+	public PropService(PropRepository repository, AddressRepository addressRepository,
+			UnitRepository unitRepository, AssetRepository assetRepository,
+			LeaseRepository leaseRepository) {
 		this.repository = repository;
 		this.addressRepository = addressRepository;
+		this.unitRepository = unitRepository;
+		this.assetRepository = assetRepository;
+		this.leaseRepository = leaseRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -106,6 +117,23 @@ public class PropService {
 	public void deleteById(UUID id) {
 		if (!repository.existsById(id))
 			throw new ResourceNotFoundException("Prop", id);
+
+		// Guard against orphaning child records
+		long unitCount = unitRepository.countByProp_Id(id);
+		if (unitCount > 0)
+			throw new IllegalStateException(
+					"Cannot delete Prop " + id + ": it has " + unitCount + " unit(s). Delete those first.");
+
+		long assetCount = assetRepository.countByProp_Id(id);
+		if (assetCount > 0)
+			throw new IllegalStateException(
+					"Cannot delete Prop " + id + ": it has " + assetCount + " asset(s). Delete those first.");
+
+		long leaseCount = leaseRepository.countByProperty_Id(id);
+		if (leaseCount > 0)
+			throw new IllegalStateException(
+					"Cannot delete Prop " + id + ": it has " + leaseCount + " lease(s). Delete those first.");
+
 		repository.deleteById(id);
 	}
 

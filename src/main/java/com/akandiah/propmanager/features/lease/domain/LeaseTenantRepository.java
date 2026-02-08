@@ -10,4 +10,6 @@ public interface LeaseTenantRepository extends JpaRepository<LeaseTenant, UUID> 
 	List<LeaseTenant> findByLease_Id(UUID leaseId);
 
 	List<LeaseTenant> findByTenant_Id(UUID tenantId);
+
+	long countByLease_Id(UUID leaseId);
 }

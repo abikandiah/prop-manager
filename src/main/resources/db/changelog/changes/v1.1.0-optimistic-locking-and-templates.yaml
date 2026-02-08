@@ -1,0 +1,159 @@
+databaseChangeLog:
+  # Add version columns for optimistic locking
+  - changeSet:
+      id: "add-version-columns"
+      author: "prop-manager"
+      changes:
+        - addColumn:
+            tableName: prop
+            columns:
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: units
+            columns:
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: assets
+            columns:
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: tenants
+            columns:
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  # Create lease_templates table
+  - changeSet:
+      id: "create-lease-templates"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: lease_templates
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version_tag
+                  type: varchar(50)
+              - column:
+                  name: template_markdown
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: default_late_fee_type
+                  type: varchar(32)
+              - column:
+                  name: default_late_fee_amount
+                  type: decimal(19,4)
+              - column:
+                  name: default_notice_period_days
+                  type: int
+              - column:
+                  name: is_active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  # Update leases table for template stamping and content fields
+  - changeSet:
+      id: "update-leases-for-templates"
+      author: "prop-manager"
+      changes:
+        # Add template FK (nullable - lease can outlive template)
+        - addColumn:
+            tableName: leases
+            columns:
+              - column:
+                  name: lease_template_id
+                  type: uuid
+        # Add denormalized template provenance
+        - addColumn:
+            tableName: leases
+            columns:
+              - column:
+                  name: lease_template_name
+                  type: varchar(255)
+              - column:
+                  name: lease_template_version_tag
+                  type: varchar(50)
+        # Add executed content and signed PDF
+        - addColumn:
+            tableName: leases
+            columns:
+              - column:
+                  name: executed_content_markdown
+                  type: text
+              - column:
+                  name: signed_pdf_url
+                  type: varchar(512)
+              - column:
+                  name: additional_metadata
+                  type: jsonb
+        # Add version for optimistic locking
+        - addColumn:
+            tableName: leases
+            columns:
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        # Drop old lease_document_url column (replaced by executed_content_markdown + signed_pdf_url)
+        - dropColumn:
+            tableName: leases
+            columnName: lease_document_url
+        # Add FK to lease_templates
+        - addForeignKeyConstraint:
+            baseTableName: leases
+            baseColumnNames: lease_template_id
+            constraintName: fk_leases_lease_template
+            referencedTableName: lease_templates
+            referencedColumnNames: id
+            onDelete: SET NULL

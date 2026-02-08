@@ -10,4 +10,8 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
 	List<Asset> findByProp_Id(UUID propId);
 
 	List<Asset> findByUnit_Id(UUID unitId);
+
+	long countByProp_Id(UUID propId);
+
+	long countByUnit_Id(UUID unitId);
 }

@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface UnitRepository extends JpaRepository<Unit, UUID> {
 
 	List<Unit> findByProp_IdOrderByUnitNumberAsc(UUID propId);
+
+	long countByProp_Id(UUID propId);
 }
