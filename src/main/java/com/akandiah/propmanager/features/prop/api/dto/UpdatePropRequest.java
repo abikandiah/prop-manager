@@ -9,22 +9,19 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 
 public record UpdatePropRequest(
-		@Size(max = 255)
-		String legalName,
+		@Size(max = 255) String legalName,
 
-		@Valid
-		AddressInput address,
+		@Valid AddressInput address,
 
 		PropertyType propertyType,
 
-		@Size(max = 64)
-		String parcelNumber,
+		@Size(max = 2000) String description,
+
+		@Size(max = 64) String parcelNumber,
 
 		UUID ownerId,
 
 		Integer totalArea,
 
-		Integer yearBuilt,
-
-		Boolean isActive) {
+		Integer yearBuilt) {
 }

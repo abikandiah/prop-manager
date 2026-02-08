@@ -55,6 +55,7 @@ public class UnitService {
 				.prop(prop)
 				.unitNumber(request.unitNumber())
 				.status(request.status())
+				.description(request.description())
 				.rentAmount(request.rentAmount())
 				.securityDeposit(request.securityDeposit())
 				.bedrooms(request.bedrooms())
@@ -81,6 +82,8 @@ public class UnitService {
 			unit.setUnitNumber(request.unitNumber());
 		if (request.status() != null)
 			unit.setStatus(request.status());
+		if (request.description() != null)
+			unit.setDescription(request.description());
 		if (request.rentAmount() != null)
 			unit.setRentAmount(request.rentAmount());
 		if (request.securityDeposit() != null)

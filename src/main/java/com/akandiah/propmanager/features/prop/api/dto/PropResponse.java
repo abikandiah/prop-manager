@@ -13,11 +13,11 @@ public record PropResponse(
 		UUID addressId,
 		AddressResponse address,
 		PropertyType propertyType,
+		String description,
 		String parcelNumber,
 		UUID ownerId,
 		Integer totalArea,
 		Integer yearBuilt,
-		Boolean isActive,
 		Instant createdAt,
 		Instant updatedAt) {
 
@@ -28,11 +28,11 @@ public record PropResponse(
 				prop.getAddress() != null ? prop.getAddress().getId() : null,
 				prop.getAddress() != null ? AddressResponse.from(prop.getAddress()) : null,
 				prop.getPropertyType(),
+				prop.getDescription(),
 				prop.getParcelNumber(),
 				prop.getOwnerId(),
 				prop.getTotalArea(),
 				prop.getYearBuilt(),
-				prop.getIsActive(),
 				prop.getCreatedAt(),
 				prop.getUpdatedAt());
 	}

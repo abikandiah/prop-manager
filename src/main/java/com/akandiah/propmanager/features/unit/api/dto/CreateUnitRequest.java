@@ -10,15 +10,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record CreateUnitRequest(
-		@NotNull(message = "Property ID is required")
-		UUID propertyId,
+		@NotNull(message = "Property ID is required") UUID propertyId,
 
-		@NotBlank(message = "Unit number is required")
-		@Size(max = 64)
-		String unitNumber,
+		@NotBlank(message = "Unit number is required") @Size(max = 64) String unitNumber,
 
-		@NotNull(message = "Status is required")
-		UnitStatus status,
+		@NotNull(message = "Status is required") UnitStatus status,
+
+		@Size(max = 2000) String description,
 
 		BigDecimal rentAmount,
 

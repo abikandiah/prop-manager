@@ -50,6 +50,9 @@ public class Unit {
 	@Enumerated(EnumType.STRING)
 	private UnitStatus status;
 
+	@Column(name = "description", length = 2000)
+	private String description;
+
 	@Column(name = "rent_amount", precision = 19, scale = 4)
 	private BigDecimal rentAmount;
 

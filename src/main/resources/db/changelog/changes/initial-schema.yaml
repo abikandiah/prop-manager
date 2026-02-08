@@ -131,6 +131,9 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
+                  name: description
+                  type: varchar(2000)
+              - column:
                   name: parcel_number
                   type: varchar(64)
               - column:
@@ -142,11 +145,6 @@ databaseChangeLog:
               - column:
                   name: year_built
                   type: int
-              - column:
-                  name: is_active
-                  type: boolean
-                  constraints:
-                    nullable: false
               - column:
                   name: created_at
                   type: timestamptz
@@ -193,6 +191,9 @@ databaseChangeLog:
                   type: varchar(32)
                   constraints:
                     nullable: false
+              - column:
+                  name: description
+                  type: varchar(2000)
               - column:
                   name: rent_amount
                   type: decimal(19,4)

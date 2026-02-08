@@ -49,11 +49,11 @@ public class PropService {
 				.legalName(request.legalName())
 				.address(address)
 				.propertyType(request.propertyType())
+				.description(request.description())
 				.parcelNumber(request.parcelNumber())
 				.ownerId(request.ownerId())
 				.totalArea(request.totalArea())
 				.yearBuilt(request.yearBuilt())
-				.isActive(request.isActive() != null ? request.isActive() : true)
 				.build();
 		prop = repository.save(prop);
 		return PropResponse.from(prop);
@@ -85,6 +85,8 @@ public class PropService {
 		}
 		if (request.propertyType() != null)
 			prop.setPropertyType(request.propertyType());
+		if (request.description() != null)
+			prop.setDescription(request.description());
 		if (request.parcelNumber() != null)
 			prop.setParcelNumber(request.parcelNumber());
 		if (request.ownerId() != null)
@@ -93,8 +95,6 @@ public class PropService {
 			prop.setTotalArea(request.totalArea());
 		if (request.yearBuilt() != null)
 			prop.setYearBuilt(request.yearBuilt());
-		if (request.isActive() != null)
-			prop.setIsActive(request.isActive());
 		prop = repository.save(prop);
 		return PropResponse.from(prop);
 	}

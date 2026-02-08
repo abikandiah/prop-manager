@@ -49,6 +49,9 @@ public class Prop {
 	@Enumerated(EnumType.STRING)
 	private PropertyType propertyType;
 
+	@Column(name = "description", length = 2000)
+	private String description;
+
 	@Column(name = "parcel_number", length = 64)
 	private String parcelNumber;
 
@@ -60,10 +63,6 @@ public class Prop {
 
 	@Column(name = "year_built")
 	private Integer yearBuilt;
-
-	@Column(name = "is_active", nullable = false)
-	@Builder.Default
-	private Boolean isActive = true;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	@Setter(AccessLevel.NONE)

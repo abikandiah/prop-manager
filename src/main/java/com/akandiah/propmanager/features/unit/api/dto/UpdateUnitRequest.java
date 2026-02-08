@@ -10,10 +10,11 @@ import jakarta.validation.constraints.Size;
 public record UpdateUnitRequest(
 		UUID propertyId,
 
-		@Size(max = 64)
-		String unitNumber,
+		@Size(max = 64) String unitNumber,
 
 		UnitStatus status,
+
+		@Size(max = 2000) String description,
 
 		BigDecimal rentAmount,
 
