@@ -24,10 +24,8 @@ import com.akandiah.propmanager.features.unit.service.UnitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@Slf4j
 @RequestMapping("/api/props")
 @Tag(name = "Props", description = "Prop resource CRUD")
 public class PropController {

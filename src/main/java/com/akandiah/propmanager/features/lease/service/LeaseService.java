@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.util.DeleteGuardUtil;
+import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseResponse;
 import com.akandiah.propmanager.features.lease.api.dto.UpdateLeaseRequest;
@@ -19,8 +21,6 @@ import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
-
-import jakarta.persistence.OptimisticLockException;
 
 @Service
 public class LeaseService {
@@ -116,28 +116,38 @@ public class LeaseService {
 	public LeaseResponse update(UUID id, UpdateLeaseRequest request) {
 		Lease lease = getEntity(id);
 		requireDraft(lease);
-		requireVersionMatch(lease, request.version());
+		OptimisticLockingUtil.requireVersionMatch("Lease", id, lease.getVersion(), request.version());
 
-		if (request.startDate() != null)
+		if (request.startDate() != null) {
 			lease.setStartDate(request.startDate());
-		if (request.endDate() != null)
+		}
+		if (request.endDate() != null) {
 			lease.setEndDate(request.endDate());
-		if (request.rentAmount() != null)
+		}
+		if (request.rentAmount() != null) {
 			lease.setRentAmount(request.rentAmount());
-		if (request.rentDueDay() != null)
+		}
+		if (request.rentDueDay() != null) {
 			lease.setRentDueDay(request.rentDueDay());
-		if (request.securityDepositHeld() != null)
+		}
+		if (request.securityDepositHeld() != null) {
 			lease.setSecurityDepositHeld(request.securityDepositHeld());
-		if (request.lateFeeType() != null)
+		}
+		if (request.lateFeeType() != null) {
 			lease.setLateFeeType(request.lateFeeType());
-		if (request.lateFeeAmount() != null)
+		}
+		if (request.lateFeeAmount() != null) {
 			lease.setLateFeeAmount(request.lateFeeAmount());
-		if (request.noticePeriodDays() != null)
+		}
+		if (request.noticePeriodDays() != null) {
 			lease.setNoticePeriodDays(request.noticePeriodDays());
-		if (request.executedContentMarkdown() != null)
+		}
+		if (request.executedContentMarkdown() != null) {
 			lease.setExecutedContentMarkdown(request.executedContentMarkdown());
-		if (request.additionalMetadata() != null)
+		}
+		if (request.additionalMetadata() != null) {
 			lease.setAdditionalMetadata(request.additionalMetadata());
+		}
 
 		lease = leaseRepository.save(lease);
 		return LeaseResponse.from(lease);
@@ -192,11 +202,7 @@ public class LeaseService {
 		Lease lease = getEntity(id);
 		requireDraft(lease);
 
-		// Guard against orphaning LeaseTenant records
-		long tenantCount = leaseTenantRepository.countByLease_Id(id);
-		if (tenantCount > 0)
-			throw new IllegalStateException(
-					"Cannot delete Lease " + id + ": it has " + tenantCount + " tenant assignment(s). Remove those first.");
+		DeleteGuardUtil.requireNoChildren("Lease", id, leaseTenantRepository.countByLease_Id(id), "tenant assignment(s)", "Remove those first.");
 
 		leaseRepository.delete(lease);
 	}
@@ -223,22 +229,14 @@ public class LeaseService {
 		}
 	}
 
-	private void requireVersionMatch(Lease lease, Integer clientVersion) {
-		if (!lease.getVersion().equals(clientVersion)) {
-			throw new OptimisticLockException(
-					"Lease " + lease.getId() + " has been modified by another user. "
-							+ "Expected version " + clientVersion
-							+ " but current version is " + lease.getVersion());
-		}
-	}
-
 	/**
 	 * Simple placeholder stamping. Replaces {{key}} tokens in the template
 	 * markdown with concrete lease values.
 	 */
 	private String stampMarkdown(String markdown, CreateLeaseRequest req, Unit unit, Prop property) {
-		if (markdown == null)
+		if (markdown == null) {
 			return null;
+		}
 		return markdown
 				.replace("{{property_name}}", property.getLegalName())
 				.replace("{{unit_number}}", unit.getUnitNumber())

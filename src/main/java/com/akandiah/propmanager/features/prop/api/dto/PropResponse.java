@@ -3,7 +3,6 @@ package com.akandiah.propmanager.features.prop.api.dto;
 import java.time.Instant;
 import java.util.UUID;
 
-import com.akandiah.propmanager.features.address.api.dto.AddressResponse;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropertyType;
 
@@ -11,7 +10,7 @@ public record PropResponse(
 		UUID id,
 		String legalName,
 		UUID addressId,
-		AddressResponse address,
+		AddressView address,
 		PropertyType propertyType,
 		String description,
 		String parcelNumber,
@@ -27,7 +26,7 @@ public record PropResponse(
 				prop.getId(),
 				prop.getLegalName(),
 				prop.getAddress() != null ? prop.getAddress().getId() : null,
-				prop.getAddress() != null ? AddressResponse.from(prop.getAddress()) : null,
+				prop.getAddress() != null ? AddressView.from(prop.getAddress()) : null,
 				prop.getPropertyType(),
 				prop.getDescription(),
 				prop.getParcelNumber(),

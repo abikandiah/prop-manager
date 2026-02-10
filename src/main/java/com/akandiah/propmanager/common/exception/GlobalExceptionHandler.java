@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -25,6 +26,8 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+	private static final HttpStatusCode STATUS_UNPROCESSABLE_ENTITY = HttpStatusCode.valueOf(422);
 
 	@Value("${spring.profiles.active:default}")
 	private String activeProfile;
@@ -88,10 +91,23 @@ public class GlobalExceptionHandler {
 				ex.getMessage(), request.getRequestURI(), null, null);
 	}
 
+	/** 422: Cannot delete because entity has child records */
+	@ExceptionHandler(HasChildrenException.class)
+	public ResponseEntity<ProblemDetail> handleHasChildren(HasChildrenException ex, HttpServletRequest request) {
+		ProblemDetail body = ProblemDetail.forStatusAndDetail(STATUS_UNPROCESSABLE_ENTITY, ex.getMessage());
+		body.setTitle("Cannot Delete");
+		body.setInstance(URI.create(request.getRequestURI()));
+		body.setProperty("parentName", ex.getParentName());
+		body.setProperty("parentId", ex.getParentId().toString());
+		body.setProperty("childCount", ex.getChildCount());
+		body.setProperty("childLabel", ex.getChildLabel());
+		return ResponseEntity.status(STATUS_UNPROCESSABLE_ENTITY).body(body);
+	}
+
 	/** 422: Illegal state transition (e.g. editing a non-DRAFT lease) */
 	@ExceptionHandler(IllegalStateException.class)
 	public ResponseEntity<ProblemDetail> handleIllegalState(IllegalStateException ex, HttpServletRequest request) {
-		return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Unprocessable Entity",
+		return problem(STATUS_UNPROCESSABLE_ENTITY, "Unprocessable Entity",
 				ex.getMessage(), request.getRequestURI(), null, null);
 	}
 
@@ -133,6 +149,16 @@ public class GlobalExceptionHandler {
 	/** Utility to build RFC 7807 ProblemDetail responses */
 	private ResponseEntity<ProblemDetail> problem(
 			HttpStatus status,
+			String title,
+			String detail,
+			String path,
+			List<FieldErrorDto> fieldErrors,
+			String debugInfo) {
+		return problem((HttpStatusCode) status, title, detail, path, fieldErrors, debugInfo);
+	}
+
+	private ResponseEntity<ProblemDetail> problem(
+			HttpStatusCode status,
 			String title,
 			String detail,
 			String path,

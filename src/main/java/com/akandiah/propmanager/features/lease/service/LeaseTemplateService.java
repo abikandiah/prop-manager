@@ -7,14 +7,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseTemplateRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseTemplateResponse;
 import com.akandiah.propmanager.features.lease.api.dto.UpdateLeaseTemplateRequest;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplateRepository;
-
-import jakarta.persistence.OptimisticLockException;
 
 @Service
 public class LeaseTemplateService {
@@ -81,28 +80,29 @@ public class LeaseTemplateService {
 		LeaseTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("LeaseTemplate", id));
 
-		// Optimistic-lock check: reject if the client's version is stale
-		if (!template.getVersion().equals(request.version())) {
-			throw new OptimisticLockException(
-					"LeaseTemplate " + id + " has been modified by another user. "
-							+ "Expected version " + request.version()
-							+ " but current version is " + template.getVersion());
-		}
+		OptimisticLockingUtil.requireVersionMatch("LeaseTemplate", id, template.getVersion(), request.version());
 
-		if (request.name() != null)
+		if (request.name() != null) {
 			template.setName(request.name());
-		if (request.versionTag() != null)
+		}
+		if (request.versionTag() != null) {
 			template.setVersionTag(request.versionTag());
-		if (request.templateMarkdown() != null)
+		}
+		if (request.templateMarkdown() != null) {
 			template.setTemplateMarkdown(request.templateMarkdown());
-		if (request.defaultLateFeeType() != null)
+		}
+		if (request.defaultLateFeeType() != null) {
 			template.setDefaultLateFeeType(request.defaultLateFeeType());
-		if (request.defaultLateFeeAmount() != null)
+		}
+		if (request.defaultLateFeeAmount() != null) {
 			template.setDefaultLateFeeAmount(request.defaultLateFeeAmount());
-		if (request.defaultNoticePeriodDays() != null)
+		}
+		if (request.defaultNoticePeriodDays() != null) {
 			template.setDefaultNoticePeriodDays(request.defaultNoticePeriodDays());
-		if (request.active() != null)
+		}
+		if (request.active() != null) {
 			template.setActive(request.active());
+		}
 
 		template = repository.save(template);
 		return LeaseTemplateResponse.from(template);
@@ -114,8 +114,9 @@ public class LeaseTemplateService {
 	 */
 	@Transactional
 	public void deleteById(UUID id) {
-		if (!repository.existsById(id))
+		if (!repository.existsById(id)) {
 			throw new ResourceNotFoundException("LeaseTemplate", id);
+		}
 		leaseRepository.clearTemplateReferences(id);
 		repository.deleteById(id);
 	}

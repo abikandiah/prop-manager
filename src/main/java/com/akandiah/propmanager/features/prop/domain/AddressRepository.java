@@ -1,4 +1,4 @@
-package com.akandiah.propmanager.features.address.domain;
+package com.akandiah.propmanager.features.prop.domain;
 
 import java.util.UUID;
 

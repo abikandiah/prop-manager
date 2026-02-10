@@ -1,0 +1,53 @@
+# Dependency Directories (Crucial for token saving)
+node_modules/
+jspm_packages/
+web_modules/
+.venv/
+env/
+venv/
+
+# Build & Output (Claude should only see source, not build artifacts)
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+target/
+*.pyc
+__pycache__/
+
+# Version Control & IDE
+.git/
+.svn/
+.hg/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs & Temp Files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+tmp/
+temp/
+.cache/
+
+# Large Assets & Data (Claude cannot "watch" videos or raw images)
+public/assets/images/
+public/assets/videos/
+*.mp4
+*.zip
+*.pdf
+*.csv
+*.sql
+*.sqlite
+
+# Sensitive Info (Security safeguard)
+.env
+.env.*
+secrets.*
+certs/
+

@@ -19,13 +19,11 @@ import com.akandiah.propmanager.features.legal.api.dto.LegalResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/public")
 @Tag(name = "Legal", description = "Public legal documents (Terms, Privacy)")
-@RequiredArgsConstructor
 @Slf4j
 public class LegalController {
 

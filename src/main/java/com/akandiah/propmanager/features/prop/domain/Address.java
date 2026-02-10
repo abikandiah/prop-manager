@@ -1,4 +1,4 @@
-package com.akandiah.propmanager.features.address.domain;
+package com.akandiah.propmanager.features.prop.domain;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -62,7 +62,8 @@ public class Address {
 
 	@jakarta.persistence.PrePersist
 	void prePersist() {
-		if (createdAt == null)
+		if (createdAt == null) {
 			createdAt = Instant.now();
+		}
 	}
 }

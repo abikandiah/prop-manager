@@ -42,10 +42,12 @@ public class LeaseController {
 	public List<LeaseResponse> list(
 			@RequestParam(required = false) UUID unitId,
 			@RequestParam(required = false) UUID propertyId) {
-		if (unitId != null)
+		if (unitId != null) {
 			return service.findByUnitId(unitId);
-		if (propertyId != null)
+		}
+		if (propertyId != null) {
 			return service.findByPropertyId(propertyId);
+		}
 		return service.findAll();
 	}
 

@@ -8,7 +8,7 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "./mvnw -q compile -DskipTests",
+  "postCreateCommand": "./mvnw -q compile -DskipTests && curl -fsSL https://claude.ai/install.sh | bash",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -17,7 +17,8 @@
         "vmware.vscode-boot-dev-pack",
         "redhat.vscode-yaml",
         "esbenp.prettier-vscode",
-		"matthewpi.caddyfile-support"
+        "matthewpi.caddyfile-support",
+        "anthropic.claude-code"
       ],
       "settings": {
         "java.configuration.updateBuildConfiguration": "automatic"
@@ -30,6 +31,11 @@
       "target": "/workspaces/prop-manager-ui",
       "type": "bind",
       "consistency": "cached"
+    },
+    {
+      "source": "${localEnv:HOME}/.claude",
+      "target": "/home/vscode/.claude",
+      "type": "bind"
     }
   ]
 }

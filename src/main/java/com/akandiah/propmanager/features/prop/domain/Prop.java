@@ -5,8 +5,6 @@ import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
-import com.akandiah.propmanager.features.address.domain.Address;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -82,8 +80,9 @@ public class Prop {
 	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();
-		if (createdAt == null)
+		if (createdAt == null) {
 			createdAt = now;
+		}
 		updatedAt = now;
 	}
 

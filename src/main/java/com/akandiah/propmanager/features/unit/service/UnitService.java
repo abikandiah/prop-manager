@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.util.DeleteGuardUtil;
+import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.prop.domain.Prop;
@@ -16,8 +18,6 @@ import com.akandiah.propmanager.features.unit.api.dto.UnitResponse;
 import com.akandiah.propmanager.features.unit.api.dto.UpdateUnitRequest;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
-
-import jakarta.persistence.OptimisticLockException;
 
 @Service
 public class UnitService {
@@ -82,63 +82,59 @@ public class UnitService {
 	public UnitResponse update(UUID id, UpdateUnitRequest request) {
 		Unit unit = unitRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Unit", id));
-		requireVersionMatch(unit, request.version());
+		OptimisticLockingUtil.requireVersionMatch("Unit", id, unit.getVersion(), request.version());
 		if (request.propertyId() != null) {
 			Prop prop = propRepository.findById(request.propertyId())
 					.orElseThrow(() -> new ResourceNotFoundException("Prop", request.propertyId()));
 			unit.setProp(prop);
 		}
-		if (request.unitNumber() != null)
+		if (request.unitNumber() != null) {
 			unit.setUnitNumber(request.unitNumber());
-		if (request.status() != null)
+		}
+		if (request.status() != null) {
 			unit.setStatus(request.status());
-		if (request.description() != null)
+		}
+		if (request.description() != null) {
 			unit.setDescription(request.description());
-		if (request.rentAmount() != null)
+		}
+		if (request.rentAmount() != null) {
 			unit.setRentAmount(request.rentAmount());
-		if (request.securityDeposit() != null)
+		}
+		if (request.securityDeposit() != null) {
 			unit.setSecurityDeposit(request.securityDeposit());
-		if (request.bedrooms() != null)
+		}
+		if (request.bedrooms() != null) {
 			unit.setBedrooms(request.bedrooms());
-		if (request.bathrooms() != null)
+		}
+		if (request.bathrooms() != null) {
 			unit.setBathrooms(request.bathrooms());
-		if (request.squareFootage() != null)
+		}
+		if (request.squareFootage() != null) {
 			unit.setSquareFootage(request.squareFootage());
-		if (request.balcony() != null)
+		}
+		if (request.balcony() != null) {
 			unit.setBalcony(request.balcony());
-		if (request.laundryInUnit() != null)
+		}
+		if (request.laundryInUnit() != null) {
 			unit.setLaundryInUnit(request.laundryInUnit());
-		if (request.hardwoodFloors() != null)
+		}
+		if (request.hardwoodFloors() != null) {
 			unit.setHardwoodFloors(request.hardwoodFloors());
+		}
 		unit = unitRepository.save(unit);
 		return UnitResponse.from(unit);
 	}
 
 	@Transactional
 	public void deleteById(UUID id) {
-		if (!unitRepository.existsById(id))
+		if (!unitRepository.existsById(id)) {
 			throw new ResourceNotFoundException("Unit", id);
+		}
 
 		// Guard against orphaning child records
-		long assetCount = assetRepository.countByUnit_Id(id);
-		if (assetCount > 0)
-			throw new IllegalStateException(
-					"Cannot delete Unit " + id + ": it has " + assetCount + " asset(s). Delete those first.");
-
-		long leaseCount = leaseRepository.countByUnit_Id(id);
-		if (leaseCount > 0)
-			throw new IllegalStateException(
-					"Cannot delete Unit " + id + ": it has " + leaseCount + " lease(s). Delete those first.");
+		DeleteGuardUtil.requireNoChildren("Unit", id, assetRepository.countByUnit_Id(id), "asset(s)", "Delete those first.");
+		DeleteGuardUtil.requireNoChildren("Unit", id, leaseRepository.countByUnit_Id(id), "lease(s)", "Delete those first.");
 
 		unitRepository.deleteById(id);
-	}
-
-	private void requireVersionMatch(Unit unit, Integer clientVersion) {
-		if (!unit.getVersion().equals(clientVersion)) {
-			throw new OptimisticLockException(
-					"Unit " + unit.getId() + " has been modified by another user. "
-							+ "Expected version " + clientVersion
-							+ " but current version is " + unit.getVersion());
-		}
 	}
 }

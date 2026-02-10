@@ -33,10 +33,12 @@ public class UserService {
 		return userRepository.findByIdpSub(idpSub)
 				.map(user -> {
 					log.info("Updating existing user: {}", email);
-					if (name != null)
+					if (name != null) {
 						user.setName(name);
-					if (email != null)
+					}
+					if (email != null) {
 						user.setEmail(email);
+					}
 					return userRepository.save(user);
 				});
 	}

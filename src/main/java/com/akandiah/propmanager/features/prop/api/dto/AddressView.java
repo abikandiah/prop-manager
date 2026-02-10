@@ -1,12 +1,12 @@
-package com.akandiah.propmanager.features.address.api.dto;
+package com.akandiah.propmanager.features.prop.api.dto;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-import com.akandiah.propmanager.features.address.domain.Address;
+import com.akandiah.propmanager.features.prop.domain.Address;
 
-public record AddressResponse(
+public record AddressView(
 		UUID id,
 		String addressLine1,
 		String addressLine2,
@@ -18,8 +18,8 @@ public record AddressResponse(
 		BigDecimal longitude,
 		Instant createdAt) {
 
-	public static AddressResponse from(Address address) {
-		return new AddressResponse(
+	public static AddressView from(Address address) {
+		return new AddressView(
 				address.getId(),
 				address.getAddressLine1(),
 				address.getAddressLine2(),

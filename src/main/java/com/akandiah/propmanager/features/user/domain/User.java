@@ -59,8 +59,9 @@ public class User {
 	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();
-		if (createdAt == null)
+		if (createdAt == null) {
 			createdAt = now;
+		}
 		updatedAt = now;
 	}
 

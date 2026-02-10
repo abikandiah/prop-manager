@@ -40,8 +40,9 @@ public class LeaseTemplateController {
 	public List<LeaseTemplateResponse> list(
 			@RequestParam(required = false, defaultValue = "false") boolean active,
 			@RequestParam(required = false) String search) {
-		if (search != null && !search.isBlank())
+		if (search != null && !search.isBlank()) {
 			return service.search(search.strip());
+		}
 		return active ? service.findActive() : service.findAll();
 	}
 

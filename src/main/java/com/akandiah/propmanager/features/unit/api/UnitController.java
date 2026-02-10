@@ -38,8 +38,9 @@ public class UnitController {
 	@GetMapping
 	@Operation(summary = "List units, optionally by property ID")
 	public List<UnitResponse> list(@RequestParam(required = false) UUID propId) {
-		if (propId != null)
+		if (propId != null) {
 			return unitService.findByPropId(propId);
+		}
 		return unitService.findAll();
 	}
 

@@ -40,10 +40,12 @@ public class AssetController {
 	public List<AssetResponse> list(
 			@RequestParam(required = false) UUID propId,
 			@RequestParam(required = false) UUID unitId) {
-		if (propId != null)
+		if (propId != null) {
 			return assetService.findByPropId(propId);
-		if (unitId != null)
+		}
+		if (unitId != null) {
 			return assetService.findByUnitId(unitId);
+		}
 		return assetService.findAll();
 	}
 
