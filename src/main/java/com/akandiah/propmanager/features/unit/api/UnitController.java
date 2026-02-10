@@ -1,8 +1,8 @@
 package com.akandiah.propmanager.features.unit.api;
 
-import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.features.unit.api.dto.CreateUnitRequest;
 import com.akandiah.propmanager.features.unit.api.dto.UnitResponse;
 import com.akandiah.propmanager.features.unit.api.dto.UpdateUnitRequest;
@@ -37,11 +38,11 @@ public class UnitController {
 
 	@GetMapping
 	@Operation(summary = "List units, optionally by property ID")
-	public List<UnitResponse> list(@RequestParam(required = false) UUID propId) {
+	public PageResponse<UnitResponse> list(@RequestParam(required = false) UUID propId, Pageable pageable) {
 		if (propId != null) {
-			return unitService.findByPropId(propId);
+			return unitService.findByPropId(propId, pageable);
 		}
-		return unitService.findAll();
+		return unitService.findAll(pageable);
 	}
 
 	@GetMapping("/{id}")

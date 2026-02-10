@@ -16,7 +16,8 @@ public record AddressView(
 		String countryCode,
 		BigDecimal latitude,
 		BigDecimal longitude,
-		Instant createdAt) {
+		Instant createdAt,
+		Instant updatedAt) {
 
 	public static AddressView from(Address address) {
 		return new AddressView(
@@ -29,6 +30,7 @@ public record AddressView(
 				address.getCountryCode(),
 				address.getLatitude(),
 				address.getLongitude(),
-				address.getCreatedAt());
+				address.getCreatedAt(),
+				address.getUpdatedAt());
 	}
 }

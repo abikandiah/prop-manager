@@ -3,15 +3,16 @@ package com.akandiah.propmanager.features.lease.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseTemplateRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseTemplateResponse;
 import com.akandiah.propmanager.features.lease.api.dto.UpdateLeaseTemplateRequest;
-import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplateRepository;
 
@@ -19,11 +20,9 @@ import com.akandiah.propmanager.features.lease.domain.LeaseTemplateRepository;
 public class LeaseTemplateService {
 
 	private final LeaseTemplateRepository repository;
-	private final LeaseRepository leaseRepository;
 
-	public LeaseTemplateService(LeaseTemplateRepository repository, LeaseRepository leaseRepository) {
+	public LeaseTemplateService(LeaseTemplateRepository repository) {
 		this.repository = repository;
-		this.leaseRepository = leaseRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -34,6 +33,12 @@ public class LeaseTemplateService {
 	}
 
 	@Transactional(readOnly = true)
+	public PageResponse<LeaseTemplateResponse> findAll(Pageable pageable) {
+		return PageResponse.from(repository.findAll(pageable)
+				.map(LeaseTemplateResponse::from));
+	}
+
+	@Transactional(readOnly = true)
 	public List<LeaseTemplateResponse> findActive() {
 		return repository.findByActiveTrueOrderByNameAsc().stream()
 				.map(LeaseTemplateResponse::from)
@@ -41,10 +46,22 @@ public class LeaseTemplateService {
 	}
 
 	@Transactional(readOnly = true)
+	public PageResponse<LeaseTemplateResponse> findActive(Pageable pageable) {
+		return PageResponse.from(repository.findByActiveTrueOrderByNameAsc(pageable)
+				.map(LeaseTemplateResponse::from));
+	}
+
+	@Transactional(readOnly = true)
 	public List<LeaseTemplateResponse> search(String query) {
 		return repository.findByNameContainingIgnoreCaseOrderByNameAsc(query).stream()
 				.map(LeaseTemplateResponse::from)
 				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public PageResponse<LeaseTemplateResponse> search(String query, Pageable pageable) {
+		return PageResponse.from(repository.findByNameContainingIgnoreCaseOrderByNameAsc(query, pageable)
+				.map(LeaseTemplateResponse::from));
 	}
 
 	@Transactional(readOnly = true)
@@ -109,15 +126,14 @@ public class LeaseTemplateService {
 	}
 
 	/**
-	 * Hard-delete. Existing leases keep their denormalized template name/version
-	 * and stamped content; only the optional FK is nulled out.
+	 * Soft-delete. Sets active=false instead of removing the record.
+	 * Existing leases keep their FK reference intact.
 	 */
 	@Transactional
 	public void deleteById(UUID id) {
-		if (!repository.existsById(id)) {
-			throw new ResourceNotFoundException("LeaseTemplate", id);
-		}
-		leaseRepository.clearTemplateReferences(id);
-		repository.deleteById(id);
+		LeaseTemplate template = repository.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("LeaseTemplate", id));
+		template.setActive(false);
+		repository.save(template);
 	}
 }

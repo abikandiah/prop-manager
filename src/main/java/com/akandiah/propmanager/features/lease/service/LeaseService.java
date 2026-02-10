@@ -3,9 +3,11 @@ package com.akandiah.propmanager.features.lease.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
@@ -30,17 +32,23 @@ public class LeaseService {
 	private final UnitRepository unitRepository;
 	private final PropRepository propRepository;
 	private final LeaseTenantRepository leaseTenantRepository;
+	private final LeaseStateMachine stateMachine;
+	private final LeaseTemplateRenderer renderer;
 
 	public LeaseService(LeaseRepository leaseRepository,
 			LeaseTemplateService templateService,
 			UnitRepository unitRepository,
 			PropRepository propRepository,
-			LeaseTenantRepository leaseTenantRepository) {
+			LeaseTenantRepository leaseTenantRepository,
+			LeaseStateMachine stateMachine,
+			LeaseTemplateRenderer renderer) {
 		this.leaseRepository = leaseRepository;
 		this.templateService = templateService;
 		this.unitRepository = unitRepository;
 		this.propRepository = propRepository;
 		this.leaseTenantRepository = leaseTenantRepository;
+		this.stateMachine = stateMachine;
+		this.renderer = renderer;
 	}
 
 	// ───────────────────────── Queries ─────────────────────────
@@ -53,6 +61,12 @@ public class LeaseService {
 	}
 
 	@Transactional(readOnly = true)
+	public PageResponse<LeaseResponse> findAll(Pageable pageable) {
+		return PageResponse.from(leaseRepository.findAll(pageable)
+				.map(LeaseResponse::from));
+	}
+
+	@Transactional(readOnly = true)
 	public List<LeaseResponse> findByUnitId(UUID unitId) {
 		return leaseRepository.findByUnit_IdOrderByStartDateDesc(unitId).stream()
 				.map(LeaseResponse::from)
@@ -60,10 +74,22 @@ public class LeaseService {
 	}
 
 	@Transactional(readOnly = true)
+	public PageResponse<LeaseResponse> findByUnitId(UUID unitId, Pageable pageable) {
+		return PageResponse.from(leaseRepository.findByUnit_IdOrderByStartDateDesc(unitId, pageable)
+				.map(LeaseResponse::from));
+	}
+
+	@Transactional(readOnly = true)
 	public List<LeaseResponse> findByPropertyId(UUID propertyId) {
 		return leaseRepository.findByProperty_IdOrderByStartDateDesc(propertyId).stream()
 				.map(LeaseResponse::from)
 				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public PageResponse<LeaseResponse> findByPropertyId(UUID propertyId, Pageable pageable) {
+		return PageResponse.from(leaseRepository.findByProperty_IdOrderByStartDateDesc(propertyId, pageable)
+				.map(LeaseResponse::from));
 	}
 
 	@Transactional(readOnly = true)
@@ -99,11 +125,11 @@ public class LeaseService {
 				.rentAmount(request.rentAmount())
 				.rentDueDay(request.rentDueDay())
 				.securityDepositHeld(request.securityDepositHeld())
-				.lateFeeType(coalesce(request.lateFeeType(), template.getDefaultLateFeeType()))
-				.lateFeeAmount(coalesce(request.lateFeeAmount(), template.getDefaultLateFeeAmount()))
-				.noticePeriodDays(coalesce(request.noticePeriodDays(), template.getDefaultNoticePeriodDays()))
+				.lateFeeType(LeaseTemplateRenderer.coalesce(request.lateFeeType(), template.getDefaultLateFeeType()))
+				.lateFeeAmount(LeaseTemplateRenderer.coalesce(request.lateFeeAmount(), template.getDefaultLateFeeAmount()))
+				.noticePeriodDays(LeaseTemplateRenderer.coalesce(request.noticePeriodDays(), template.getDefaultNoticePeriodDays()))
 				.additionalMetadata(request.additionalMetadata())
-				.executedContentMarkdown(stampMarkdown(template.getTemplateMarkdown(), request, unit, property))
+				.executedContentMarkdown(renderer.stampMarkdown(template.getTemplateMarkdown(), request, unit, property))
 				.build();
 
 		lease = leaseRepository.save(lease);
@@ -115,7 +141,7 @@ public class LeaseService {
 	@Transactional
 	public LeaseResponse update(UUID id, UpdateLeaseRequest request) {
 		Lease lease = getEntity(id);
-		requireDraft(lease);
+		stateMachine.requireDraft(lease);
 		OptimisticLockingUtil.requireVersionMatch("Lease", id, lease.getVersion(), request.version());
 
 		if (request.startDate() != null) {
@@ -158,41 +184,25 @@ public class LeaseService {
 	/** Owner sends the draft to the tenant for review. */
 	@Transactional
 	public LeaseResponse submitForReview(UUID id) {
-		Lease lease = getEntity(id);
-		requireStatus(lease, LeaseStatus.DRAFT, "submit for review");
-		lease.setStatus(LeaseStatus.PENDING_REVIEW);
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
+		return stateMachine.submitForReview(id);
 	}
 
 	/** Both parties signed — lease becomes active and read-only. */
 	@Transactional
 	public LeaseResponse activate(UUID id) {
-		Lease lease = getEntity(id);
-		requireStatus(lease, LeaseStatus.PENDING_REVIEW, "activate");
-		lease.setStatus(LeaseStatus.ACTIVE);
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
+		return stateMachine.activate(id);
 	}
 
 	/** Revert a pending-review lease back to draft for further edits. */
 	@Transactional
 	public LeaseResponse revertToDraft(UUID id) {
-		Lease lease = getEntity(id);
-		requireStatus(lease, LeaseStatus.PENDING_REVIEW, "revert to draft");
-		lease.setStatus(LeaseStatus.DRAFT);
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
+		return stateMachine.revertToDraft(id);
 	}
 
 	/** Terminate an active lease early. */
 	@Transactional
 	public LeaseResponse terminate(UUID id) {
-		Lease lease = getEntity(id);
-		requireStatus(lease, LeaseStatus.ACTIVE, "terminate");
-		lease.setStatus(LeaseStatus.TERMINATED);
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
+		return stateMachine.terminate(id);
 	}
 
 	// ───────────────────────── Delete (DRAFT only) ─────────────────────────
@@ -200,7 +210,7 @@ public class LeaseService {
 	@Transactional
 	public void deleteById(UUID id) {
 		Lease lease = getEntity(id);
-		requireDraft(lease);
+		stateMachine.requireDraft(lease);
 
 		DeleteGuardUtil.requireNoChildren("Lease", id, leaseTenantRepository.countByLease_Id(id), "tenant assignment(s)", "Remove those first.");
 
@@ -212,44 +222,5 @@ public class LeaseService {
 	private Lease getEntity(UUID id) {
 		return leaseRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Lease", id));
-	}
-
-	private void requireDraft(Lease lease) {
-		if (lease.getStatus() != LeaseStatus.DRAFT) {
-			throw new IllegalStateException(
-					"Lease " + lease.getId() + " is " + lease.getStatus() + "; only DRAFT leases can be modified");
-		}
-	}
-
-	private void requireStatus(Lease lease, LeaseStatus expected, String action) {
-		if (lease.getStatus() != expected) {
-			throw new IllegalStateException(
-					"Cannot " + action + ": lease " + lease.getId()
-							+ " is " + lease.getStatus() + " (expected " + expected + ")");
-		}
-	}
-
-	/**
-	 * Simple placeholder stamping. Replaces {{key}} tokens in the template
-	 * markdown with concrete lease values.
-	 */
-	private String stampMarkdown(String markdown, CreateLeaseRequest req, Unit unit, Prop property) {
-		if (markdown == null) {
-			return null;
-		}
-		return markdown
-				.replace("{{property_name}}", property.getLegalName())
-				.replace("{{unit_number}}", unit.getUnitNumber())
-				.replace("{{start_date}}", req.startDate().toString())
-				.replace("{{end_date}}", req.endDate().toString())
-				.replace("{{rent_amount}}", req.rentAmount().toPlainString())
-				.replace("{{rent_due_day}}", req.rentDueDay().toString())
-				.replace("{{security_deposit}}", req.securityDepositHeld() != null
-						? req.securityDepositHeld().toPlainString()
-						: "N/A");
-	}
-
-	private static <T> T coalesce(T override, T fallback) {
-		return override != null ? override : fallback;
 	}
 }

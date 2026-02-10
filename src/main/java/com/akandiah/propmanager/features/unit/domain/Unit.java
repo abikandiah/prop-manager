@@ -53,6 +53,10 @@ public class Unit {
 	@Enumerated(EnumType.STRING)
 	private UnitStatus status;
 
+	@Column(name = "unit_type", length = 32)
+	@Enumerated(EnumType.STRING)
+	private UnitType unitType;
+
 	@Column(name = "description", length = 2000)
 	private String description;
 

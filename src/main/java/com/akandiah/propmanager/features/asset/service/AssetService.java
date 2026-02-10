@@ -3,9 +3,11 @@ package com.akandiah.propmanager.features.asset.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.asset.api.dto.AssetResponse;
@@ -40,6 +42,12 @@ public class AssetService {
 	}
 
 	@Transactional(readOnly = true)
+	public PageResponse<AssetResponse> findAll(Pageable pageable) {
+		return PageResponse.from(assetRepository.findAll(pageable)
+				.map(AssetResponse::from));
+	}
+
+	@Transactional(readOnly = true)
 	public List<AssetResponse> findByPropId(UUID propId) {
 		return assetRepository.findByProp_Id(propId).stream()
 				.map(AssetResponse::from)
@@ -47,10 +55,22 @@ public class AssetService {
 	}
 
 	@Transactional(readOnly = true)
+	public PageResponse<AssetResponse> findByPropId(UUID propId, Pageable pageable) {
+		return PageResponse.from(assetRepository.findByProp_Id(propId, pageable)
+				.map(AssetResponse::from));
+	}
+
+	@Transactional(readOnly = true)
 	public List<AssetResponse> findByUnitId(UUID unitId) {
 		return assetRepository.findByUnit_Id(unitId).stream()
 				.map(AssetResponse::from)
 				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public PageResponse<AssetResponse> findByUnitId(UUID unitId, Pageable pageable) {
+		return PageResponse.from(assetRepository.findByUnit_Id(unitId, pageable)
+				.map(AssetResponse::from));
 	}
 
 	@Transactional(readOnly = true)

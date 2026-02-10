@@ -52,6 +52,11 @@ databaseChangeLog:
                   type: timestamptz
                   constraints:
                     nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
 
   # users - no FKs
   - changeSet:
@@ -155,6 +160,12 @@ databaseChangeLog:
                   type: timestamptz
                   constraints:
                     nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
         - addForeignKeyConstraint:
             baseTableName: prop
             baseColumnNames: address_id
@@ -186,6 +197,9 @@ databaseChangeLog:
                   type: varchar(64)
                   constraints:
                     nullable: false
+              - column:
+                  name: unit_type
+                  type: varchar(32)
               - column:
                   name: status
                   type: varchar(32)
@@ -226,6 +240,12 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
                   constraints:
                     nullable: false
         - addForeignKeyConstraint:
@@ -280,6 +300,12 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
                   constraints:
                     nullable: false
         - addForeignKeyConstraint:
@@ -339,6 +365,12 @@ databaseChangeLog:
                   type: timestamptz
                   constraints:
                     nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
         - addForeignKeyConstraint:
             baseTableName: assets
             baseColumnNames: property_id
@@ -352,7 +384,66 @@ databaseChangeLog:
             referencedTableName: units
             referencedColumnNames: id
 
-  # leases - FK units, prop
+  # lease_templates
+  - changeSet:
+      id: "initial-lease-templates"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: lease_templates
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version_tag
+                  type: varchar(50)
+              - column:
+                  name: template_markdown
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: default_late_fee_type
+                  type: varchar(32)
+              - column:
+                  name: default_late_fee_amount
+                  type: decimal(19,4)
+              - column:
+                  name: default_notice_period_days
+                  type: int
+              - column:
+                  name: is_active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  # leases - FK units, prop, lease_templates
   - changeSet:
       id: "initial-leases"
       author: "prop-manager"
@@ -376,6 +467,15 @@ databaseChangeLog:
                   type: uuid
                   constraints:
                     nullable: false
+              - column:
+                  name: lease_template_id
+                  type: uuid
+              - column:
+                  name: lease_template_name
+                  type: varchar(255)
+              - column:
+                  name: lease_template_version_tag
+                  type: varchar(50)
               - column:
                   name: status
                   type: varchar(32)
@@ -414,8 +514,14 @@ databaseChangeLog:
                   name: notice_period_days
                   type: int
               - column:
-                  name: lease_document_url
+                  name: executed_content_markdown
+                  type: text
+              - column:
+                  name: signed_pdf_url
                   type: varchar(512)
+              - column:
+                  name: additional_metadata
+                  type: jsonb
               - column:
                   name: created_at
                   type: timestamptz
@@ -424,6 +530,12 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
                   constraints:
                     nullable: false
         - addForeignKeyConstraint:
@@ -438,8 +550,15 @@ databaseChangeLog:
             constraintName: fk_leases_property
             referencedTableName: prop
             referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: leases
+            baseColumnNames: lease_template_id
+            constraintName: fk_leases_lease_template
+            referencedTableName: lease_templates
+            referencedColumnNames: id
+            onDelete: SET NULL
 
-  # lease_tenants - join lease ↔ tenants with role (e.g. primary vs occupant)
+  # lease_tenants - join lease <> tenants with role (e.g. primary vs occupant)
   - changeSet:
       id: "initial-lease-tenants"
       author: "prop-manager"

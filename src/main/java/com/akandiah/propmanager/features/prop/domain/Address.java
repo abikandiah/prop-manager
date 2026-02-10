@@ -60,10 +60,21 @@ public class Address {
 	@Setter(AccessLevel.NONE)
 	private Instant createdAt;
 
+	@Column(name = "updated_at", nullable = false)
+	@Setter(AccessLevel.NONE)
+	private Instant updatedAt;
+
 	@jakarta.persistence.PrePersist
 	void prePersist() {
+		Instant now = Instant.now();
 		if (createdAt == null) {
-			createdAt = Instant.now();
+			createdAt = now;
 		}
+		updatedAt = now;
+	}
+
+	@jakarta.persistence.PreUpdate
+	void preUpdate() {
+		updatedAt = Instant.now();
 	}
 }

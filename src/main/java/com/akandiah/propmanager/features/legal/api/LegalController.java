@@ -19,6 +19,7 @@ import com.akandiah.propmanager.features.legal.api.dto.LegalResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
@@ -33,16 +34,27 @@ public class LegalController {
 	@Value("classpath:legal/privacy.md")
 	private Resource privacyResource;
 
+	private LegalResponse cachedTerms;
+	private LegalResponse cachedPrivacy;
+
+	@PostConstruct
+	void init() {
+		log.info("Eagerly loading legal documents at startup");
+		cachedTerms = loadLegalDocument("Terms and Conditions", termsResource);
+		cachedPrivacy = loadLegalDocument("Privacy Policy", privacyResource);
+		log.info("Legal documents cached successfully");
+	}
+
 	@GetMapping("/terms")
 	@Operation(summary = "Get Terms and Conditions", description = "Returns the current terms and conditions for the application.")
 	public LegalResponse getTerms() {
-		return loadLegalDocument("Terms and Conditions", termsResource);
+		return cachedTerms;
 	}
 
 	@GetMapping("/privacy")
 	@Operation(summary = "Get Privacy Policy", description = "Returns the current privacy policy for the application.")
 	public LegalResponse getPrivacy() {
-		return loadLegalDocument("Privacy Policy", privacyResource);
+		return cachedPrivacy;
 	}
 
 	private LegalResponse loadLegalDocument(String title, Resource resource) {

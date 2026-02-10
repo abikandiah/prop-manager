@@ -22,6 +22,9 @@ import com.nimbusds.jwt.SignedJWT;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,7 +47,7 @@ public class DevAuthController {
 
 	@PostMapping("/login")
 	@Operation(summary = "Generate a dev JWT", description = "Generates a signed JWT with specified roles. ONLY for local development.")
-	public Map<String, String> login(@RequestBody DevLoginRequest request) throws Exception {
+	public Map<String, String> login(@Valid @RequestBody DevLoginRequest request) throws Exception {
 		log.warn("DEV LOGIN ATTEMPT - User: {}", request.username());
 
 		if (!devJwtConfig.getDevLoginSecret().equals(request.password())) {
@@ -69,6 +72,9 @@ public class DevAuthController {
 		return Map.of("token", signedJWT.serialize());
 	}
 
-	public record DevLoginRequest(String username, String password, List<String> roles) {
+	public record DevLoginRequest(
+			@NotBlank String username,
+			@NotBlank String password,
+			@NotNull List<String> roles) {
 	}
 }

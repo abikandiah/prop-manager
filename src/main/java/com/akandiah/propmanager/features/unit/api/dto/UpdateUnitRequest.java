@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import com.akandiah.propmanager.features.unit.domain.UnitStatus;
+import com.akandiah.propmanager.features.unit.domain.UnitType;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -14,6 +15,8 @@ public record UpdateUnitRequest(
 		@Size(max = 64) String unitNumber,
 
 		UnitStatus status,
+
+		UnitType unitType,
 
 		@Size(max = 2000) String description,
 

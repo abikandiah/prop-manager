@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @RestControllerAdvice
 @Slf4j
@@ -117,6 +118,16 @@ public class GlobalExceptionHandler {
 		return problem(HttpStatus.CONFLICT, "Conflict",
 				ex.getMessage() != null ? ex.getMessage()
 						: "The resource was modified by another request. Please refresh and try again.",
+				request.getRequestURI(), null, null);
+	}
+
+	/** 409: Data Integrity Violation (e.g. FK constraint, concurrent insert) */
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ProblemDetail> handleDataIntegrityViolation(DataIntegrityViolationException ex,
+			HttpServletRequest request) {
+		log.warn("Data integrity violation at {}: {}", request.getRequestURI(), ex.getMessage());
+		return problem(HttpStatus.CONFLICT, "Conflict",
+				"Operation failed due to a referential integrity constraint. A related record may have been created concurrently.",
 				request.getRequestURI(), null, null);
 	}
 

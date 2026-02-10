@@ -6,12 +6,14 @@ import java.util.UUID;
 
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitStatus;
+import com.akandiah.propmanager.features.unit.domain.UnitType;
 
 public record UnitResponse(
 		UUID id,
 		UUID propertyId,
 		String unitNumber,
 		UnitStatus status,
+		UnitType unitType,
 		String description,
 		BigDecimal rentAmount,
 		BigDecimal securityDeposit,
@@ -31,6 +33,7 @@ public record UnitResponse(
 				unit.getProp() != null ? unit.getProp().getId() : null,
 				unit.getUnitNumber(),
 				unit.getStatus(),
+				unit.getUnitType(),
 				unit.getDescription(),
 				unit.getRentAmount(),
 				unit.getSecurityDeposit(),

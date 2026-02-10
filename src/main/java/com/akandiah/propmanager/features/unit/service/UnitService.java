@@ -3,9 +3,11 @@ package com.akandiah.propmanager.features.unit.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
@@ -43,10 +45,22 @@ public class UnitService {
 	}
 
 	@Transactional(readOnly = true)
+	public PageResponse<UnitResponse> findAll(Pageable pageable) {
+		return PageResponse.from(unitRepository.findAll(pageable)
+				.map(UnitResponse::from));
+	}
+
+	@Transactional(readOnly = true)
 	public List<UnitResponse> findByPropId(UUID propId) {
 		return unitRepository.findByProp_IdOrderByUnitNumberAsc(propId).stream()
 				.map(UnitResponse::from)
 				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public PageResponse<UnitResponse> findByPropId(UUID propId, Pageable pageable) {
+		return PageResponse.from(unitRepository.findByProp_IdOrderByUnitNumberAsc(propId, pageable)
+				.map(UnitResponse::from));
 	}
 
 	@Transactional(readOnly = true)
@@ -64,6 +78,7 @@ public class UnitService {
 				.prop(prop)
 				.unitNumber(request.unitNumber())
 				.status(request.status())
+				.unitType(request.unitType())
 				.description(request.description())
 				.rentAmount(request.rentAmount())
 				.securityDeposit(request.securityDeposit())
@@ -93,6 +108,9 @@ public class UnitService {
 		}
 		if (request.status() != null) {
 			unit.setStatus(request.status());
+		}
+		if (request.unitType() != null) {
+			unit.setUnitType(request.unitType());
 		}
 		if (request.description() != null) {
 			unit.setDescription(request.description());
