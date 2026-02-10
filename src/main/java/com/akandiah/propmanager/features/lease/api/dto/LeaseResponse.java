@@ -30,6 +30,7 @@ public record LeaseResponse(
 		BigDecimal lateFeeAmount,
 		Integer noticePeriodDays,
 		Map<String, Object> additionalMetadata,
+		Map<String, String> templateParameters,
 		Instant createdAt,
 		Instant updatedAt) {
 
@@ -54,6 +55,7 @@ public record LeaseResponse(
 				l.getLateFeeAmount(),
 				l.getNoticePeriodDays(),
 				l.getAdditionalMetadata(),
+				l.getTemplateParameters(),
 				l.getCreatedAt(),
 				l.getUpdatedAt());
 	}

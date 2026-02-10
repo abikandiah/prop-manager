@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.features.lease.api.dto;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 
@@ -20,5 +21,8 @@ public record CreateLeaseTemplateRequest(
 
 		@PositiveOrZero(message = "Late fee amount must be zero or positive") BigDecimal defaultLateFeeAmount,
 
-		@Min(value = 1, message = "Notice period must be at least 1 day") Integer defaultNoticePeriodDays) {
+		@Min(value = 1, message = "Notice period must be at least 1 day") Integer defaultNoticePeriodDays,
+
+		/** Default placeholder values for {{key}} in the template markdown. */
+		Map<String, String> templateParameters) {
 }

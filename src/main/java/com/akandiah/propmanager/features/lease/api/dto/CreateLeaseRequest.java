@@ -40,5 +40,8 @@ public record CreateLeaseRequest(
 
 		@Min(1) Integer noticePeriodDays,
 
-		Map<String, Object> additionalMetadata) {
+		Map<String, Object> additionalMetadata,
+
+		/** Extra placeholders for template: {{key}} → value. Can add or override built-in params. */
+		Map<String, String> templateParameters) {
 }

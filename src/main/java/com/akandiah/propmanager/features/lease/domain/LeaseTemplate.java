@@ -2,9 +2,12 @@ package com.akandiah.propmanager.features.lease.domain;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -57,8 +60,6 @@ public class LeaseTemplate {
 	@Column(name = "template_markdown", columnDefinition = "TEXT", nullable = false)
 	private String templateMarkdown;
 
-	// --- DEFAULT SETTINGS (arguments for the stamping logic) ---
-
 	@Column(name = "default_late_fee_type", length = 32)
 	@Enumerated(EnumType.STRING)
 	private LateFeeType defaultLateFeeType;
@@ -73,7 +74,14 @@ public class LeaseTemplate {
 	@Column(name = "is_active", nullable = false)
 	private boolean active = true;
 
-	// --- AUDIT FIELDS ---
+	/**
+	 * Default placeholder values for this template. When stamping a lease,
+	 * these are applied after built-in params and can be overridden by the
+	 * lease request's templateParameters.
+	 */
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "template_parameters")
+	private Map<String, String> templateParameters;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	@Setter(AccessLevel.NONE)

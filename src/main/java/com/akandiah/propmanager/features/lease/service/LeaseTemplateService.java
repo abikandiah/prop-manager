@@ -87,6 +87,7 @@ public class LeaseTemplateService {
 				.defaultLateFeeType(request.defaultLateFeeType())
 				.defaultLateFeeAmount(request.defaultLateFeeAmount())
 				.defaultNoticePeriodDays(request.defaultNoticePeriodDays())
+				.templateParameters(request.templateParameters())
 				.build();
 		template = repository.save(template);
 		return LeaseTemplateResponse.from(template);
@@ -119,6 +120,9 @@ public class LeaseTemplateService {
 		}
 		if (request.active() != null) {
 			template.setActive(request.active());
+		}
+		if (request.templateParameters() != null) {
+			template.setTemplateParameters(request.templateParameters());
 		}
 
 		template = repository.save(template);

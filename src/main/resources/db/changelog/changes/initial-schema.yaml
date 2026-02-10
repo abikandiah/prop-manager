@@ -427,6 +427,9 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
+                  name: template_parameters
+                  type: jsonb
+              - column:
                   name: created_at
                   type: timestamptz
                   constraints:
@@ -521,6 +524,9 @@ databaseChangeLog:
                   type: varchar(512)
               - column:
                   name: additional_metadata
+                  type: jsonb
+              - column:
+                  name: template_parameters
                   type: jsonb
               - column:
                   name: created_at

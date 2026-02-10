@@ -2,6 +2,7 @@ package com.akandiah.propmanager.features.lease.api.dto;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
@@ -17,6 +18,7 @@ public record LeaseTemplateResponse(
 		BigDecimal defaultLateFeeAmount,
 		Integer defaultNoticePeriodDays,
 		boolean active,
+		Map<String, String> templateParameters,
 		Instant createdAt,
 		Instant updatedAt) {
 
@@ -31,6 +33,7 @@ public record LeaseTemplateResponse(
 				t.getDefaultLateFeeAmount(),
 				t.getDefaultNoticePeriodDays(),
 				t.isActive(),
+				t.getTemplateParameters(),
 				t.getCreatedAt(),
 				t.getUpdatedAt());
 	}

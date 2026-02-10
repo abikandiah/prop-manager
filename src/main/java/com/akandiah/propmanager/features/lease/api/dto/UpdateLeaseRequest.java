@@ -37,5 +37,8 @@ public record UpdateLeaseRequest(
 
 		Map<String, Object> additionalMetadata,
 
+		/** Extra placeholders for template: {{key}} → value. */
+		Map<String, String> templateParameters,
+
 		@NotNull(message = "version is required for optimistic-lock verification") Integer version) {
 }

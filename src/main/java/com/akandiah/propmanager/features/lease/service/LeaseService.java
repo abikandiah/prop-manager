@@ -129,7 +129,8 @@ public class LeaseService {
 				.lateFeeAmount(LeaseTemplateRenderer.coalesce(request.lateFeeAmount(), template.getDefaultLateFeeAmount()))
 				.noticePeriodDays(LeaseTemplateRenderer.coalesce(request.noticePeriodDays(), template.getDefaultNoticePeriodDays()))
 				.additionalMetadata(request.additionalMetadata())
-				.executedContentMarkdown(renderer.stampMarkdown(template.getTemplateMarkdown(), request, unit, property))
+				.templateParameters(request.templateParameters())
+				.executedContentMarkdown(renderer.stampMarkdown(template.getTemplateMarkdown(), request, unit, property, template.getTemplateParameters()))
 				.build();
 
 		lease = leaseRepository.save(lease);
@@ -173,6 +174,9 @@ public class LeaseService {
 		}
 		if (request.additionalMetadata() != null) {
 			lease.setAdditionalMetadata(request.additionalMetadata());
+		}
+		if (request.templateParameters() != null) {
+			lease.setTemplateParameters(request.templateParameters());
 		}
 
 		lease = leaseRepository.save(lease);
