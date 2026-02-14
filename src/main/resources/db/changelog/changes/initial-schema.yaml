@@ -522,9 +522,6 @@ databaseChangeLog:
                   name: executed_content_markdown
                   type: text
               - column:
-                  name: signed_pdf_url
-                  type: varchar(512)
-              - column:
                   name: additional_metadata
                   type: jsonb
               - column:

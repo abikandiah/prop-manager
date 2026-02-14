@@ -90,9 +90,6 @@ public class Lease {
 	@Column(name = "executed_content_markdown", columnDefinition = "TEXT")
 	private String executedContentMarkdown;
 
-	@Column(name = "signed_pdf_url", length = 512)
-	private String signedPdfUrl;
-
 	@Column(name = "rent_due_day", nullable = false)
 	private Integer rentDueDay;
 

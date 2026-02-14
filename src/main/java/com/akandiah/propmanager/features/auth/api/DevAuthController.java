@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -75,6 +74,10 @@ public class DevAuthController {
 	public record DevLoginRequest(
 			@NotBlank String username,
 			@NotBlank String password,
-			@NotNull List<String> roles) {
+			List<String> roles) {
+
+		public DevLoginRequest {
+			roles = roles != null ? roles : List.of();
+		}
 	}
 }
