@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.akandiah.propmanager.features.invite.api.dto.CreateInviteRequest;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.api.dto.RedeemInviteRequest;
-import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
 import com.akandiah.propmanager.features.invite.service.InviteService;
 import com.akandiah.propmanager.features.user.domain.User;
@@ -31,6 +30,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Controller for managing invitations.
@@ -38,15 +38,11 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/invites")
 @Tag(name = "Invites", description = "Invitation management for leases, properties, and other resources")
+@RequiredArgsConstructor
 public class InviteController {
 
 	private final InviteService inviteService;
 	private final UserRepository userRepository;
-
-	public InviteController(InviteService inviteService, UserRepository userRepository) {
-		this.inviteService = inviteService;
-		this.userRepository = userRepository;
-	}
 
 	// ───────────────────────── Commands ─────────────────────────
 
@@ -61,10 +57,10 @@ public class InviteController {
 
 		User inviter = getCurrentUser(jwt);
 
-		Invite invite = inviteService.createAndSendInvite(request.email(), request.targetType(), request.targetId(),
+		InviteResponse response = inviteService.createAndSendInvite(request.email(), request.targetType(), request.targetId(),
 				request.role(), inviter, request.metadata());
 
-		return ResponseEntity.status(HttpStatus.CREATED).body(InviteResponse.from(invite));
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@PostMapping("/{id}/resend")
@@ -73,8 +69,7 @@ public class InviteController {
 	public ResponseEntity<InviteResponse> resendInvite(@PathVariable UUID id,
 			@RequestBody(required = false) Map<String, Object> metadata) {
 
-		Invite invite = inviteService.resendInvite(id, metadata);
-		return ResponseEntity.ok(InviteResponse.from(invite));
+		return ResponseEntity.ok(inviteService.resendInvite(id, metadata));
 	}
 
 	@PostMapping("/redeem")
@@ -85,8 +80,7 @@ public class InviteController {
 		// For now, this is a placeholder - you'll need to implement user creation logic
 		User user = findOrCreateUser(request);
 
-		Invite invite = inviteService.redeemInvite(request.token(), user);
-		return ResponseEntity.ok(InviteResponse.from(invite));
+		return ResponseEntity.ok(inviteService.redeemInvite(request.token(), user));
 	}
 
 	@DeleteMapping("/{id}")
@@ -103,8 +97,7 @@ public class InviteController {
 	@PreAuthorize("@inviteAuthService.canViewInvite(#id)")
 	@Operation(summary = "Get invite by ID", security = @SecurityRequirement(name = "bearer-jwt"))
 	public ResponseEntity<InviteResponse> getById(@PathVariable UUID id) {
-		Invite invite = inviteService.findById(id);
-		return ResponseEntity.ok(InviteResponse.from(invite));
+		return ResponseEntity.ok(inviteService.findById(id));
 	}
 
 	@GetMapping
@@ -114,7 +107,7 @@ public class InviteController {
 			@RequestParam(required = false) TargetType targetType, @RequestParam(required = false) UUID targetId,
 			@AuthenticationPrincipal Jwt jwt) {
 
-		List<Invite> invites;
+		List<InviteResponse> invites;
 
 		if (email != null) {
 			invites = inviteService.findInvitesByEmail(email);
@@ -127,9 +120,7 @@ public class InviteController {
 		// TODO: Filter results based on user permissions
 		// Users should only see invites they created, received, or for resources they manage
 
-		List<InviteResponse> response = invites.stream().map(InviteResponse::from).toList();
-
-		return ResponseEntity.ok(response);
+		return ResponseEntity.ok(invites);
 	}
 
 	// ───────────────────────── Helpers ─────────────────────────

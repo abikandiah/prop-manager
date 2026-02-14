@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.akandiah.propmanager.common.notification.NotificationException;
 import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -129,6 +130,14 @@ public class GlobalExceptionHandler {
 		return problem(HttpStatus.CONFLICT, "Conflict",
 				"Operation failed due to a referential integrity constraint. A related record may have been created concurrently.",
 				request.getRequestURI(), null, null);
+	}
+
+	/** 503: Notification delivery failed (e.g. email send or template render) */
+	@ExceptionHandler(NotificationException.class)
+	public ResponseEntity<ProblemDetail> handleNotification(NotificationException ex, HttpServletRequest request) {
+		log.warn("Notification failed at {}: {}", request.getRequestURI(), ex.getMessage());
+		return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable",
+				"Notification could not be sent. Please try again later.", request.getRequestURI(), null, null);
 	}
 
 	/** Handle ResponseStatusException from Spring */

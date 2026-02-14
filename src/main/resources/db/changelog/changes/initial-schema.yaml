@@ -1,3 +1,5 @@
+# For agents: when adding or changing Liquibase schema migrations, update only
+# this file (initial-schema.yaml). Do not create new changelog files.
 databaseChangeLog:
   # addresses - no FKs
   - changeSet:
@@ -609,3 +611,119 @@ databaseChangeLog:
             constraintName: fk_lease_tenants_tenant
             referencedTableName: tenants
             referencedColumnNames: id
+
+  # invite - FK users (invited_by, claimed_user). Depends on users.
+  - changeSet:
+      id: "initial-invite"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: invite
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: token
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: target_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: target_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: invited_by_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sent_at
+                  type: timestamptz
+              - column:
+                  name: last_resent_at
+                  type: timestamptz
+              - column:
+                  name: expires_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: accepted_at
+                  type: timestamptz
+              - column:
+                  name: claimed_user_id
+                  type: uuid
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: invite
+            baseColumnNames: invited_by_id
+            constraintName: fk_invite_invited_by
+            referencedTableName: users
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: invite
+            baseColumnNames: claimed_user_id
+            constraintName: fk_invite_claimed_user
+            referencedTableName: users
+            referencedColumnNames: id
+        - createIndex:
+            indexName: idx_invite_token
+            tableName: invite
+            columns:
+              - column:
+                  name: token
+        - createIndex:
+            indexName: idx_invite_email
+            tableName: invite
+            columns:
+              - column:
+                  name: email
+        - createIndex:
+            indexName: idx_invite_target
+            tableName: invite
+            columns:
+              - column:
+                  name: target_type
+              - column:
+                  name: target_id
+        - createIndex:
+            indexName: idx_invite_status
+            tableName: invite
+            columns:
+              - column:
+                  name: status

@@ -1,3 +1,4 @@
+# For agents: add new schema changes only in initial-schema.yaml. Do not add new includes here.
 databaseChangeLog:
   - include:
       file: db/changelog/changes/initial-schema.yaml

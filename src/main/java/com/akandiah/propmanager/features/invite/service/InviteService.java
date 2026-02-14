@@ -16,12 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.notification.NotificationService;
 import com.akandiah.propmanager.common.notification.NotificationTemplate;
+import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.invite.domain.InviteStatus;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.domain.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +35,6 @@ import lombok.extern.slf4j.Slf4j;
 public class InviteService {
 
 	private final InviteRepository inviteRepository;
-	private final UserRepository userRepository;
 	private final NotificationService notificationService;
 
 	private static final SecureRandom RANDOM = new SecureRandom();
@@ -61,7 +60,7 @@ public class InviteService {
 	 * @return Created invite
 	 */
 	@Transactional
-	public Invite createAndSendInvite(String email, TargetType targetType, UUID targetId, String role, User invitedBy,
+	public InviteResponse createAndSendInvite(String email, TargetType targetType, UUID targetId, String role, User invitedBy,
 			Map<String, Object> metadata) {
 
 		// Check if a pending invite already exists
@@ -100,7 +99,7 @@ public class InviteService {
 		log.info("Invite created and sent: id={}, email={}, targetType={}, targetId={}", invite.getId(), email,
 				targetType, targetId);
 
-		return invite;
+		return InviteResponse.from(invite);
 	}
 
 	/**
@@ -111,7 +110,7 @@ public class InviteService {
 	 * @return Updated invite
 	 */
 	@Transactional
-	public Invite resendInvite(UUID inviteId, Map<String, Object> metadata) {
+	public InviteResponse resendInvite(UUID inviteId, Map<String, Object> metadata) {
 		Invite invite = inviteRepository.findById(inviteId)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite", inviteId));
 
@@ -143,7 +142,7 @@ public class InviteService {
 
 		log.info("Invite resent: id={}, email={}", inviteId, invite.getEmail());
 
-		return invite;
+		return InviteResponse.from(invite);
 	}
 
 	/**
@@ -154,7 +153,7 @@ public class InviteService {
 	 * @return Accepted invite
 	 */
 	@Transactional
-	public Invite redeemInvite(String token, User claimedBy) {
+	public InviteResponse redeemInvite(String token, User claimedBy) {
 		Invite invite = inviteRepository.findByToken(token)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite not found or invalid token"));
 
@@ -178,7 +177,7 @@ public class InviteService {
 		log.info("Invite accepted: id={}, email={}, claimedBy={}", invite.getId(), invite.getEmail(),
 				claimedBy.getId());
 
-		return invite;
+		return InviteResponse.from(invite);
 	}
 
 	/**
@@ -205,25 +204,30 @@ public class InviteService {
 	 * Find all invites for a specific resource.
 	 */
 	@Transactional(readOnly = true)
-	public List<Invite> findInvitesByTarget(TargetType targetType, UUID targetId) {
-		return inviteRepository.findByTargetTypeAndTargetId(targetType, targetId);
+	public List<InviteResponse> findInvitesByTarget(TargetType targetType, UUID targetId) {
+		return inviteRepository.findByTargetTypeAndTargetId(targetType, targetId).stream()
+				.map(InviteResponse::from)
+				.toList();
 	}
 
 	/**
 	 * Find all invites for a specific email.
 	 */
 	@Transactional(readOnly = true)
-	public List<Invite> findInvitesByEmail(String email) {
-		return inviteRepository.findByEmail(email);
+	public List<InviteResponse> findInvitesByEmail(String email) {
+		return inviteRepository.findByEmail(email).stream()
+				.map(InviteResponse::from)
+				.toList();
 	}
 
 	/**
 	 * Find an invite by ID.
 	 */
 	@Transactional(readOnly = true)
-	public Invite findById(UUID inviteId) {
-		return inviteRepository.findById(inviteId)
+	public InviteResponse findById(UUID inviteId) {
+		Invite invite = inviteRepository.findById(inviteId)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite", inviteId));
+		return InviteResponse.from(invite);
 	}
 
 	/**
