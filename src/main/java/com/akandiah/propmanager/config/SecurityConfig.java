@@ -6,7 +6,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
@@ -45,12 +44,8 @@ public class SecurityConfig {
 
 		http
 				.cors(cors -> cors.configurationSource(corsConfigurationSource))
-				.csrf(csrf -> {
-					csrf.disable();
-					if (h2ConsoleEnabled) {
-						csrf.ignoringRequestMatchers("/h2-console/**");
-					}
-				})
+				// CSRF disabled for stateless JWT API
+				.csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session
 						.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> {
@@ -64,8 +59,8 @@ public class SecurityConfig {
 					// 3. Public API
 					auth.requestMatchers("/api/public/**").permitAll();
 
-					// 4. Dev Utilities (Login for JWT generation)
-					auth.requestMatchers("/api/dev/login").permitAll();
+					// 4. Dev Utilities (Login for JWT generation - controller is @Profile("dev"))
+					auth.requestMatchers("/api/dev/**").permitAll();
 
 					// 5. H2 Console (Dev only)
 					if (h2ConsoleEnabled) {
@@ -73,13 +68,27 @@ public class SecurityConfig {
 					}
 
 					// 6. Secure Everything Else
-					auth.requestMatchers("/api/**").authenticated()
-							.anyRequest().authenticated();
+					auth.requestMatchers("/api/**").authenticated();
+
+					// 7. Deny all other requests (fallback)
+					auth.anyRequest().denyAll();
 				})
 				.headers(headers -> {
-					if (h2ConsoleEnabled) {
-						headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin);
-					}
+					// Security Headers
+					headers
+							.contentSecurityPolicy(csp -> csp
+									.policyDirectives("default-src 'self'; frame-ancestors 'self'; form-action 'self'"))
+							.httpStrictTransportSecurity(hsts -> hsts
+									.includeSubDomains(true)
+									.maxAgeInSeconds(31536000)) // 1 year
+							.xssProtection(xss -> xss.disable()) // Disable deprecated XSS header (CSP is preferred)
+							.frameOptions(frame -> {
+								if (h2ConsoleEnabled) {
+									frame.sameOrigin();
+								} else {
+									frame.deny();
+								}
+							});
 				})
 				.oauth2ResourceServer(oauth2 -> oauth2
 						.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
