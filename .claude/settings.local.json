@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(mvn clean compile:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(./mvnw clean compile:*)",
+      "Bash(./mvnw clean:*)"
     ]
   }
 }

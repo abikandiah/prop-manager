@@ -1,8 +1,8 @@
 package com.akandiah.propmanager.features.prop.api;
 
+import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
@@ -41,8 +40,8 @@ public class PropController {
 
 	@GetMapping
 	@Operation(summary = "List all props")
-	public PageResponse<PropResponse> list(Pageable pageable) {
-		return propService.findAll(pageable);
+	public List<PropResponse> list() {
+		return propService.findAll();
 	}
 
 	@GetMapping("/{id}")
@@ -53,8 +52,8 @@ public class PropController {
 
 	@GetMapping("/{id}/units")
 	@Operation(summary = "List units for a prop")
-	public PageResponse<UnitResponse> listUnits(@PathVariable UUID id, Pageable pageable) {
-		return unitService.findByPropId(id, pageable);
+	public List<UnitResponse> listUnits(@PathVariable UUID id) {
+		return unitService.findByPropId(id);
 	}
 
 	@PostMapping

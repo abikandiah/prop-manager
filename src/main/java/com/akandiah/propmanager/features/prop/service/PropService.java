@@ -3,11 +3,9 @@ package com.akandiah.propmanager.features.prop.service;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
@@ -47,12 +45,6 @@ public class PropService {
 		return repository.findAll().stream()
 				.map(PropResponse::from)
 				.toList();
-	}
-
-	@Transactional(readOnly = true)
-	public PageResponse<PropResponse> findAll(Pageable pageable) {
-		return PageResponse.from(repository.findAll(pageable)
-				.map(PropResponse::from));
 	}
 
 	@Transactional(readOnly = true)

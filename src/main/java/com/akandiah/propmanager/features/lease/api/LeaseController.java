@@ -1,8 +1,8 @@
 package com.akandiah.propmanager.features.lease.api;
 
+import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseResponse;
 import com.akandiah.propmanager.features.lease.api.dto.UpdateLeaseRequest;
@@ -40,17 +39,16 @@ public class LeaseController {
 
 	@GetMapping
 	@Operation(summary = "List leases", description = "Optionally filter by ?unitId= or ?propertyId=")
-	public PageResponse<LeaseResponse> list(
+	public List<LeaseResponse> list(
 			@RequestParam(required = false) UUID unitId,
-			@RequestParam(required = false) UUID propertyId,
-			Pageable pageable) {
+			@RequestParam(required = false) UUID propertyId) {
 		if (unitId != null) {
-			return service.findByUnitId(unitId, pageable);
+			return service.findByUnitId(unitId);
 		}
 		if (propertyId != null) {
-			return service.findByPropertyId(propertyId, pageable);
+			return service.findByPropertyId(propertyId);
 		}
-		return service.findAll(pageable);
+		return service.findAll();
 	}
 
 	@GetMapping("/{id}")

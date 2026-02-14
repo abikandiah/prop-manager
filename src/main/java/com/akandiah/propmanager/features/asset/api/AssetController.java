@@ -1,8 +1,8 @@
 package com.akandiah.propmanager.features.asset.api;
 
+import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.features.asset.api.dto.AssetResponse;
 import com.akandiah.propmanager.features.asset.api.dto.CreateAssetRequest;
 import com.akandiah.propmanager.features.asset.api.dto.UpdateAssetRequest;
@@ -38,17 +37,16 @@ public class AssetController {
 
 	@GetMapping
 	@Operation(summary = "List assets, optionally by property ID or unit ID")
-	public PageResponse<AssetResponse> list(
+	public List<AssetResponse> list(
 			@RequestParam(required = false) UUID propId,
-			@RequestParam(required = false) UUID unitId,
-			Pageable pageable) {
+			@RequestParam(required = false) UUID unitId) {
 		if (propId != null) {
-			return assetService.findByPropId(propId, pageable);
+			return assetService.findByPropId(propId);
 		}
 		if (unitId != null) {
-			return assetService.findByUnitId(unitId, pageable);
+			return assetService.findByUnitId(unitId);
 		}
-		return assetService.findAll(pageable);
+		return assetService.findAll();
 	}
 
 	@GetMapping("/{id}")

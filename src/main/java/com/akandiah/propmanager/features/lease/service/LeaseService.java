@@ -3,11 +3,9 @@ package com.akandiah.propmanager.features.lease.service;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.akandiah.propmanager.common.dto.PageResponse;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
@@ -61,12 +59,6 @@ public class LeaseService {
 	}
 
 	@Transactional(readOnly = true)
-	public PageResponse<LeaseResponse> findAll(Pageable pageable) {
-		return PageResponse.from(leaseRepository.findAll(pageable)
-				.map(LeaseResponse::from));
-	}
-
-	@Transactional(readOnly = true)
 	public List<LeaseResponse> findByUnitId(UUID unitId) {
 		return leaseRepository.findByUnit_IdOrderByStartDateDesc(unitId).stream()
 				.map(LeaseResponse::from)
@@ -74,22 +66,10 @@ public class LeaseService {
 	}
 
 	@Transactional(readOnly = true)
-	public PageResponse<LeaseResponse> findByUnitId(UUID unitId, Pageable pageable) {
-		return PageResponse.from(leaseRepository.findByUnit_IdOrderByStartDateDesc(unitId, pageable)
-				.map(LeaseResponse::from));
-	}
-
-	@Transactional(readOnly = true)
 	public List<LeaseResponse> findByPropertyId(UUID propertyId) {
 		return leaseRepository.findByProperty_IdOrderByStartDateDesc(propertyId).stream()
 				.map(LeaseResponse::from)
 				.toList();
-	}
-
-	@Transactional(readOnly = true)
-	public PageResponse<LeaseResponse> findByPropertyId(UUID propertyId, Pageable pageable) {
-		return PageResponse.from(leaseRepository.findByProperty_IdOrderByStartDateDesc(propertyId, pageable)
-				.map(LeaseResponse::from));
 	}
 
 	@Transactional(readOnly = true)
