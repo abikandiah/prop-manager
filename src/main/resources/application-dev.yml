@@ -12,6 +12,18 @@ spring:
       path: /h2-console
   liquibase:
     enabled: false
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+    from: ${MAIL_FROM:noreply@propmanager.local}
   security:
     oauth2:
       resourceserver:
@@ -30,6 +42,8 @@ app:
     enabled: true
     include-query-string: true
     include-client-info: true
+  notification:
+    base-url: ${APP_BASE_URL:http://localhost:8080}
 
 logging:
   level:
