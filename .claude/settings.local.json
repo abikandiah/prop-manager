@@ -4,7 +4,12 @@
       "Bash(mvn clean compile:*)",
       "Bash(find:*)",
       "Bash(./mvnw clean compile:*)",
-      "Bash(./mvnw clean:*)"
+      "Bash(./mvnw clean:*)",
+      "Bash(mvn clean test:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(mvn test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
