@@ -270,8 +270,8 @@ class LeaseServiceTest {
 				1,
 				new BigDecimal("2000.00"),
 				LateFeeType.PERCENTAGE, // Override
-				new BigDecimal("5.00"),  // Override
-				90,                      // Override
+				new BigDecimal("5.00"), // Override
+				90, // Override
 				null,
 				null);
 
@@ -377,7 +377,7 @@ class LeaseServiceTest {
 				null, // executedContentMarkdown
 				null, // additionalMetadata
 				null, // templateParameters
-				0);  // version
+				0); // version
 
 		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(draftLease));
 		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> invocation.getArgument(0));
