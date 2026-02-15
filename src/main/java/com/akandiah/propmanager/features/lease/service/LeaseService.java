@@ -88,11 +88,15 @@ public class LeaseService {
 	@Transactional
 	public LeaseResponse create(CreateLeaseRequest request) {
 		LeaseTemplate template = templateService.getEntity(request.leaseTemplateId());
+		if (!template.isActive()) {
+			throw new IllegalArgumentException("Lease template is not active and cannot be used for new leases.");
+		}
 		Unit unit = unitRepository.findById(request.unitId())
 				.orElseThrow(() -> new ResourceNotFoundException("Unit", request.unitId()));
 		Prop property = propRepository.findById(request.propertyId())
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", request.propertyId()));
 
+		// DRAFT lease keeps template FK; stamp (executedContentMarkdown) happens on activate
 		Lease lease = Lease.builder()
 				.leaseTemplate(template)
 				.leaseTemplateName(template.getName())
@@ -110,7 +114,7 @@ public class LeaseService {
 				.noticePeriodDays(LeaseTemplateRenderer.coalesce(request.noticePeriodDays(), template.getDefaultNoticePeriodDays()))
 				.additionalMetadata(request.additionalMetadata())
 				.templateParameters(request.templateParameters())
-				.executedContentMarkdown(renderer.stampMarkdown(template.getTemplateMarkdown(), request, unit, property, template.getTemplateParameters()))
+				.executedContentMarkdown(null)
 				.build();
 
 		lease = leaseRepository.save(lease);
@@ -171,10 +175,21 @@ public class LeaseService {
 		return stateMachine.submitForReview(id);
 	}
 
-	/** Both parties signed — lease becomes active and read-only. */
+	/** Both parties signed — lease becomes active and read-only. Stamps template onto lease (executedContentMarkdown) at this point. */
 	@Transactional
 	public LeaseResponse activate(UUID id) {
-		return stateMachine.activate(id);
+		LeaseResponse res = stateMachine.activate(id);
+		Lease lease = leaseRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Lease", id));
+		if (lease.getLeaseTemplate() != null) {
+			LeaseTemplate t = lease.getLeaseTemplate();
+			String content = renderer.stampMarkdownFromLease(t.getTemplateMarkdown(), lease,
+					lease.getUnit(), lease.getProperty(), t.getTemplateParameters());
+			lease.setExecutedContentMarkdown(content);
+			lease.setLeaseTemplateName(t.getName());
+			lease.setLeaseTemplateVersionTag(t.getVersionTag());
+			leaseRepository.save(lease);
+		}
+		return LeaseResponse.from(lease);
 	}
 
 	/** Revert a pending-review lease back to draft for further edits. */

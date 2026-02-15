@@ -36,7 +36,7 @@ public class LeaseTemplateController {
 	}
 
 	@GetMapping
-	@Operation(summary = "List lease templates", description = "Filter with ?active=true for active-only, or ?search= for name search")
+	@Operation(summary = "List lease templates", description = "Filter with ?active=true for active-only (e.g. for dropdown when creating a lease), or ?search= for name search")
 	public List<LeaseTemplateResponse> list(
 			@RequestParam(required = false, defaultValue = "false") boolean active,
 			@RequestParam(required = false) String search) {

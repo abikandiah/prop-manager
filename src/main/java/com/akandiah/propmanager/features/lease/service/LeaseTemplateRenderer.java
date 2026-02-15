@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseRequest;
+import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 
@@ -37,6 +38,25 @@ public class LeaseTemplateRenderer {
 		return substitutePlaceholders(markdown, params);
 	}
 
+	/**
+	 * Stamps the template markdown using data from an existing lease (e.g. on activate).
+	 * Use when the lease is already persisted and we are freezing the template content.
+	 */
+	public String stampMarkdownFromLease(String markdown, Lease lease, Unit unit, Prop property,
+			Map<String, String> templateDefaultParameters) {
+		if (markdown == null) {
+			return null;
+		}
+		Map<String, String> params = buildParameterMapFromLease(lease, unit, property);
+		if (templateDefaultParameters != null) {
+			params.putAll(templateDefaultParameters);
+		}
+		if (lease.getTemplateParameters() != null) {
+			params.putAll(lease.getTemplateParameters());
+		}
+		return substitutePlaceholders(markdown, params);
+	}
+
 	private Map<String, String> buildParameterMap(CreateLeaseRequest req, Unit unit, Prop property) {
 		Map<String, String> params = new LinkedHashMap<>();
 		params.put("property_name", property.getLegalName());
@@ -47,6 +67,20 @@ public class LeaseTemplateRenderer {
 		params.put("rent_due_day", req.rentDueDay().toString());
 		params.put("security_deposit", req.securityDepositHeld() != null
 				? req.securityDepositHeld().toPlainString()
+				: "N/A");
+		return params;
+	}
+
+	private Map<String, String> buildParameterMapFromLease(Lease lease, Unit unit, Prop property) {
+		Map<String, String> params = new LinkedHashMap<>();
+		params.put("property_name", property.getLegalName());
+		params.put("unit_number", unit.getUnitNumber());
+		params.put("start_date", lease.getStartDate().toString());
+		params.put("end_date", lease.getEndDate().toString());
+		params.put("rent_amount", lease.getRentAmount().toPlainString());
+		params.put("rent_due_day", lease.getRentDueDay().toString());
+		params.put("security_deposit", lease.getSecurityDepositHeld() != null
+				? lease.getSecurityDepositHeld().toPlainString()
 				: "N/A");
 		return params;
 	}

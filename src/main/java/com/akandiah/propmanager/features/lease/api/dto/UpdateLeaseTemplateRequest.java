@@ -23,6 +23,7 @@ public record UpdateLeaseTemplateRequest(
 
 		@Min(value = 1, message = "Notice period must be at least 1 day") Integer defaultNoticePeriodDays,
 
+		/** Whether this template can be used for new leases (enable/disable). */
 		Boolean active,
 
 		/** Default placeholder values for {{key}} in the template markdown. */

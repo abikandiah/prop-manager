@@ -210,8 +210,6 @@ class LeaseServiceTest {
 		when(templateService.getEntity(templateId)).thenReturn(template);
 		when(unitRepository.findById(unitId)).thenReturn(Optional.of(leaseUnit));
 		when(propRepository.findById(propertyId)).thenReturn(Optional.of(property));
-		when(renderer.stampMarkdown(anyString(), eq(request), eq(leaseUnit), eq(property), any()))
-				.thenReturn("Rendered lease content");
 		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> {
 			Lease l = invocation.getArgument(0);
 			return lease()
@@ -235,12 +233,11 @@ class LeaseServiceTest {
 		assertThat(response.lateFeeType()).isEqualTo(LateFeeType.FLAT_FEE);
 		assertThat(response.lateFeeAmount()).isEqualByComparingTo("50.00");
 		assertThat(response.noticePeriodDays()).isEqualTo(60);
-		assertThat(response.executedContentMarkdown()).isEqualTo("Rendered lease content");
+		assertThat(response.executedContentMarkdown()).isNull(); // Stamped on activate, not create
 
 		verify(templateService).getEntity(templateId);
 		verify(unitRepository).findById(unitId);
 		verify(propRepository).findById(propertyId);
-		verify(renderer).stampMarkdown(anyString(), eq(request), eq(leaseUnit), eq(property), any());
 		verify(leaseRepository).save(any(Lease.class));
 	}
 
@@ -278,8 +275,6 @@ class LeaseServiceTest {
 		when(templateService.getEntity(templateId)).thenReturn(template);
 		when(unitRepository.findById(unitId)).thenReturn(Optional.of(leaseUnit));
 		when(propRepository.findById(propertyId)).thenReturn(Optional.of(property));
-		when(renderer.stampMarkdown(anyString(), eq(request), eq(leaseUnit), eq(property), any()))
-				.thenReturn("Rendered content");
 		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		ArgumentCaptor<Lease> leaseCaptor = ArgumentCaptor.forClass(Lease.class);
@@ -457,19 +452,28 @@ class LeaseServiceTest {
 	}
 
 	@Test
-	void shouldDelegateActivateToStateMachine() {
+	void shouldDelegateActivateToStateMachineAndStampTemplate() {
 		UUID leaseId = UUID.randomUUID();
+		LeaseTemplate template = leaseTemplate().build();
 		Lease activeLease = lease()
 				.id(leaseId)
 				.status(LeaseStatus.ACTIVE)
+				.leaseTemplate(template)
+				.unit(unit().build())
+				.property(prop().build())
 				.build();
 
 		when(stateMachine.activate(leaseId)).thenReturn(LeaseResponse.from(activeLease));
+		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(activeLease));
+		when(renderer.stampMarkdownFromLease(anyString(), any(), any(), any(), any())).thenReturn("Stamped content");
+		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		LeaseResponse response = leaseService.activate(leaseId);
 
 		assertThat(response.status()).isEqualTo(LeaseStatus.ACTIVE);
+		assertThat(response.executedContentMarkdown()).isEqualTo("Stamped content");
 		verify(stateMachine).activate(leaseId);
+		verify(renderer).stampMarkdownFromLease(anyString(), eq(activeLease), any(), any(), any());
 	}
 
 	@Test
@@ -596,17 +600,14 @@ class LeaseServiceTest {
 		when(templateService.getEntity(templateId)).thenReturn(template);
 		when(unitRepository.findById(unitId)).thenReturn(Optional.of(leaseUnit));
 		when(propRepository.findById(propertyId)).thenReturn(Optional.of(property));
-		when(renderer.stampMarkdown(anyString(), eq(request), eq(leaseUnit), eq(property), eq(templateParams)))
-				.thenReturn("Final rendered content");
 		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
+		ArgumentCaptor<Lease> leaseCaptor = ArgumentCaptor.forClass(Lease.class);
 		leaseService.create(request);
 
-		verify(renderer).stampMarkdown(
-				eq("Template content"),
-				eq(request),
-				eq(leaseUnit),
-				eq(property),
-				eq(templateParams));
+		verify(leaseRepository).save(leaseCaptor.capture());
+		// Template params stored on lease for stamping on activate; no renderer call at create
+		assertThat(leaseCaptor.getValue().getTemplateParameters()).isEqualTo(requestParams);
+		verify(renderer, never()).stampMarkdown(anyString(), any(), any(), any(), any());
 	}
 }

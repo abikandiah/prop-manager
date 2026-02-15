@@ -70,6 +70,9 @@ public class LeaseTemplate {
 	@Column(name = "default_notice_period_days")
 	private Integer defaultNoticePeriodDays;
 
+	/**
+	 * Whether this template can be used for new leases (enable/disable).
+	 */
 	@Builder.Default
 	@Column(name = "is_active", nullable = false)
 	private boolean active = true;

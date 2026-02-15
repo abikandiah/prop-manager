@@ -7,10 +7,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
+import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseTemplateRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseTemplateResponse;
 import com.akandiah.propmanager.features.lease.api.dto.UpdateLeaseTemplateRequest;
+import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplateRepository;
 
@@ -18,9 +21,11 @@ import com.akandiah.propmanager.features.lease.domain.LeaseTemplateRepository;
 public class LeaseTemplateService {
 
 	private final LeaseTemplateRepository repository;
+	private final LeaseRepository leaseRepository;
 
-	public LeaseTemplateService(LeaseTemplateRepository repository) {
+	public LeaseTemplateService(LeaseTemplateRepository repository, LeaseRepository leaseRepository) {
 		this.repository = repository;
+		this.leaseRepository = leaseRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -68,6 +73,7 @@ public class LeaseTemplateService {
 				.defaultLateFeeAmount(request.defaultLateFeeAmount())
 				.defaultNoticePeriodDays(request.defaultNoticePeriodDays())
 				.templateParameters(request.templateParameters())
+				.active(true)
 				.build();
 		template = repository.save(template);
 		return LeaseTemplateResponse.from(template);
@@ -110,14 +116,19 @@ public class LeaseTemplateService {
 	}
 
 	/**
-	 * Soft-delete. Sets active=false instead of removing the record.
-	 * Existing leases keep their FK reference intact.
+	 * Hard-delete. Blocked if any DRAFT lease references this template (it still needs it).
+	 * For non-DRAFT leases we clear the template FK (they keep their stamped snapshot)
+	 * and then delete the template.
 	 */
 	@Transactional
 	public void deleteById(UUID id) {
 		LeaseTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("LeaseTemplate", id));
-		template.setActive(false);
-		repository.save(template);
+		long draftCount = leaseRepository.countByLeaseTemplate_IdAndStatusIn(id,
+				java.util.List.of(LeaseStatus.DRAFT));
+		DeleteGuardUtil.requireNoChildren("LeaseTemplate", id, draftCount,
+				"DRAFT lease(s)", "Activate or remove those leases first.");
+		leaseRepository.clearTemplateReference(id);
+		repository.delete(template);
 	}
 }
