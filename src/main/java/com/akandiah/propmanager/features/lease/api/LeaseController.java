@@ -77,19 +77,19 @@ public class LeaseController {
 	// ───────────────────────── Status transitions ─────────────────────────
 
 	@PostMapping("/{id}/submit")
-	@Operation(summary = "Submit draft for tenant review", description = "DRAFT → PENDING_REVIEW")
+	@Operation(summary = "Submit draft for tenant review", description = "DRAFT → REVIEW")
 	public LeaseResponse submitForReview(@PathVariable UUID id) {
 		return service.submitForReview(id);
 	}
 
 	@PostMapping("/{id}/activate")
-	@Operation(summary = "Activate a reviewed lease", description = "PENDING_REVIEW → ACTIVE (read-only)")
+	@Operation(summary = "Activate a reviewed lease", description = "REVIEW → ACTIVE (read-only)")
 	public LeaseResponse activate(@PathVariable UUID id) {
 		return service.activate(id);
 	}
 
 	@PostMapping("/{id}/revert")
-	@Operation(summary = "Revert to draft for further edits", description = "PENDING_REVIEW → DRAFT")
+	@Operation(summary = "Revert to draft for further edits", description = "REVIEW → DRAFT")
 	public LeaseResponse revertToDraft(@PathVariable UUID id) {
 		return service.revertToDraft(id);
 	}

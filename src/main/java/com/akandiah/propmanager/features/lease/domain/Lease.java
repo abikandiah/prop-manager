@@ -110,10 +110,6 @@ public class Lease {
 	@Column(name = "additional_metadata")
 	private Map<String, Object> additionalMetadata;
 
-	/**
-	 * Extra placeholder values for template rendering. Keys match {{key}} in the
-	 * template markdown; can add or override the built-in placeholders.
-	 */
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "template_parameters")
 	private Map<String, String> templateParameters;

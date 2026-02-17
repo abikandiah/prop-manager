@@ -40,7 +40,7 @@ class LeaseStateMachineTest {
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
-	// Submit for Review (DRAFT → PENDING_REVIEW)
+	// Submit for Review (DRAFT → REVIEW)
 	// ═══════════════════════════════════════════════════════════════════════
 
 	@Test
@@ -56,9 +56,9 @@ class LeaseStateMachineTest {
 
 		LeaseResponse response = stateMachine.submitForReview(leaseId);
 
-		assertThat(response.status()).isEqualTo(LeaseStatus.PENDING_REVIEW);
+		assertThat(response.status()).isEqualTo(LeaseStatus.REVIEW);
 		verify(leaseRepository).save(draftLease);
-		assertThat(draftLease.getStatus()).isEqualTo(LeaseStatus.PENDING_REVIEW);
+		assertThat(draftLease.getStatus()).isEqualTo(LeaseStatus.REVIEW);
 	}
 
 	@Test
@@ -80,7 +80,7 @@ class LeaseStateMachineTest {
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
-	// Activate (PENDING_REVIEW → ACTIVE)
+	// Activate (REVIEW → ACTIVE)
 	// ═══════════════════════════════════════════════════════════════════════
 
 	@Test
@@ -88,7 +88,7 @@ class LeaseStateMachineTest {
 		UUID leaseId = UUID.randomUUID();
 		Lease pendingLease = lease()
 				.id(leaseId)
-				.status(LeaseStatus.PENDING_REVIEW)
+				.status(LeaseStatus.REVIEW)
 				.build();
 
 		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(pendingLease));
@@ -115,7 +115,7 @@ class LeaseStateMachineTest {
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("Cannot activate")
 				.hasMessageContaining("is DRAFT")
-				.hasMessageContaining("expected PENDING_REVIEW");
+				.hasMessageContaining("expected REVIEW");
 	}
 
 	@Test
@@ -134,7 +134,7 @@ class LeaseStateMachineTest {
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
-	// Revert to Draft (PENDING_REVIEW → DRAFT)
+	// Revert to Draft (REVIEW → DRAFT)
 	// ═══════════════════════════════════════════════════════════════════════
 
 	@Test
@@ -142,7 +142,7 @@ class LeaseStateMachineTest {
 		UUID leaseId = UUID.randomUUID();
 		Lease pendingLease = lease()
 				.id(leaseId)
-				.status(LeaseStatus.PENDING_REVIEW)
+				.status(LeaseStatus.REVIEW)
 				.build();
 
 		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(pendingLease));
@@ -215,14 +215,14 @@ class LeaseStateMachineTest {
 		UUID leaseId = UUID.randomUUID();
 		Lease pendingLease = lease()
 				.id(leaseId)
-				.status(LeaseStatus.PENDING_REVIEW)
+				.status(LeaseStatus.REVIEW)
 				.build();
 
 		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(pendingLease));
 
 		assertThatThrownBy(() -> stateMachine.terminate(leaseId))
 				.isInstanceOf(IllegalStateException.class)
-				.hasMessageContaining("is PENDING_REVIEW");
+				.hasMessageContaining("is REVIEW");
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -310,11 +310,11 @@ class LeaseStateMachineTest {
 		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(lease));
 		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		// DRAFT → PENDING_REVIEW
+		// DRAFT → REVIEW
 		stateMachine.submitForReview(leaseId);
-		assertThat(lease.getStatus()).isEqualTo(LeaseStatus.PENDING_REVIEW);
+		assertThat(lease.getStatus()).isEqualTo(LeaseStatus.REVIEW);
 
-		// PENDING_REVIEW → ACTIVE
+		// REVIEW → ACTIVE
 		stateMachine.activate(leaseId);
 		assertThat(lease.getStatus()).isEqualTo(LeaseStatus.ACTIVE);
 
@@ -334,16 +334,16 @@ class LeaseStateMachineTest {
 		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(lease));
 		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-		// DRAFT → PENDING_REVIEW
+		// DRAFT → REVIEW
 		stateMachine.submitForReview(leaseId);
-		assertThat(lease.getStatus()).isEqualTo(LeaseStatus.PENDING_REVIEW);
+		assertThat(lease.getStatus()).isEqualTo(LeaseStatus.REVIEW);
 
-		// PENDING_REVIEW → DRAFT (revert)
+		// REVIEW → DRAFT (revert)
 		stateMachine.revertToDraft(leaseId);
 		assertThat(lease.getStatus()).isEqualTo(LeaseStatus.DRAFT);
 
 		// Can submit again
 		stateMachine.submitForReview(leaseId);
-		assertThat(lease.getStatus()).isEqualTo(LeaseStatus.PENDING_REVIEW);
+		assertThat(lease.getStatus()).isEqualTo(LeaseStatus.REVIEW);
 	}
 }

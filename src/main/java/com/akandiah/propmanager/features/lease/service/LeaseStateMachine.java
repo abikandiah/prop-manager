@@ -28,7 +28,7 @@ public class LeaseStateMachine {
 	public LeaseResponse submitForReview(UUID id) {
 		Lease lease = getEntity(id);
 		requireStatus(lease, LeaseStatus.DRAFT, "submit for review");
-		lease.setStatus(LeaseStatus.PENDING_REVIEW);
+		lease.setStatus(LeaseStatus.REVIEW);
 		lease = leaseRepository.save(lease);
 		return LeaseResponse.from(lease);
 	}
@@ -37,17 +37,17 @@ public class LeaseStateMachine {
 	@Transactional
 	public LeaseResponse activate(UUID id) {
 		Lease lease = getEntity(id);
-		requireStatus(lease, LeaseStatus.PENDING_REVIEW, "activate");
+		requireStatus(lease, LeaseStatus.REVIEW, "activate");
 		lease.setStatus(LeaseStatus.ACTIVE);
 		lease = leaseRepository.save(lease);
 		return LeaseResponse.from(lease);
 	}
 
-	/** Revert a pending-review lease back to draft for further edits. */
+	/** Revert a lease in review back to draft for further edits. */
 	@Transactional
 	public LeaseResponse revertToDraft(UUID id) {
 		Lease lease = getEntity(id);
-		requireStatus(lease, LeaseStatus.PENDING_REVIEW, "revert to draft");
+		requireStatus(lease, LeaseStatus.REVIEW, "revert to draft");
 		lease.setStatus(LeaseStatus.DRAFT);
 		lease = leaseRepository.save(lease);
 		return LeaseResponse.from(lease);

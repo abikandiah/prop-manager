@@ -440,14 +440,14 @@ class LeaseServiceTest {
 		UUID leaseId = UUID.randomUUID();
 		Lease leasePendingReview = lease()
 				.id(leaseId)
-				.status(LeaseStatus.PENDING_REVIEW)
+				.status(LeaseStatus.REVIEW)
 				.build();
 
 		when(stateMachine.submitForReview(leaseId)).thenReturn(LeaseResponse.from(leasePendingReview));
 
 		LeaseResponse response = leaseService.submitForReview(leaseId);
 
-		assertThat(response.status()).isEqualTo(LeaseStatus.PENDING_REVIEW);
+		assertThat(response.status()).isEqualTo(LeaseStatus.REVIEW);
 		verify(stateMachine).submitForReview(leaseId);
 	}
 
