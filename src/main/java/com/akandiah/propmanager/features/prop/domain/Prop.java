@@ -56,7 +56,7 @@ public class Prop {
 	@Column(name = "parcel_number", length = 64)
 	private String parcelNumber;
 
-	@Column(name = "owner_id")
+	@Column(name = "owner_id", nullable = false)
 	private UUID ownerId;
 
 	@Column(name = "total_area")

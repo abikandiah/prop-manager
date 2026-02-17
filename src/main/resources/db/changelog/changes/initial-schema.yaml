@@ -146,6 +146,8 @@ databaseChangeLog:
               - column:
                   name: owner_id
                   type: uuid
+                  constraints:
+                    nullable: false
               - column:
                   name: total_area
                   type: int
@@ -173,6 +175,12 @@ databaseChangeLog:
             baseColumnNames: address_id
             constraintName: fk_prop_address
             referencedTableName: addresses
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: prop
+            baseColumnNames: owner_id
+            constraintName: fk_prop_owner
+            referencedTableName: users
             referencedColumnNames: id
 
   # units - FK prop
