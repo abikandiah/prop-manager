@@ -196,6 +196,7 @@ class LeaseServiceTest {
 				templateId,
 				unitId,
 				propertyId,
+				null,
 				LocalDate.of(2026, 4, 1),
 				LocalDate.of(2027, 3, 31),
 				new BigDecimal("2000.00"),
@@ -261,6 +262,7 @@ class LeaseServiceTest {
 				templateId,
 				unitId,
 				propertyId,
+				null,
 				LocalDate.of(2026, 4, 1),
 				LocalDate.of(2027, 3, 31),
 				new BigDecimal("2000.00"),
@@ -594,6 +596,7 @@ class LeaseServiceTest {
 
 		CreateLeaseRequest request = new CreateLeaseRequest(
 				templateId, unitId, propertyId,
+				null,
 				LocalDate.now(), LocalDate.now().plusYears(1),
 				new BigDecimal("2000.00"), 1, null,
 				null, null, null, null, requestParams);

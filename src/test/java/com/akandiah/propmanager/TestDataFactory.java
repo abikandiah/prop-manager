@@ -584,6 +584,7 @@ public final class TestDataFactory {
 					template.getId(),
 					leaseUnit.getId(),
 					leaseProp.getId(),
+					null,
 					startDate,
 					endDate,
 					rentAmount,
