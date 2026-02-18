@@ -369,6 +369,7 @@ class LeaseServiceTest {
 				null, // lateFeeType
 				null, // lateFeeAmount
 				null, // noticePeriodDays
+				null, // tenantEmails
 				null, // executedContentMarkdown
 				null, // additionalMetadata
 				null, // templateParameters
@@ -396,7 +397,7 @@ class LeaseServiceTest {
 				.build();
 
 		UpdateLeaseRequest request = new UpdateLeaseRequest(
-				null, null, new BigDecimal("2200.00"), null, null, null, null, null, null, null, null, 0);
+				null, null, new BigDecimal("2200.00"), null, null, null, null, null, null, null, null, null, 0);
 
 		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(activeLease));
 		doThrow(new IllegalStateException("Lease " + leaseId + " is ACTIVE; only DRAFT leases can be modified"))
@@ -419,7 +420,7 @@ class LeaseServiceTest {
 				.build();
 
 		UpdateLeaseRequest request = new UpdateLeaseRequest(
-				null, null, null, null, null, null, null, null, null, null, null, 3);
+				null, null, null, null, null, null, null, null, null, null, null, null, 3);
 
 		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(lease));
 

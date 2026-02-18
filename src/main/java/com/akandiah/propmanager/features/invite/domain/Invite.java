@@ -108,16 +108,10 @@ public class Invite {
 		updatedAt = Instant.now();
 	}
 
-	/**
-	 * Check if this invite is still valid (not expired, not accepted, not revoked).
-	 */
 	public boolean isValid() {
 		return status == InviteStatus.PENDING && Instant.now().isBefore(expiresAt);
 	}
 
-	/**
-	 * Check if this invite has expired.
-	 */
 	public boolean isExpired() {
 		return Instant.now().isAfter(expiresAt);
 	}

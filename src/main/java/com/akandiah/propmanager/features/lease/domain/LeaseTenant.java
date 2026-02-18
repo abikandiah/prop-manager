@@ -1,6 +1,9 @@
 package com.akandiah.propmanager.features.lease.domain;
 
+import java.time.LocalDate;
 import java.util.UUID;
+
+import jakarta.persistence.Column;
 
 import org.hibernate.annotations.UuidGenerator;
 
@@ -43,7 +46,13 @@ public class LeaseTenant {
 	@JoinColumn(name = "tenant_id", nullable = false)
 	private Tenant tenant;
 
-	@jakarta.persistence.Column(nullable = false, length = 32)
+	@Column(nullable = false, length = 32)
 	@Enumerated(EnumType.STRING)
 	private LeaseTenantRole role;
+
+	@Column(name = "invited_date")
+	private LocalDate invitedDate;
+
+	@Column(name = "signed_date")
+	private LocalDate signedDate;
 }
