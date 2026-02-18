@@ -155,25 +155,15 @@ public class LeaseService {
 
 	// ───────────────────────── Status transitions ─────────────────────────
 
-	/** Owner sends the draft to the tenant for review. */
+	/**
+	 * Owner sends the draft to the tenant for review.
+	 * Stamps the template markdown into executedContentMarkdown here so participants
+	 * can review the rendered lease before signing.
+	 */
 	@Transactional
 	public LeaseResponse submitForReview(UUID id) {
 		Lease lease = getEntity(id);
 		stateMachine.submitForReview(lease);
-		return LeaseResponse.from(leaseRepository.save(lease));
-	}
-
-	/**
-	 * Both parties signed — lease becomes active and read-only.
-	 * Stamps the template markdown into executedContentMarkdown at this point.
-	 */
-	@Transactional
-	public LeaseResponse activate(UUID id) {
-		Lease lease = getEntity(id);
-		if (leaseRepository.existsByUnit_IdAndStatusAndIdNot(lease.getUnit().getId(), LeaseStatus.ACTIVE, id)) {
-			throw new IllegalStateException("Cannot activate: unit already has an active lease.");
-		}
-		stateMachine.activate(lease);
 		if (lease.getLeaseTemplate() != null) {
 			LeaseTemplate t = lease.getLeaseTemplate();
 			lease.setExecutedContentMarkdown(renderer.stampMarkdownFromLease(
@@ -184,11 +174,26 @@ public class LeaseService {
 		return LeaseResponse.from(leaseRepository.save(lease));
 	}
 
-	/** Revert a lease in review back to draft for further edits. */
+	/** Both parties signed — lease becomes active and read-only. */
+	@Transactional
+	public LeaseResponse activate(UUID id) {
+		Lease lease = getEntity(id);
+		if (leaseRepository.existsByUnit_IdAndStatusAndIdNot(lease.getUnit().getId(), LeaseStatus.ACTIVE, id)) {
+			throw new IllegalStateException("Cannot activate: unit already has an active lease.");
+		}
+		stateMachine.activate(lease);
+		return LeaseResponse.from(leaseRepository.save(lease));
+	}
+
+	/**
+	 * Revert a lease in review back to draft for further edits.
+	 * Clears the stamped content so it will be re-stamped on the next submit.
+	 */
 	@Transactional
 	public LeaseResponse revertToDraft(UUID id) {
 		Lease lease = getEntity(id);
 		stateMachine.revertToDraft(lease);
+		lease.setExecutedContentMarkdown(null);
 		return LeaseResponse.from(leaseRepository.save(lease));
 	}
 

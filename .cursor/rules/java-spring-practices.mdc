@@ -23,12 +23,13 @@ All Java code in this project must follow these practices so agents and humans p
 
 ## Spring REST and HTTP
 
-- **ResponseEntity**: Prefer Spring’s factory/static methods:
-  - `ResponseEntity.ok(body)`
-  - `ResponseEntity.status(HttpStatus.XXX).body(body)` or `.build()` for no body
-  - `ResponseEntity.noContent().build()` for 204
-  - `ResponseEntity.created(uri).body(body)` for 201 with Location
-- Use `@Valid` on request bodies that have validation annotations.
+- **ResponseEntity**: Prefer Spring's factory/static methods:
+  - `ResponseEntity.ok(body)` for 200
+  - `ResponseEntity.status(HttpStatus.CREATED).body(body)` for 201 (POST)
+  - `ResponseEntity.noContent().build()` for 204 (DELETE)
+  - `ResponseEntity.created(uri).body(body)` for 201 with Location header
+- **HTTP methods**: `GET` for reads, `POST` for create, `@PatchMapping` for partial update (never `@PutMapping`), `DELETE` for delete.
+- Use `@Valid` on every `@RequestBody` that has validation annotations.
 - Prefer standard Spring Security and Spring Web APIs over custom or third-party equivalents where the standard covers the use case.
 
 ## Spring configuration and beans

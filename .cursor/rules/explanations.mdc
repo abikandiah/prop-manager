@@ -1,16 +1,25 @@
 ---
-description: How to explain code and changes — concise, cited, actionable
+description: How to explain code and communicate changes — concise, cited, actionable
 alwaysApply: true
 ---
 
-# How to Explain Things
+# Communication Style
 
 When discussing or changing code in this project:
 
-- **Be concise** — Prefer short, direct answers. Avoid long preambles or repeated summaries unless the user asks for detail.
-- **Cite the code** — When referring to files or behavior, point to the place that implements it (e.g. “In `PropService` you throw `ResourceNotFoundException` when the entity is missing”) and use the project’s path format (e.g. `src/main/java/.../PropService.java` or `features/prop/service/PropService.java`) when helpful.
-- **Be actionable** — For “how do I…?” or “what should we do?”, give concrete steps or patterns (e.g. “Add a `domain/` class, a repository, then a service method that throws ResourceNotFoundException”) rather than only theory.
-- **Match the question** — Answer what was asked; don’t over-explain unrelated areas. If the user only asks about structure, focus on structure; if they ask about errors, focus on error handling.
-- **Prefer project patterns** — When suggesting code, follow this repo’s layout (features with domain/service/api/dto), naming (CreateXxxRequest, XxxResponse, ResourceNotFoundException), and error handling (GlobalExceptionHandler, ProblemDetail). Reference existing features (e.g. `features.prop`) as the template.
+- **Be concise** — Short, direct answers. Skip preambles and repeated summaries unless the user asks for detail.
+- **Cite the code** — Point to where things are implemented. Use project path format: `features/prop/service/PropService.java`. Reference line numbers when relevant.
+- **Be actionable** — For "how do I…?" questions, give concrete steps that follow existing patterns — not theory.
+- **Match the question** — Only address what was asked. Don't explain unrelated areas unless they're relevant.
+- **Prefer project patterns** — When suggesting code, use this project's conventions:
+  - Feature layout: `domain/` → `service/` → `api/` → `api/dto/`
+  - Naming: `Create{X}Request`, `Update{X}Request`, `{X}Response`, `{X}Service`, `{X}Controller`
+  - Error handling: `ResourceNotFoundException`, `GlobalExceptionHandler`, `ProblemDetail`
+  - Reference `features.prop` as the canonical example when unsure
 
-Apply this style in every conversation so explanations stay consistent and useful.
+## When Making Changes
+
+- Read the relevant existing code before proposing changes
+- Follow the conventions in `java-spring-structure.mdc`, `java-spring-practices.mdc`, `java-naming.mdc`, `java-error-handling.mdc`
+- Don't add extra error handling, logging, or abstractions beyond what's asked
+- Don't refactor surrounding code that wasn't part of the request
