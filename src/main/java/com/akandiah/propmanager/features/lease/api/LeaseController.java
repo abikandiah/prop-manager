@@ -39,65 +39,64 @@ public class LeaseController {
 
 	@GetMapping
 	@Operation(summary = "List leases", description = "Optionally filter by ?unitId= or ?propertyId=")
-	public List<LeaseResponse> list(
+	public ResponseEntity<List<LeaseResponse>> list(
 			@RequestParam(required = false) UUID unitId,
 			@RequestParam(required = false) UUID propertyId) {
 		if (unitId != null) {
-			return service.findByUnitId(unitId);
+			return ResponseEntity.ok(service.findByUnitId(unitId));
 		}
 		if (propertyId != null) {
-			return service.findByPropertyId(propertyId);
+			return ResponseEntity.ok(service.findByPropertyId(propertyId));
 		}
-		return service.findAll();
+		return ResponseEntity.ok(service.findAll());
 	}
 
 	@GetMapping("/{id}")
 	@Operation(summary = "Get lease by ID")
-	public LeaseResponse getById(@PathVariable UUID id) {
-		return service.findById(id);
+	public ResponseEntity<LeaseResponse> getById(@PathVariable UUID id) {
+		return ResponseEntity.ok(service.findById(id));
 	}
 
 	// ───────────────────────── Stamp (create) ─────────────────────────
 
 	@PostMapping
-	@Operation(summary = "Stamp a new lease from a template", description = "Creates a DRAFT lease with the template's markdown rendered and defaults applied")
+	@Operation(summary = "Stamp a new lease from a template", description = "Creates a DRAFT lease with template defaults applied; markdown is rendered on activate")
 	public ResponseEntity<LeaseResponse> create(@Valid @RequestBody CreateLeaseRequest request) {
-		LeaseResponse created = service.create(request);
-		return ResponseEntity.status(HttpStatus.CREATED).body(created);
+		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
 	}
 
 	// ───────────────────────── Edit (DRAFT only) ─────────────────────────
 
 	@PatchMapping("/{id}")
 	@Operation(summary = "Update a DRAFT lease", description = "Only DRAFT leases can be modified; returns 422 otherwise")
-	public LeaseResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateLeaseRequest request) {
-		return service.update(id, request);
+	public ResponseEntity<LeaseResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateLeaseRequest request) {
+		return ResponseEntity.ok(service.update(id, request));
 	}
 
 	// ───────────────────────── Status transitions ─────────────────────────
 
 	@PostMapping("/{id}/submit")
 	@Operation(summary = "Submit draft for tenant review", description = "DRAFT → REVIEW")
-	public LeaseResponse submitForReview(@PathVariable UUID id) {
-		return service.submitForReview(id);
+	public ResponseEntity<LeaseResponse> submitForReview(@PathVariable UUID id) {
+		return ResponseEntity.ok(service.submitForReview(id));
 	}
 
 	@PostMapping("/{id}/activate")
-	@Operation(summary = "Activate a reviewed lease", description = "REVIEW → ACTIVE (read-only)")
-	public LeaseResponse activate(@PathVariable UUID id) {
-		return service.activate(id);
+	@Operation(summary = "Activate a reviewed lease", description = "REVIEW → ACTIVE (read-only); stamps template markdown")
+	public ResponseEntity<LeaseResponse> activate(@PathVariable UUID id) {
+		return ResponseEntity.ok(service.activate(id));
 	}
 
 	@PostMapping("/{id}/revert")
 	@Operation(summary = "Revert to draft for further edits", description = "REVIEW → DRAFT")
-	public LeaseResponse revertToDraft(@PathVariable UUID id) {
-		return service.revertToDraft(id);
+	public ResponseEntity<LeaseResponse> revertToDraft(@PathVariable UUID id) {
+		return ResponseEntity.ok(service.revertToDraft(id));
 	}
 
 	@PostMapping("/{id}/terminate")
 	@Operation(summary = "Terminate an active lease early", description = "ACTIVE → TERMINATED")
-	public LeaseResponse terminate(@PathVariable UUID id) {
-		return service.terminate(id);
+	public ResponseEntity<LeaseResponse> terminate(@PathVariable UUID id) {
+		return ResponseEntity.ok(service.terminate(id));
 	}
 
 	// ───────────────────────── Delete (DRAFT only) ─────────────────────────

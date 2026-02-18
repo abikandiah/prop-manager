@@ -30,10 +30,9 @@ import lombok.Setter;
 @Entity
 @Table(name = "lease_templates")
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class LeaseTemplate {
 
 	@Id
@@ -41,65 +40,56 @@ public class LeaseTemplate {
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
+	@Setter
 	@Column(nullable = false, length = 255)
-	private String name; // e.g., "Ontario Residential Standard 2026"
+	private String name;
 
+	@Setter
 	@Column(name = "version_tag")
-	private String versionTag; // e.g., "v2.1"
+	private String versionTag;
 
-	/**
-	 * JPA optimistic-lock version. Auto-incremented on every update;
-	 * prevents concurrent edits and gives each save a monotonic revision number.
-	 */
 	@Version
 	@Column(nullable = false)
 	private Integer version;
 
-	// The master text with placeholders like {{tenant_name}}, {{rent_amount}}
+	@Setter
 	@Lob
 	@Column(name = "template_markdown", columnDefinition = "TEXT", nullable = false)
 	private String templateMarkdown;
 
+	@Setter
 	@Column(name = "default_late_fee_type", length = 32)
 	@Enumerated(EnumType.STRING)
 	private LateFeeType defaultLateFeeType;
 
+	@Setter
 	@Column(name = "default_late_fee_amount", precision = 19, scale = 4)
 	private BigDecimal defaultLateFeeAmount;
 
+	@Setter
 	@Column(name = "default_notice_period_days")
 	private Integer defaultNoticePeriodDays;
 
-	/**
-	 * Whether this template can be used for new leases (enable/disable).
-	 */
+	@Setter
 	@Builder.Default
 	@Column(name = "is_active", nullable = false)
 	private boolean active = true;
 
-	/**
-	 * Default placeholder values for this template. When stamping a lease,
-	 * these are applied after built-in params and can be overridden by the
-	 * lease request's templateParameters.
-	 */
+	@Setter
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "template_parameters")
 	private Map<String, String> templateParameters;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
-	@Setter(AccessLevel.NONE)
 	private Instant createdAt;
 
 	@Column(name = "updated_at", nullable = false)
-	@Setter(AccessLevel.NONE)
 	private Instant updatedAt;
 
 	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();
-		if (createdAt == null) {
-			createdAt = now;
-		}
+		createdAt = (createdAt == null) ? now : createdAt;
 		updatedAt = now;
 	}
 

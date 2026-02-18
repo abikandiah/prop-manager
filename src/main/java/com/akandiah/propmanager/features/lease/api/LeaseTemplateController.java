@@ -36,36 +36,35 @@ public class LeaseTemplateController {
 	}
 
 	@GetMapping
-	@Operation(summary = "List lease templates", description = "Filter with ?active=true for active-only (e.g. for dropdown when creating a lease), or ?search= for name search")
-	public List<LeaseTemplateResponse> list(
+	@Operation(summary = "List lease templates", description = "Filter with ?active=true for active-only, or ?search= for name search")
+	public ResponseEntity<List<LeaseTemplateResponse>> list(
 			@RequestParam(required = false, defaultValue = "false") boolean active,
 			@RequestParam(required = false) String search) {
 		if (search != null && !search.isBlank()) {
-			return service.search(search.strip());
+			return ResponseEntity.ok(service.search(search.strip()));
 		}
-		return active ? service.findActive() : service.findAll();
+		return ResponseEntity.ok(active ? service.findActive() : service.findAll());
 	}
 
 	@GetMapping("/{id}")
 	@Operation(summary = "Get lease template by ID")
-	public LeaseTemplateResponse getById(@PathVariable UUID id) {
-		return service.findById(id);
+	public ResponseEntity<LeaseTemplateResponse> getById(@PathVariable UUID id) {
+		return ResponseEntity.ok(service.findById(id));
 	}
 
 	@PostMapping
 	@Operation(summary = "Create a lease template")
 	public ResponseEntity<LeaseTemplateResponse> create(
 			@Valid @RequestBody CreateLeaseTemplateRequest request) {
-		LeaseTemplateResponse created = service.create(request);
-		return ResponseEntity.status(HttpStatus.CREATED).body(created);
+		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
 	}
 
 	@PatchMapping("/{id}")
 	@Operation(summary = "Update a lease template", description = "Requires 'version' for optimistic-lock verification; returns 409 if stale")
-	public LeaseTemplateResponse update(
+	public ResponseEntity<LeaseTemplateResponse> update(
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateLeaseTemplateRequest request) {
-		return service.update(id, request);
+		return ResponseEntity.ok(service.update(id, request));
 	}
 
 	@DeleteMapping("/{id}")

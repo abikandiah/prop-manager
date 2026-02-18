@@ -30,6 +30,12 @@ public interface LeaseRepository extends JpaRepository<Lease, UUID> {
 	 * leaseTemplateVersionTag,
 	 * executedContentMarkdown) so they remain valid after the template is deleted.
 	 */
+	/**
+	 * Checks whether a unit already has an active lease, excluding the given lease ID.
+	 * Used before activation to prevent concurrent active leases on the same unit.
+	 */
+	boolean existsByUnit_IdAndStatusAndIdNot(UUID unitId, LeaseStatus status, UUID excludedLeaseId);
+
 	@Modifying
 	@Query("UPDATE Lease l SET l.leaseTemplate = null WHERE l.leaseTemplate.id = :templateId")
 	int clearTemplateReference(@Param("templateId") UUID templateId);

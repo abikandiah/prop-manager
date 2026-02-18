@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -48,4 +49,9 @@ public record CreateLeaseRequest(
 
 		/** Extra placeholders for template: {{key}} → value. Can add or override built-in params. */
 		Map<String, String> templateParameters) {
+
+	@AssertTrue(message = "Start date must be before end date")
+	public boolean isDateRangeValid() {
+		return startDate == null || endDate == null || startDate.isBefore(endDate);
+	}
 }

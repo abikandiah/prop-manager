@@ -1,74 +1,43 @@
 package com.akandiah.propmanager.features.lease.service;
 
-import java.util.UUID;
+import org.springframework.stereotype.Component;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
-import com.akandiah.propmanager.features.lease.api.dto.LeaseResponse;
 import com.akandiah.propmanager.features.lease.domain.Lease;
-import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 
 /**
- * Handles lease status transitions.
+ * Pure domain component for lease status transitions.
+ * Owns guard logic and status mutation only — no I/O.
+ * Callers (LeaseService) are responsible for loading and persisting the entity.
  */
-@Service
+@Component
 public class LeaseStateMachine {
 
-	private final LeaseRepository leaseRepository;
-
-	public LeaseStateMachine(LeaseRepository leaseRepository) {
-		this.leaseRepository = leaseRepository;
-	}
-
-	/** Owner sends the draft to the tenant for review. */
-	@Transactional
-	public LeaseResponse submitForReview(UUID id) {
-		Lease lease = getEntity(id);
+	/** DRAFT → REVIEW */
+	void submitForReview(Lease lease) {
 		requireStatus(lease, LeaseStatus.DRAFT, "submit for review");
 		lease.setStatus(LeaseStatus.REVIEW);
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
 	}
 
-	/** Both parties signed — lease becomes active and read-only. */
-	@Transactional
-	public LeaseResponse activate(UUID id) {
-		Lease lease = getEntity(id);
+	/** REVIEW → ACTIVE */
+	void activate(Lease lease) {
 		requireStatus(lease, LeaseStatus.REVIEW, "activate");
 		lease.setStatus(LeaseStatus.ACTIVE);
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
 	}
 
-	/** Revert a lease in review back to draft for further edits. */
-	@Transactional
-	public LeaseResponse revertToDraft(UUID id) {
-		Lease lease = getEntity(id);
+	/** REVIEW → DRAFT */
+	void revertToDraft(Lease lease) {
 		requireStatus(lease, LeaseStatus.REVIEW, "revert to draft");
 		lease.setStatus(LeaseStatus.DRAFT);
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
 	}
 
-	/** Terminate an active lease early. */
-	@Transactional
-	public LeaseResponse terminate(UUID id) {
-		Lease lease = getEntity(id);
+	/** ACTIVE → TERMINATED */
+	void terminate(Lease lease) {
 		requireStatus(lease, LeaseStatus.ACTIVE, "terminate");
 		lease.setStatus(LeaseStatus.TERMINATED);
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
 	}
 
-	// ───────────────────────── Package-private helpers ─────────────────────────
-
-	Lease getEntity(UUID id) {
-		return leaseRepository.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException("Lease", id));
-	}
+	// ───────────────────────── Guards ─────────────────────────
 
 	void requireStatus(Lease lease, LeaseStatus expected, String action) {
 		if (lease.getStatus() != expected) {

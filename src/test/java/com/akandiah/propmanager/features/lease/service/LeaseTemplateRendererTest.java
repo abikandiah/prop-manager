@@ -1,7 +1,6 @@
 package com.akandiah.propmanager.features.lease.service;
 
 import static com.akandiah.propmanager.TestDataFactory.lease;
-import static com.akandiah.propmanager.TestDataFactory.leaseTemplate;
 import static com.akandiah.propmanager.TestDataFactory.prop;
 import static com.akandiah.propmanager.TestDataFactory.unit;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,8 +14,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseRequest;
-import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
+import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 
@@ -46,7 +44,7 @@ class LeaseTemplateRendererTest {
 				.unitNumber("204")
 				.build();
 
-		CreateLeaseRequest request = lease()
+		Lease lease = lease()
 				.property(property)
 				.unit(leaseUnit)
 				.startDate(LocalDate.of(2026, 3, 1))
@@ -54,7 +52,7 @@ class LeaseTemplateRendererTest {
 				.rentAmount(new BigDecimal("2500.00"))
 				.rentDueDay(5)
 				.securityDepositHeld(new BigDecimal("2500.00"))
-				.buildCreateRequest();
+				.build();
 
 		String template = "Property: {{property_name}}\n"
 				+ "Unit: {{unit_number}}\n"
@@ -62,7 +60,7 @@ class LeaseTemplateRendererTest {
 				+ "Period: {{start_date}} to {{end_date}}\n"
 				+ "Deposit: ${{security_deposit}}";
 
-		String result = renderer.stampMarkdown(template, request, leaseUnit, property, null);
+		String result = renderer.stampMarkdownFromLease(template, lease, leaseUnit, property, null);
 
 		assertThat(result).contains("Property: Sunset Towers");
 		assertThat(result).contains("Unit: 204");
@@ -73,47 +71,42 @@ class LeaseTemplateRendererTest {
 
 	@Test
 	void shouldMergeTemplateDefaultParameters() {
-		LeaseTemplate template = leaseTemplate()
-				.templateMarkdown("Landlord: {{landlord_name}}\nTenant: {{tenant_name}}")
-				.templateParameters(Map.of(
-						"landlord_name", "John Smith Properties",
-						"tenant_name", "Default Tenant"))
-				.build();
-
-		CreateLeaseRequest request = lease().buildCreateRequest();
 		Prop property = prop().id(UUID.randomUUID()).build();
 		Unit leaseUnit = unit().id(UUID.randomUUID()).build();
+		Lease lease = lease().property(property).unit(leaseUnit).build();
 
-		String result = renderer.stampMarkdown(
-				template.getTemplateMarkdown(),
-				request,
-				leaseUnit,
-				property,
-				template.getTemplateParameters());
+		Map<String, String> templateDefaults = Map.of(
+				"landlord_name", "John Smith Properties",
+				"tenant_name", "Default Tenant");
+
+		String template = "Landlord: {{landlord_name}}\nTenant: {{tenant_name}}";
+
+		String result = renderer.stampMarkdownFromLease(template, lease, leaseUnit, property, templateDefaults);
 
 		assertThat(result).contains("Landlord: John Smith Properties");
 		assertThat(result).contains("Tenant: Default Tenant");
 	}
 
 	@Test
-	void shouldAllowRequestParametersToOverrideTemplateDefaults() {
+	void shouldAllowLeaseParametersToOverrideTemplateDefaults() {
 		Map<String, String> templateDefaults = new HashMap<>();
 		templateDefaults.put("landlord_name", "Default Landlord");
 		templateDefaults.put("special_clause", "Standard clause");
 
-		Map<String, String> requestOverrides = new HashMap<>();
-		requestOverrides.put("special_clause", "Custom clause for this lease");
-
-		CreateLeaseRequest request = lease()
-				.templateParameters(requestOverrides)
-				.buildCreateRequest();
+		Map<String, String> leaseOverrides = new HashMap<>();
+		leaseOverrides.put("special_clause", "Custom clause for this lease");
 
 		Prop property = prop().id(UUID.randomUUID()).build();
 		Unit leaseUnit = unit().id(UUID.randomUUID()).build();
+		Lease lease = lease()
+				.property(property)
+				.unit(leaseUnit)
+				.templateParameters(leaseOverrides)
+				.build();
 
 		String template = "Landlord: {{landlord_name}}\nClause: {{special_clause}}";
 
-		String result = renderer.stampMarkdown(template, request, leaseUnit, property, templateDefaults);
+		String result = renderer.stampMarkdownFromLease(template, lease, leaseUnit, property, templateDefaults);
 
 		assertThat(result).contains("Landlord: Default Landlord");
 		assertThat(result).contains("Clause: Custom clause for this lease");
@@ -121,72 +114,75 @@ class LeaseTemplateRendererTest {
 
 	@Test
 	void shouldHandleNullSecurityDeposit() {
-		CreateLeaseRequest request = lease()
-				.securityDepositHeld(null)
-				.buildCreateRequest();
-
 		Prop property = prop().id(UUID.randomUUID()).build();
 		Unit leaseUnit = unit().id(UUID.randomUUID()).build();
+		Lease lease = lease()
+				.property(property)
+				.unit(leaseUnit)
+				.securityDepositHeld(null)
+				.build();
 
 		String template = "Security Deposit: {{security_deposit}}";
 
-		String result = renderer.stampMarkdown(template, request, leaseUnit, property, null);
+		String result = renderer.stampMarkdownFromLease(template, lease, leaseUnit, property, null);
 
 		assertThat(result).contains("Security Deposit: N/A");
 	}
 
 	@Test
 	void shouldHandleNullMarkdown() {
-		CreateLeaseRequest request = lease().buildCreateRequest();
 		Prop property = prop().id(UUID.randomUUID()).build();
 		Unit leaseUnit = unit().id(UUID.randomUUID()).build();
+		Lease lease = lease().property(property).unit(leaseUnit).build();
 
-		String result = renderer.stampMarkdown(null, request, leaseUnit, property, null);
+		String result = renderer.stampMarkdownFromLease(null, lease, leaseUnit, property, null);
 
 		assertThat(result).isNull();
 	}
 
 	@Test
 	void shouldReplaceAllOccurrencesOfPlaceholder() {
-		CreateLeaseRequest request = lease()
-				.rentAmount(new BigDecimal("1800.00"))
-				.buildCreateRequest();
-
 		Prop property = prop().id(UUID.randomUUID()).build();
 		Unit leaseUnit = unit().id(UUID.randomUUID()).build();
+		Lease lease = lease()
+				.property(property)
+				.unit(leaseUnit)
+				.rentAmount(new BigDecimal("1800.00"))
+				.build();
 
 		String template = "Monthly rent: ${{rent_amount}}\nFirst payment: ${{rent_amount}}\nLast payment: ${{rent_amount}}";
 
-		String result = renderer.stampMarkdown(template, request, leaseUnit, property, null);
+		String result = renderer.stampMarkdownFromLease(template, lease, leaseUnit, property, null);
 
 		assertThat(result).isEqualTo("Monthly rent: $1800.00\nFirst payment: $1800.00\nLast payment: $1800.00");
 	}
 
 	@Test
 	void shouldHandleEmptyTemplateParameters() {
-		CreateLeaseRequest request = lease()
-				.templateParameters(new HashMap<>())
-				.buildCreateRequest();
-
 		Prop property = prop().id(UUID.randomUUID()).legalName("Test Property").build();
 		Unit leaseUnit = unit().id(UUID.randomUUID()).unitNumber("A1").build();
+		Lease lease = lease()
+				.property(property)
+				.unit(leaseUnit)
+				.templateParameters(new HashMap<>())
+				.build();
 
 		String template = "Property: {{property_name}}, Unit: {{unit_number}}";
 
-		String result = renderer.stampMarkdown(template, request, leaseUnit, property, new HashMap<>());
+		String result = renderer.stampMarkdownFromLease(template, lease, leaseUnit, property, new HashMap<>());
 
 		assertThat(result).isEqualTo("Property: Test Property, Unit: A1");
 	}
 
 	@Test
 	void shouldLeaveUnknownPlaceholdersUnchanged() {
-		CreateLeaseRequest request = lease().buildCreateRequest();
-		Prop property = prop().id(UUID.randomUUID()).build();
+		Prop property = prop().id(UUID.randomUUID()).legalName("Sunrise Apartments").build();
 		Unit leaseUnit = unit().id(UUID.randomUUID()).build();
+		Lease lease = lease().property(property).unit(leaseUnit).build();
 
 		String template = "Known: {{property_name}}\nUnknown: {{unknown_placeholder}}";
 
-		String result = renderer.stampMarkdown(template, request, leaseUnit, property, null);
+		String result = renderer.stampMarkdownFromLease(template, lease, leaseUnit, property, null);
 
 		assertThat(result).contains("Known: Sunrise Apartments");
 		assertThat(result).contains("Unknown: {{unknown_placeholder}}");
@@ -224,16 +220,17 @@ class LeaseTemplateRendererTest {
 		Map<String, String> params = new HashMap<>();
 		params.put("nullable_field", null);
 
-		CreateLeaseRequest request = lease()
-				.templateParameters(params)
-				.buildCreateRequest();
-
 		Prop property = prop().id(UUID.randomUUID()).build();
 		Unit leaseUnit = unit().id(UUID.randomUUID()).build();
+		Lease lease = lease()
+				.property(property)
+				.unit(leaseUnit)
+				.templateParameters(params)
+				.build();
 
 		String template = "Field: {{nullable_field}}";
 
-		String result = renderer.stampMarkdown(template, request, leaseUnit, property, null);
+		String result = renderer.stampMarkdownFromLease(template, lease, leaseUnit, property, null);
 
 		// Null values should be replaced with empty string
 		assertThat(result).isEqualTo("Field: ");

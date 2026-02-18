@@ -439,76 +439,94 @@ class LeaseServiceTest {
 	// ═══════════════════════════════════════════════════════════════════════
 
 	@Test
-	void shouldDelegateSubmitForReviewToStateMachine() {
+	void shouldSubmitForReview() {
 		UUID leaseId = UUID.randomUUID();
-		Lease leasePendingReview = lease()
-				.id(leaseId)
-				.status(LeaseStatus.REVIEW)
-				.build();
+		Lease draftLease = lease().id(leaseId).status(LeaseStatus.DRAFT).build();
 
-		when(stateMachine.submitForReview(leaseId)).thenReturn(LeaseResponse.from(leasePendingReview));
+		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(draftLease));
+		when(leaseRepository.save(draftLease)).thenReturn(draftLease);
 
-		LeaseResponse response = leaseService.submitForReview(leaseId);
+		leaseService.submitForReview(leaseId);
 
-		assertThat(response.status()).isEqualTo(LeaseStatus.REVIEW);
-		verify(stateMachine).submitForReview(leaseId);
+		verify(stateMachine).submitForReview(draftLease);
+		verify(leaseRepository).save(draftLease);
 	}
 
 	@Test
-	void shouldDelegateActivateToStateMachineAndStampTemplate() {
+	void shouldActivateAndStampTemplate() {
 		UUID leaseId = UUID.randomUUID();
-		LeaseTemplate template = leaseTemplate().build();
-		Lease activeLease = lease()
+		LeaseTemplate template = leaseTemplate().templateMarkdown("Template {{property_name}}").build();
+		Unit leaseUnit = unit().build();
+		Prop property = prop().build();
+		Lease reviewLease = lease()
 				.id(leaseId)
-				.status(LeaseStatus.ACTIVE)
+				.status(LeaseStatus.REVIEW)
 				.leaseTemplate(template)
-				.unit(unit().build())
-				.property(prop().build())
+				.unit(leaseUnit)
+				.property(property)
 				.build();
 
-		when(stateMachine.activate(leaseId)).thenReturn(LeaseResponse.from(activeLease));
-		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(activeLease));
+		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(reviewLease));
+		when(leaseRepository.existsByUnit_IdAndStatusAndIdNot(any(), eq(LeaseStatus.ACTIVE), eq(leaseId)))
+				.thenReturn(false);
 		when(renderer.stampMarkdownFromLease(anyString(), any(), any(), any(), any())).thenReturn("Stamped content");
 		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		LeaseResponse response = leaseService.activate(leaseId);
 
-		assertThat(response.status()).isEqualTo(LeaseStatus.ACTIVE);
+		verify(stateMachine).activate(reviewLease);
+		verify(renderer).stampMarkdownFromLease(anyString(), eq(reviewLease), eq(leaseUnit), eq(property), any());
 		assertThat(response.executedContentMarkdown()).isEqualTo("Stamped content");
-		verify(stateMachine).activate(leaseId);
-		verify(renderer).stampMarkdownFromLease(anyString(), eq(activeLease), any(), any(), any());
 	}
 
 	@Test
-	void shouldDelegateRevertToDraftToStateMachine() {
+	void shouldThrowWhenActivatingWithExistingActiveLease() {
 		UUID leaseId = UUID.randomUUID();
-		Lease draftLease = lease()
+		Unit leaseUnit = unit().build();
+		Lease reviewLease = lease()
 				.id(leaseId)
-				.status(LeaseStatus.DRAFT)
+				.status(LeaseStatus.REVIEW)
+				.unit(leaseUnit)
 				.build();
 
-		when(stateMachine.revertToDraft(leaseId)).thenReturn(LeaseResponse.from(draftLease));
+		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(reviewLease));
+		when(leaseRepository.existsByUnit_IdAndStatusAndIdNot(any(), eq(LeaseStatus.ACTIVE), eq(leaseId)))
+				.thenReturn(true);
 
-		LeaseResponse response = leaseService.revertToDraft(leaseId);
+		assertThatThrownBy(() -> leaseService.activate(leaseId))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("unit already has an active lease");
 
-		assertThat(response.status()).isEqualTo(LeaseStatus.DRAFT);
-		verify(stateMachine).revertToDraft(leaseId);
+		verify(stateMachine, never()).activate(any());
+		verify(leaseRepository, never()).save(any());
 	}
 
 	@Test
-	void shouldDelegateTerminateToStateMachine() {
+	void shouldRevertToDraft() {
 		UUID leaseId = UUID.randomUUID();
-		Lease terminatedLease = lease()
-				.id(leaseId)
-				.status(LeaseStatus.TERMINATED)
-				.build();
+		Lease reviewLease = lease().id(leaseId).status(LeaseStatus.REVIEW).build();
 
-		when(stateMachine.terminate(leaseId)).thenReturn(LeaseResponse.from(terminatedLease));
+		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(reviewLease));
+		when(leaseRepository.save(reviewLease)).thenReturn(reviewLease);
 
-		LeaseResponse response = leaseService.terminate(leaseId);
+		leaseService.revertToDraft(leaseId);
 
-		assertThat(response.status()).isEqualTo(LeaseStatus.TERMINATED);
-		verify(stateMachine).terminate(leaseId);
+		verify(stateMachine).revertToDraft(reviewLease);
+		verify(leaseRepository).save(reviewLease);
+	}
+
+	@Test
+	void shouldTerminate() {
+		UUID leaseId = UUID.randomUUID();
+		Lease activeLease = lease().id(leaseId).status(LeaseStatus.ACTIVE).build();
+
+		when(leaseRepository.findById(leaseId)).thenReturn(Optional.of(activeLease));
+		when(leaseRepository.save(activeLease)).thenReturn(activeLease);
+
+		leaseService.terminate(leaseId);
+
+		verify(stateMachine).terminate(activeLease);
+		verify(leaseRepository).save(activeLease);
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -577,18 +595,17 @@ class LeaseServiceTest {
 	// ═══════════════════════════════════════════════════════════════════════
 
 	@Test
-	void shouldPassTemplateParametersToRenderer() {
+	void shouldStoreTemplateParametersOnLeaseForLaterStamping() {
 		UUID templateId = UUID.randomUUID();
 		UUID unitId = UUID.randomUUID();
 		UUID propertyId = UUID.randomUUID();
 
-		Map<String, String> templateParams = Map.of("landlord", "John Doe");
 		Map<String, String> requestParams = Map.of("special_clause", "Pet allowed");
 
 		LeaseTemplate template = leaseTemplate()
 				.id(templateId)
 				.templateMarkdown("Template content")
-				.templateParameters(templateParams)
+				.templateParameters(Map.of("landlord", "John Doe"))
 				.build();
 
 		Unit leaseUnit = unit().id(unitId).build();
@@ -610,8 +627,8 @@ class LeaseServiceTest {
 		leaseService.create(request);
 
 		verify(leaseRepository).save(leaseCaptor.capture());
-		// Template params stored on lease for stamping on activate; no renderer call at create
+		// Template params stored on lease for stamping on activate; renderer not called at create
 		assertThat(leaseCaptor.getValue().getTemplateParameters()).isEqualTo(requestParams);
-		verify(renderer, never()).stampMarkdown(anyString(), any(), any(), any(), any());
+		verify(renderer, never()).stampMarkdownFromLease(anyString(), any(), any(), any(), any());
 	}
 }

@@ -1,14 +1,14 @@
 package com.akandiah.propmanager.features.lease.domain;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
-
-import jakarta.persistence.Column;
 
 import org.hibernate.annotations.UuidGenerator;
 
 import com.akandiah.propmanager.features.tenant.domain.Tenant;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -17,7 +17,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,10 +31,9 @@ import lombok.Setter;
 @Entity
 @Table(name = "lease_tenants")
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class LeaseTenant {
 
 	@Id
@@ -46,13 +49,38 @@ public class LeaseTenant {
 	@JoinColumn(name = "tenant_id", nullable = false)
 	private Tenant tenant;
 
+	@Setter
 	@Column(nullable = false, length = 32)
 	@Enumerated(EnumType.STRING)
 	private LeaseTenantRole role;
 
+	@Setter
 	@Column(name = "invited_date")
 	private LocalDate invitedDate;
 
+	@Setter
 	@Column(name = "signed_date")
 	private LocalDate signedDate;
+
+	@Version
+	@Column(nullable = false)
+	private Integer version;
+
+	@Column(name = "created_at", nullable = false, updatable = false)
+	private Instant createdAt;
+
+	@Column(name = "updated_at", nullable = false)
+	private Instant updatedAt;
+
+	@PrePersist
+	void prePersist() {
+		Instant now = Instant.now();
+		createdAt = (createdAt == null) ? now : createdAt;
+		updatedAt = now;
+	}
+
+	@PreUpdate
+	void preUpdate() {
+		updatedAt = Instant.now();
+	}
 }

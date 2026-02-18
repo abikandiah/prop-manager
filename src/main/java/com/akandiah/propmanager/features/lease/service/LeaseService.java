@@ -22,7 +22,11 @@ import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class LeaseService {
 
 	private final LeaseRepository leaseRepository;
@@ -33,60 +37,43 @@ public class LeaseService {
 	private final LeaseStateMachine stateMachine;
 	private final LeaseTemplateRenderer renderer;
 
-	public LeaseService(LeaseRepository leaseRepository,
-			LeaseTemplateService templateService,
-			UnitRepository unitRepository,
-			PropRepository propRepository,
-			LeaseTenantRepository leaseTenantRepository,
-			LeaseStateMachine stateMachine,
-			LeaseTemplateRenderer renderer) {
-		this.leaseRepository = leaseRepository;
-		this.templateService = templateService;
-		this.unitRepository = unitRepository;
-		this.propRepository = propRepository;
-		this.leaseTenantRepository = leaseTenantRepository;
-		this.stateMachine = stateMachine;
-		this.renderer = renderer;
-	}
-
 	// ───────────────────────── Queries ─────────────────────────
 
-	@Transactional(readOnly = true)
 	public List<LeaseResponse> findAll() {
 		return leaseRepository.findAll().stream()
 				.map(LeaseResponse::from)
 				.toList();
 	}
 
-	@Transactional(readOnly = true)
 	public List<LeaseResponse> findByUnitId(UUID unitId) {
 		return leaseRepository.findByUnit_IdOrderByStartDateDesc(unitId).stream()
 				.map(LeaseResponse::from)
 				.toList();
 	}
 
-	@Transactional(readOnly = true)
 	public List<LeaseResponse> findByPropertyId(UUID propertyId) {
 		return leaseRepository.findByProperty_IdOrderByStartDateDesc(propertyId).stream()
 				.map(LeaseResponse::from)
 				.toList();
 	}
 
-	@Transactional(readOnly = true)
 	public LeaseResponse findById(UUID id) {
-		Lease lease = getEntity(id);
-		return LeaseResponse.from(lease);
+		return LeaseResponse.from(getEntity(id));
 	}
 
 	// ───────────────────────── Stamp (create) ─────────────────────────
 
 	/**
-	 * Stamps a new lease from a template.
-	 * Copies template defaults for any field the caller didn't override,
-	 * then renders the template markdown into the executed snapshot.
+	 * Stamps a new DRAFT lease from a template.
+	 * Copies template defaults for any field the caller didn't override.
+	 * Template markdown is rendered into executedContentMarkdown on activate, not here.
 	 */
 	@Transactional
 	public LeaseResponse create(CreateLeaseRequest request) {
+		if (!request.startDate().isBefore(request.endDate())) {
+			throw new IllegalArgumentException("Start date must be before end date.");
+		}
+
 		LeaseTemplate template = templateService.getEntity(request.leaseTemplateId());
 		if (!template.isActive()) {
 			throw new IllegalArgumentException("Lease template is not active and cannot be used for new leases.");
@@ -96,7 +83,6 @@ public class LeaseService {
 		Prop property = propRepository.findById(request.propertyId())
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", request.propertyId()));
 
-		// DRAFT lease keeps template FK; stamp (executedContentMarkdown) happens on activate
 		Lease lease = Lease.builder()
 				.leaseTemplate(template)
 				.leaseTemplateName(template.getName())
@@ -114,11 +100,9 @@ public class LeaseService {
 				.noticePeriodDays(LeaseTemplateRenderer.coalesce(request.noticePeriodDays(), template.getDefaultNoticePeriodDays()))
 				.additionalMetadata(request.additionalMetadata())
 				.templateParameters(request.templateParameters())
-				.executedContentMarkdown(null)
 				.build();
 
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
+		return LeaseResponse.from(leaseRepository.save(lease));
 	}
 
 	// ───────────────────────── Update (DRAFT only) ─────────────────────────
@@ -134,6 +118,9 @@ public class LeaseService {
 		}
 		if (request.endDate() != null) {
 			lease.setEndDate(request.endDate());
+		}
+		if (!lease.getStartDate().isBefore(lease.getEndDate())) {
+			throw new IllegalArgumentException("Start date must be before end date.");
 		}
 		if (request.rentAmount() != null) {
 			lease.setRentAmount(request.rentAmount());
@@ -163,8 +150,7 @@ public class LeaseService {
 			lease.setTemplateParameters(request.templateParameters());
 		}
 
-		lease = leaseRepository.save(lease);
-		return LeaseResponse.from(lease);
+		return LeaseResponse.from(leaseRepository.save(lease));
 	}
 
 	// ───────────────────────── Status transitions ─────────────────────────
@@ -172,36 +158,46 @@ public class LeaseService {
 	/** Owner sends the draft to the tenant for review. */
 	@Transactional
 	public LeaseResponse submitForReview(UUID id) {
-		return stateMachine.submitForReview(id);
+		Lease lease = getEntity(id);
+		stateMachine.submitForReview(lease);
+		return LeaseResponse.from(leaseRepository.save(lease));
 	}
 
-	/** Both parties signed — lease becomes active and read-only. Stamps template onto lease (executedContentMarkdown) at this point. */
+	/**
+	 * Both parties signed — lease becomes active and read-only.
+	 * Stamps the template markdown into executedContentMarkdown at this point.
+	 */
 	@Transactional
 	public LeaseResponse activate(UUID id) {
-		LeaseResponse res = stateMachine.activate(id);
-		Lease lease = leaseRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Lease", id));
+		Lease lease = getEntity(id);
+		if (leaseRepository.existsByUnit_IdAndStatusAndIdNot(lease.getUnit().getId(), LeaseStatus.ACTIVE, id)) {
+			throw new IllegalStateException("Cannot activate: unit already has an active lease.");
+		}
+		stateMachine.activate(lease);
 		if (lease.getLeaseTemplate() != null) {
 			LeaseTemplate t = lease.getLeaseTemplate();
-			String content = renderer.stampMarkdownFromLease(t.getTemplateMarkdown(), lease,
-					lease.getUnit(), lease.getProperty(), t.getTemplateParameters());
-			lease.setExecutedContentMarkdown(content);
+			lease.setExecutedContentMarkdown(renderer.stampMarkdownFromLease(
+					t.getTemplateMarkdown(), lease, lease.getUnit(), lease.getProperty(), t.getTemplateParameters()));
 			lease.setLeaseTemplateName(t.getName());
 			lease.setLeaseTemplateVersionTag(t.getVersionTag());
-			leaseRepository.save(lease);
 		}
-		return LeaseResponse.from(lease);
+		return LeaseResponse.from(leaseRepository.save(lease));
 	}
 
-	/** Revert a pending-review lease back to draft for further edits. */
+	/** Revert a lease in review back to draft for further edits. */
 	@Transactional
 	public LeaseResponse revertToDraft(UUID id) {
-		return stateMachine.revertToDraft(id);
+		Lease lease = getEntity(id);
+		stateMachine.revertToDraft(lease);
+		return LeaseResponse.from(leaseRepository.save(lease));
 	}
 
 	/** Terminate an active lease early. */
 	@Transactional
 	public LeaseResponse terminate(UUID id) {
-		return stateMachine.terminate(id);
+		Lease lease = getEntity(id);
+		stateMachine.terminate(lease);
+		return LeaseResponse.from(leaseRepository.save(lease));
 	}
 
 	// ───────────────────────── Delete (DRAFT only) ─────────────────────────
@@ -210,9 +206,7 @@ public class LeaseService {
 	public void deleteById(UUID id) {
 		Lease lease = getEntity(id);
 		stateMachine.requireDraft(lease);
-
 		DeleteGuardUtil.requireNoChildren("Lease", id, leaseTenantRepository.countByLease_Id(id), "tenant assignment(s)", "Remove those first.");
-
 		leaseRepository.delete(lease);
 	}
 

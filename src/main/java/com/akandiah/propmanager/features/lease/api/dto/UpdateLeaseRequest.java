@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -45,4 +46,10 @@ public record UpdateLeaseRequest(
 		Map<String, String> templateParameters,
 
 		@NotNull(message = "version is required for optimistic-lock verification") Integer version) {
+
+	@AssertTrue(message = "Start date must be before end date")
+	public boolean isDateRangeValid() {
+		if (startDate == null || endDate == null) return true;
+		return startDate.isBefore(endDate);
+	}
 }

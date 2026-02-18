@@ -37,10 +37,9 @@ import lombok.Setter;
 @Entity
 @Table(name = "leases")
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Lease {
 
 	@Id
@@ -49,15 +48,18 @@ public class Lease {
 	private UUID id;
 
 	// Optional FK — may be null if the template was deleted after stamping.
+	@Setter
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "lease_template_id")
 	private LeaseTemplate leaseTemplate;
 
 	// Denormalized snapshot so the lease carries its own provenance
 	// even after the template is deleted.
+	@Setter
 	@Column(name = "lease_template_name", length = 255)
 	private String leaseTemplateName;
 
+	@Setter
 	@Column(name = "lease_template_version_tag", length = 50)
 	private String leaseTemplateVersionTag;
 
@@ -73,53 +75,63 @@ public class Lease {
 	@Column(nullable = false)
 	private Integer version;
 
+	@Setter
 	@Column(nullable = false, length = 32)
 	@Enumerated(EnumType.STRING)
 	private LeaseStatus status;
 
+	@Setter
 	@Column(name = "start_date", nullable = false)
 	private LocalDate startDate;
 
+	@Setter
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
 
+	@Setter
 	@Column(name = "rent_amount", precision = 19, scale = 4, nullable = false)
 	private BigDecimal rentAmount;
 
-	@Lob // Uses Large Object storage for long contracts
+	@Setter
+	@Lob
 	@Column(name = "executed_content_markdown", columnDefinition = "TEXT")
 	private String executedContentMarkdown;
 
+	@Setter
 	@Column(name = "rent_due_day", nullable = false)
 	private Integer rentDueDay;
 
+	@Setter
 	@Column(name = "security_deposit_held", precision = 19, scale = 4)
 	private BigDecimal securityDepositHeld;
 
+	@Setter
 	@Column(name = "late_fee_type", length = 32)
 	@Enumerated(EnumType.STRING)
 	private LateFeeType lateFeeType;
 
+	@Setter
 	@Column(name = "late_fee_amount", precision = 19, scale = 4)
 	private BigDecimal lateFeeAmount;
 
+	@Setter
 	@Column(name = "notice_period_days")
 	private Integer noticePeriodDays;
 
+	@Setter
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "additional_metadata")
 	private Map<String, Object> additionalMetadata;
 
+	@Setter
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "template_parameters")
 	private Map<String, String> templateParameters;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
-	@Setter(AccessLevel.NONE)
 	private Instant createdAt;
 
 	@Column(name = "updated_at", nullable = false)
-	@Setter(AccessLevel.NONE)
 	private Instant updatedAt;
 
 	@PrePersist
