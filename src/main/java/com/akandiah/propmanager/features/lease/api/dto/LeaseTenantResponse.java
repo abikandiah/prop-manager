@@ -21,6 +21,8 @@ public record LeaseTenantResponse(
 		UUID inviteId,
 		LocalDate invitedDate,
 		LocalDate signedDate,
+		/** Timestamp of the last resend, null if never resent. */
+		Instant lastResentAt,
 		Integer version,
 		Instant createdAt,
 		Instant updatedAt) {
@@ -45,6 +47,7 @@ public record LeaseTenantResponse(
 				lt.getInvite().getId(),
 				lt.getInvitedDate(),
 				lt.getSignedDate(),
+				lt.getInvite().getLastResentAt(),
 				lt.getVersion(),
 				lt.getCreatedAt(),
 				lt.getUpdatedAt());

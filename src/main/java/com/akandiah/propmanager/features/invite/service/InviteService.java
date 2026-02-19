@@ -111,15 +111,9 @@ public class InviteService {
 		Invite invite = inviteRepository.findById(inviteId)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite", inviteId));
 
-		// Validate invite can be resent
-		if (invite.getStatus() != InviteStatus.PENDING) {
-			throw new IllegalStateException("Only pending invites can be resent");
-		}
-
-		if (invite.isExpired()) {
-			invite.setStatus(InviteStatus.EXPIRED);
-			inviteRepository.save(invite);
-			throw new IllegalStateException("Cannot resend expired invite");
+		// Cannot resend accepted or revoked invites
+		if (invite.getStatus() == InviteStatus.ACCEPTED || invite.getStatus() == InviteStatus.REVOKED) {
+			throw new IllegalStateException("Only pending or expired invites can be resent");
 		}
 
 		// Check resend cooldown
@@ -128,6 +122,12 @@ public class InviteService {
 			if (Instant.now().isBefore(cooldownExpiry)) {
 				throw new IllegalStateException("Please wait before resending this invitation");
 			}
+		}
+
+		// Renew expired invites so the recipient gets a fresh window
+		if (invite.isExpired() || invite.getStatus() == InviteStatus.EXPIRED) {
+			invite.setExpiresAt(Instant.now().plus(Duration.ofHours(inviteProperties.expiryHours())));
+			invite.setStatus(InviteStatus.PENDING);
 		}
 
 		// Send email

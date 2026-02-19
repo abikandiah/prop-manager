@@ -54,6 +54,15 @@ public class LeaseTenantController {
 				.body(leaseTenantService.inviteTenants(leaseId, request, invitedBy));
 	}
 
+	@PostMapping("/{leaseTenantId}/resend")
+	@PreAuthorize("isAuthenticated()")
+	@Operation(summary = "Resend the invite for a tenant who hasn't accepted yet")
+	public ResponseEntity<LeaseTenantResponse> resendInvite(
+			@PathVariable UUID leaseId,
+			@PathVariable UUID leaseTenantId) {
+		return ResponseEntity.ok(leaseTenantService.resendTenantInvite(leaseId, leaseTenantId));
+	}
+
 	@DeleteMapping("/{leaseTenantId}")
 	@PreAuthorize("isAuthenticated()")
 	@Operation(summary = "Remove a tenant from a DRAFT lease")

@@ -99,6 +99,35 @@ public class LeaseTenantService {
 		return created.stream().map(LeaseTenantResponse::from).toList();
 	}
 
+	// ───────────────────────── Resend ─────────────────────────
+
+	/**
+	 * Resends the invite for a lease tenant slot that is still in INVITED status.
+	 * Delegates cooldown and expiry renewal logic to {@link InviteService#resendInvite}.
+	 */
+	@Transactional
+	public LeaseTenantResponse resendTenantInvite(UUID leaseId, UUID leaseTenantId) {
+		LeaseTenant leaseTenant = leaseTenantRepository.findById(leaseTenantId)
+				.orElseThrow(() -> new ResourceNotFoundException("LeaseTenant", leaseTenantId));
+
+		if (!leaseTenant.getLease().getId().equals(leaseId)) {
+			throw new ResourceNotFoundException("LeaseTenant", leaseTenantId);
+		}
+
+		if (leaseTenant.getTenant() != null) {
+			throw new IllegalStateException("This tenant has already accepted their invitation");
+		}
+
+		inviteService.resendInvite(leaseTenant.getInvite().getId(), Map.of("leaseId", leaseId.toString()));
+
+		// Reload to pick up the updated lastResentAt from the invite
+		LeaseTenant refreshed = leaseTenantRepository.findById(leaseTenantId)
+				.orElseThrow(() -> new ResourceNotFoundException("LeaseTenant", leaseTenantId));
+
+		log.info("Resent invite for LeaseTenant {} on lease {}", leaseTenantId, leaseId);
+		return LeaseTenantResponse.from(refreshed);
+	}
+
 	// ───────────────────────── Remove ─────────────────────────
 
 	/**
