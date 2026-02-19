@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import com.akandiah.propmanager.config.NotificationProperties;
+
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -25,12 +27,10 @@ public class EmailNotificationService {
 
 	private final JavaMailSender mailSender;
 	private final TemplateEngine templateEngine;
+	private final NotificationProperties notificationProperties;
 
 	@Value("${spring.mail.from:noreply@propmanager.local}")
 	private String fromEmail;
-
-	@Value("${app.notification.email.enabled:true}")
-	private boolean emailEnabled;
 
 	/**
 	 * Send an email using the specified template and context data.
@@ -41,7 +41,7 @@ public class EmailNotificationService {
 	 * @throws NotificationException if sending fails
 	 */
 	public void send(String toEmail, NotificationTemplate template, Map<String, Object> context) {
-		if (!emailEnabled) {
+		if (!notificationProperties.email().enabled()) {
 			log.info("Email notifications disabled. Skipping email to {}", toEmail);
 			return;
 		}

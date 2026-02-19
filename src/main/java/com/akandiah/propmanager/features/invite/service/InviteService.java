@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.notification.NotificationService;
 import com.akandiah.propmanager.common.notification.NotificationTemplate;
+import com.akandiah.propmanager.config.InviteProperties;
+import com.akandiah.propmanager.config.NotificationProperties;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteAcceptedEvent;
@@ -39,17 +40,10 @@ public class InviteService {
 	private final InviteRepository inviteRepository;
 	private final NotificationService notificationService;
 	private final ApplicationEventPublisher eventPublisher;
+	private final InviteProperties inviteProperties;
+	private final NotificationProperties notificationProperties;
 
 	private static final SecureRandom RANDOM = new SecureRandom();
-
-	@Value("${app.notification.base-url}")
-	private String baseUrl;
-
-	@Value("${app.invite.expiry-hours:72}")
-	private int expiryHours;
-
-	@Value("${app.invite.resend-cooldown-minutes:15}")
-	private int resendCooldownMinutes;
 
 	/**
 	 * Create and send an invitation.
@@ -77,7 +71,7 @@ public class InviteService {
 
 		// Create invite
 		Instant now = Instant.now();
-		Instant expiresAt = now.plus(Duration.ofHours(expiryHours));
+		Instant expiresAt = now.plus(Duration.ofHours(inviteProperties.expiryHours()));
 
 		Invite invite = Invite.builder()
 				.email(email)
@@ -130,7 +124,7 @@ public class InviteService {
 
 		// Check resend cooldown
 		if (invite.getLastResentAt() != null) {
-			Instant cooldownExpiry = invite.getLastResentAt().plus(Duration.ofMinutes(resendCooldownMinutes));
+			Instant cooldownExpiry = invite.getLastResentAt().plus(Duration.ofMinutes(inviteProperties.resendCooldownMinutes()));
 			if (Instant.now().isBefore(cooldownExpiry)) {
 				throw new IllegalStateException("Please wait before resending this invitation");
 			}
@@ -259,7 +253,7 @@ public class InviteService {
 	 * Send the invitation email using the notification service.
 	 */
 	private void sendInviteEmail(Invite invite, Map<String, Object> metadata) {
-		String inviteLink = baseUrl + "/invite/accept?token=" + invite.getToken();
+		String inviteLink = notificationProperties.baseUrl() + "/invite/accept?token=" + invite.getToken();
 
 		Map<String, Object> emailContext = new HashMap<>(metadata != null ? metadata : Map.of());
 		emailContext.put("inviteLink", inviteLink);
