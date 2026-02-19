@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
+import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.tenant.domain.Tenant;
 
 import jakarta.persistence.Column;
@@ -45,8 +46,20 @@ public class LeaseTenant {
 	@JoinColumn(name = "lease_id", nullable = false)
 	private Lease lease;
 
+	/**
+	 * The invite that originated this tenant slot.
+	 * Always set at creation; used to look up and fulfil the slot on invite acceptance.
+	 */
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "tenant_id", nullable = false)
+	@JoinColumn(name = "invite_id", nullable = false)
+	private Invite invite;
+
+	/**
+	 * Null until the invited user accepts the invite and their tenant profile is created/linked.
+	 */
+	@Setter
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "tenant_id")
 	private Tenant tenant;
 
 	@Setter

@@ -2,14 +2,12 @@ package com.akandiah.propmanager.features.lease.api.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 
 import jakarta.validation.constraints.AssertTrue;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +16,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 /**
  * Stamps a new lease from a template.
  * The template's defaults are used for any field left null.
+ * Tenants are invited separately via POST /api/leases/{id}/tenants/invite.
  */
 public record CreateLeaseRequest(
 		@NotNull(message = "Lease template ID is required") UUID leaseTemplateId,
@@ -25,8 +24,6 @@ public record CreateLeaseRequest(
 		@NotNull(message = "Unit ID is required") UUID unitId,
 
 		@NotNull(message = "Property ID is required") UUID propertyId,
-
-		List<@Email String> tenantEmails,
 
 		@NotNull(message = "Start date is required") LocalDate startDate,
 

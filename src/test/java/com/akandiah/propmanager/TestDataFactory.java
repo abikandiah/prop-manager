@@ -17,9 +17,11 @@ import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
 import com.akandiah.propmanager.features.prop.domain.Address;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropertyType;
+import com.akandiah.propmanager.features.tenant.domain.Tenant;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitStatus;
 import com.akandiah.propmanager.features.unit.domain.UnitType;
+import com.akandiah.propmanager.features.user.domain.User;
 
 /**
  * Central factory for creating test data with sensible defaults.
@@ -29,6 +31,139 @@ public final class TestDataFactory {
 
 	private TestDataFactory() {
 		throw new UnsupportedOperationException("Utility class");
+	}
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// User Builders
+	// ═══════════════════════════════════════════════════════════════════════
+
+	public static UserBuilder user() {
+		return new UserBuilder();
+	}
+
+	public static class UserBuilder {
+		private UUID id = UUID.randomUUID();
+		private String idpSub = "test-user";
+		private String name = "Alice Tenant";
+		private String email = "alice@example.com";
+		private String phoneNumber = "+1-416-555-0100";
+		private String avatarUrl = null;
+
+		public UserBuilder id(UUID id) {
+			this.id = id;
+			return this;
+		}
+
+		public UserBuilder idpSub(String idpSub) {
+			this.idpSub = idpSub;
+			return this;
+		}
+
+		public UserBuilder name(String name) {
+			this.name = name;
+			return this;
+		}
+
+		public UserBuilder email(String email) {
+			this.email = email;
+			return this;
+		}
+
+		public UserBuilder phoneNumber(String phoneNumber) {
+			this.phoneNumber = phoneNumber;
+			return this;
+		}
+
+		public User build() {
+			return User.builder()
+					.id(id)
+					.idpSub(idpSub)
+					.name(name)
+					.email(email)
+					.phoneNumber(phoneNumber)
+					.avatarUrl(avatarUrl)
+					.build();
+		}
+	}
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// Tenant Builders
+	// ═══════════════════════════════════════════════════════════════════════
+
+	public static TenantBuilder tenant() {
+		return new TenantBuilder();
+	}
+
+	public static class TenantBuilder {
+		private UUID id = UUID.randomUUID();
+		private User user;
+		private String emergencyContactName = "Bob Emergency";
+		private String emergencyContactPhone = "+1-416-555-0199";
+		private Boolean hasPets = false;
+		private String petDescription = null;
+		private String vehicleInfo = null;
+		private String notes = null;
+		private Integer version = 0;
+
+		public TenantBuilder id(UUID id) {
+			this.id = id;
+			return this;
+		}
+
+		public TenantBuilder user(User user) {
+			this.user = user;
+			return this;
+		}
+
+		public TenantBuilder emergencyContactName(String emergencyContactName) {
+			this.emergencyContactName = emergencyContactName;
+			return this;
+		}
+
+		public TenantBuilder emergencyContactPhone(String emergencyContactPhone) {
+			this.emergencyContactPhone = emergencyContactPhone;
+			return this;
+		}
+
+		public TenantBuilder hasPets(Boolean hasPets) {
+			this.hasPets = hasPets;
+			return this;
+		}
+
+		public TenantBuilder petDescription(String petDescription) {
+			this.petDescription = petDescription;
+			return this;
+		}
+
+		public TenantBuilder vehicleInfo(String vehicleInfo) {
+			this.vehicleInfo = vehicleInfo;
+			return this;
+		}
+
+		public TenantBuilder notes(String notes) {
+			this.notes = notes;
+			return this;
+		}
+
+		public TenantBuilder version(Integer version) {
+			this.version = version;
+			return this;
+		}
+
+		public Tenant build() {
+			User tenantUser = this.user != null ? this.user : TestDataFactory.user().build();
+			return Tenant.builder()
+					.id(id)
+					.user(tenantUser)
+					.emergencyContactName(emergencyContactName)
+					.emergencyContactPhone(emergencyContactPhone)
+					.hasPets(hasPets)
+					.petDescription(petDescription)
+					.vehicleInfo(vehicleInfo)
+					.notes(notes)
+					.version(version)
+					.build();
+		}
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -584,7 +719,6 @@ public final class TestDataFactory {
 					template.getId(),
 					leaseUnit.getId(),
 					leaseProp.getId(),
-					null,
 					startDate,
 					endDate,
 					rentAmount,

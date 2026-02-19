@@ -2,13 +2,11 @@ package com.akandiah.propmanager.features.lease.api.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 
 import jakarta.validation.constraints.AssertTrue;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -17,6 +15,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 /**
  * Partial update for a DRAFT lease.
  * Only DRAFT leases may be modified; all other statuses are read-only.
+ * Tenants are managed separately via /api/leases/{id}/tenants.
  */
 public record UpdateLeaseRequest(
 		LocalDate startDate,
@@ -34,8 +33,6 @@ public record UpdateLeaseRequest(
 		@PositiveOrZero BigDecimal lateFeeAmount,
 
 		@Min(1) Integer noticePeriodDays,
-
-		List<@Email String> tenantEmails,
 
 		/** Allow the owner to tweak the stamped content before sending for review. */
 		String executedContentMarkdown,

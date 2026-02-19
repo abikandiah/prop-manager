@@ -732,3 +732,66 @@ databaseChangeLog:
             columns:
               - column:
                   name: status
+
+  # alter lease_tenants: make tenant_id nullable, add invite_id FK, add missing audit/lifecycle columns
+  - changeSet:
+      id: "alter-lease-tenants-for-invite"
+      author: "prop-manager"
+      changes:
+        # Drop the unique constraint that assumed tenant_id was always set
+        - dropUniqueConstraint:
+            tableName: lease_tenants
+            constraintName: uk_lease_tenants_lease_tenant
+        # Make tenant_id nullable (it is now null until the invitee accepts)
+        - dropNotNullConstraint:
+            tableName: lease_tenants
+            columnName: tenant_id
+            columnDataType: uuid
+        # Add invite_id column (non-nullable — every LeaseTenant row originates from an invite)
+        - addColumn:
+            tableName: lease_tenants
+            columns:
+              - column:
+                  name: invite_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: lease_tenants
+            baseColumnNames: invite_id
+            constraintName: fk_lease_tenants_invite
+            referencedTableName: invite
+            referencedColumnNames: id
+        # Unique: one invite maps to exactly one LeaseTenant slot
+        - addUniqueConstraint:
+            tableName: lease_tenants
+            columnNames: lease_id, invite_id
+            constraintName: uk_lease_tenants_lease_invite
+        # Lifecycle columns present in the entity but missing from the original migration
+        - addColumn:
+            tableName: lease_tenants
+            columns:
+              - column:
+                  name: invited_date
+                  type: date
+              - column:
+                  name: signed_date
+                  type: date
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+                  defaultValueComputed: now()

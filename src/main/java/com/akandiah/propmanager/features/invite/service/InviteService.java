@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import com.akandiah.propmanager.common.notification.NotificationService;
 import com.akandiah.propmanager.common.notification.NotificationTemplate;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.Invite;
+import com.akandiah.propmanager.features.invite.domain.InviteAcceptedEvent;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.invite.domain.InviteStatus;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
@@ -36,6 +38,7 @@ public class InviteService {
 
 	private final InviteRepository inviteRepository;
 	private final NotificationService notificationService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -173,6 +176,8 @@ public class InviteService {
 		invite.setAcceptedAt(Instant.now());
 		invite.setClaimedUser(claimedBy);
 		invite = inviteRepository.save(invite);
+
+		eventPublisher.publishEvent(new InviteAcceptedEvent(invite, claimedBy));
 
 		log.info("Invite accepted: id={}, email={}, claimedBy={}", invite.getId(), invite.getEmail(),
 				claimedBy.getId());
