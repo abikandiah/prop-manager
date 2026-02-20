@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.notification.NotificationChannel;
+import com.akandiah.propmanager.common.notification.NotificationReferenceType;
 import com.akandiah.propmanager.common.notification.NotificationService;
 import com.akandiah.propmanager.common.notification.NotificationType;
 import com.akandiah.propmanager.features.notification.api.dto.NotificationDeliveryResponse;
@@ -47,17 +48,18 @@ public class NotificationDeliveryService {
 	}
 
 	/**
-	 * Create a delivery record and attempt to send immediately.
-	 * If the user has opted out of this notification type, the record is not created.
+	 * Writes a PENDING delivery row and returns its ID.
+	 * If the user has opted out of this notification type, no record is created and null is returned.
+	 * Runs in REQUIRES_NEW so the row is committed before the caller returns.
 	 */
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
-	public void createAndSend(
+	public UUID createPending(
 			UUID userId,
 			String recipientAddress,
 			NotificationType type,
 			NotificationChannel channel,
 			UUID referenceId,
-			String referenceType,
+			NotificationReferenceType referenceType,
 			Map<String, Object> templateContext) {
 
 		// Check opt-out preference for known users
@@ -68,7 +70,7 @@ public class NotificationDeliveryService {
 					.orElse(false);
 			if (disabled) {
 				log.info("Skipping notification: user={} has opted out of type={}", userId, type);
-				return;
+				return null;
 			}
 		}
 
@@ -84,8 +86,42 @@ public class NotificationDeliveryService {
 				.build();
 
 		delivery = deliveryRepository.save(delivery);
-		attemptSend(delivery, templateContext);
+		return delivery.getId();
+	}
+
+	/**
+	 * Sends a PENDING or FAILED delivery by ID.
+	 * Loads the delivery, attempts to send, and persists the resulting status.
+	 * Runs in REQUIRES_NEW so send failures are isolated per delivery.
+	 */
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void sendDelivery(UUID deliveryId) {
+		NotificationDelivery delivery = deliveryRepository.findById(deliveryId)
+				.orElseThrow(() -> new ResourceNotFoundException("NotificationDelivery", deliveryId));
+
+		if (delivery.getStatus() != NotificationDeliveryStatus.PENDING
+				&& delivery.getStatus() != NotificationDeliveryStatus.FAILED) {
+			log.warn("Send skipped: delivery {} is not in PENDING or FAILED state (status={})",
+					deliveryId, delivery.getStatus());
+			return;
+		}
+
+		attemptSend(delivery, delivery.getTemplateContext());
 		deliveryRepository.save(delivery);
+	}
+
+	/**
+	 * Bulk-cancels PENDING and FAILED deliveries for a reference.
+	 * Used before a resend to prevent duplicate delivery.
+	 * Runs in REQUIRES_NEW so the cancellation is committed atomically.
+	 */
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void cancelActiveDeliveriesForReference(NotificationReferenceType referenceType, UUID referenceId) {
+		int cancelled = deliveryRepository.cancelActiveDeliveriesForReference(referenceType, referenceId);
+		if (cancelled > 0) {
+			log.info("Cancelled {} active delivery(ies) for referenceType={} referenceId={}",
+					cancelled, referenceType, referenceId);
+		}
 	}
 
 	/**
@@ -103,20 +139,11 @@ public class NotificationDeliveryService {
 	}
 
 	/**
-	 * Retry a previously failed delivery.
+	 * Retry a previously failed delivery. Delegates to sendDelivery.
 	 */
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void retryDelivery(UUID deliveryId) {
-		NotificationDelivery delivery = deliveryRepository.findById(deliveryId)
-				.orElseThrow(() -> new ResourceNotFoundException("NotificationDelivery", deliveryId));
-
-		if (delivery.getStatus() != NotificationDeliveryStatus.FAILED) {
-			log.warn("Retry skipped: delivery {} is not in FAILED state (status={})", deliveryId, delivery.getStatus());
-			return;
-		}
-
-		attemptSend(delivery, delivery.getTemplateContext());
-		deliveryRepository.save(delivery);
+		sendDelivery(deliveryId);
 	}
 
 	private void attemptSend(NotificationDelivery delivery, Map<String, Object> context) {

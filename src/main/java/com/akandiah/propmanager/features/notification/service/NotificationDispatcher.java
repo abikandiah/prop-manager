@@ -3,13 +3,14 @@ package com.akandiah.propmanager.features.notification.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.akandiah.propmanager.common.notification.NotificationChannel;
+import com.akandiah.propmanager.common.notification.NotificationReferenceType;
 import com.akandiah.propmanager.common.notification.NotificationType;
 import com.akandiah.propmanager.config.NotificationProperties;
 import com.akandiah.propmanager.features.invite.domain.Invite;
@@ -30,12 +31,16 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Central dispatcher that listens to domain events and delegates delivery
- * to {@link NotificationDeliveryService}. Runs asynchronously after commit so
- * the originating HTTP thread is never blocked by email I/O.
+ * to {@link NotificationDeliveryService} and {@link NotificationDeliverySender}.
  *
- * <p>No {@code @Transactional} here — each call to
- * {@code deliveryService.createAndSend()} opens its own {@code REQUIRES_NEW}
- * transaction, so failures are isolated per recipient.
+ * <p>Outbox pattern: each handler runs synchronously on the committing thread
+ * (AFTER_COMMIT, no @Async). It first commits a PENDING row via
+ * {@code deliveryService.createPending()} (REQUIRES_NEW), then enqueues the async
+ * send via {@code notificationSender.sendAsync()}. A JVM crash between commit and
+ * enqueue leaves a recoverable PENDING row that the scheduler will pick up.
+ *
+ * <p>No {@code @Transactional} here — each call to the delivery service opens its
+ * own {@code REQUIRES_NEW} transaction, isolating failures per recipient.
  */
 @Component
 @Slf4j
@@ -43,6 +48,7 @@ import lombok.extern.slf4j.Slf4j;
 public class NotificationDispatcher {
 
 	private final NotificationDeliveryService deliveryService;
+	private final NotificationDeliverySender notificationSender;
 	private final InviteRepository inviteRepository;
 	private final LeaseRepository leaseRepository;
 	private final LeaseTenantRepository leaseTenantRepository;
@@ -52,7 +58,6 @@ public class NotificationDispatcher {
 	// ─────────────────────────── Invite ───────────────────────────
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	@Async("notificationExecutor")
 	public void onInviteEmailRequested(InviteEmailRequestedEvent event) {
 		Invite invite = inviteRepository.findWithInvitedByById(event.inviteId()).orElse(null);
 		if (invite == null) {
@@ -72,20 +77,28 @@ public class NotificationDispatcher {
 				? NotificationType.INVITE_PROPERTY
 				: NotificationType.INVITE_LEASE;
 
-		deliveryService.createAndSend(
+		// On resend: cancel any active deliveries to prevent duplicate sends
+		if (event.isResend()) {
+			deliveryService.cancelActiveDeliveriesForReference(NotificationReferenceType.INVITE, invite.getId());
+		}
+
+		UUID deliveryId = deliveryService.createPending(
 				null,
 				invite.getEmail(),
 				type,
 				NotificationChannel.EMAIL,
 				invite.getId(),
-				"Invite",
+				NotificationReferenceType.INVITE,
 				context);
+
+		if (deliveryId != null) {
+			notificationSender.sendAsync(deliveryId);
+		}
 	}
 
 	// ─────────────────────────── Lease lifecycle ───────────────────────────
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	@Async("notificationExecutor")
 	public void onLeaseLifecycle(LeaseLifecycleEvent event) {
 		Lease lease = leaseRepository.findByIdWithUnitAndProperty(event.leaseId()).orElse(null);
 		if (lease == null) {
@@ -116,14 +129,17 @@ public class NotificationDispatcher {
 		for (LeaseTenant lt : tenants) {
 			User user = lt.getTenant().getUser();
 			try {
-				deliveryService.createAndSend(
+				UUID deliveryId = deliveryService.createPending(
 						user.getId(),
 						user.getEmail(),
 						type,
 						NotificationChannel.EMAIL,
 						lease.getId(),
-						"Lease",
+						NotificationReferenceType.LEASE,
 						context);
+				if (deliveryId != null) {
+					notificationSender.sendAsync(deliveryId);
+				}
 			} catch (Exception e) {
 				log.error("Failed to dispatch lease lifecycle notification: leaseId={}, userId={}", lease.getId(), user.getId(), e);
 			}
@@ -133,7 +149,6 @@ public class NotificationDispatcher {
 	// ─────────────────────────── User registered ───────────────────────────
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	@Async("notificationExecutor")
 	public void onUserRegistered(UserRegisteredEvent event) {
 		User user = userRepository.findById(event.userId()).orElse(null);
 		if (user == null) {
@@ -146,13 +161,17 @@ public class NotificationDispatcher {
 				"email", user.getEmail()
 		);
 
-		deliveryService.createAndSend(
+		UUID deliveryId = deliveryService.createPending(
 				user.getId(),
 				user.getEmail(),
 				NotificationType.ACCOUNT_CREATED,
 				NotificationChannel.EMAIL,
 				user.getId(),
-				"User",
+				NotificationReferenceType.USER,
 				context);
+
+		if (deliveryId != null) {
+			notificationSender.sendAsync(deliveryId);
+		}
 	}
 }

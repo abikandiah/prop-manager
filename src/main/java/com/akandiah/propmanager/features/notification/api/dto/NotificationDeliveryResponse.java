@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.akandiah.propmanager.common.notification.NotificationChannel;
+import com.akandiah.propmanager.common.notification.NotificationReferenceType;
 import com.akandiah.propmanager.common.notification.NotificationType;
 import com.akandiah.propmanager.features.notification.domain.NotificationDelivery;
 import com.akandiah.propmanager.features.notification.domain.NotificationDeliveryStatus;
@@ -17,7 +18,7 @@ public record NotificationDeliveryResponse(
 		NotificationType notificationType,
 		NotificationChannel channel,
 		UUID referenceId,
-		String referenceType,
+		NotificationReferenceType referenceType,
 		Map<String, Object> templateContext,
 		NotificationDeliveryStatus status,
 		int retryCount,

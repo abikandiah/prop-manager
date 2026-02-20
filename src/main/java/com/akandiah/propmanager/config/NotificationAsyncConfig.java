@@ -1,8 +1,9 @@
 package com.akandiah.propmanager.config;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadPoolExecutor;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -15,13 +16,17 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * larger than CPU count is appropriate. Threads are named {@code email-worker-N}
  * to make them easy to identify in logs and thread dumps.
  *
- * <p>Back-pressure: if both the pool and queue are full, {@link ThreadPoolExecutor.CallerRunsPolicy}
- * causes the calling thread (the async event dispatcher) to send the email directly,
- * which naturally slows the producer without dropping work.
+ * <p>Back-pressure: if both the pool and queue are full, the task is dropped with a
+ * warning log. The outbox pattern guarantees a PENDING row was committed before the
+ * task was enqueued, so the retry scheduler will recover any dropped tasks safely.
+ * Using CallerRunsPolicy here would be unsafe — it would block the AFTER_COMMIT
+ * synchronisation thread on SMTP I/O, potentially causing transaction timeouts.
  */
 @Configuration
 @EnableAsync
 public class NotificationAsyncConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationAsyncConfig.class);
 
     @Bean(name = "notificationExecutor")
     public Executor notificationExecutor() {
@@ -35,8 +40,10 @@ public class NotificationAsyncConfig {
         // Note: the retry scheduler acts as a durable backstop for any overflow.
         executor.setQueueCapacity(500);
 
-        // CallerRunsPolicy: back-pressure instead of silent drops.
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        // Discard-with-log: the PENDING outbox row is the durable record;
+        // the scheduler will recover any dropped tasks on its next cycle.
+        executor.setRejectedExecutionHandler((r, exec) ->
+            log.warn("Notification task dropped due to full queue — scheduler will recover via PENDING row"));
 
         executor.setThreadNamePrefix("email-worker-");
 

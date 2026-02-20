@@ -58,6 +58,7 @@ public interface InviteRepository extends JpaRepository<Invite, UUID> {
 	 * Fetch invite with its invitedBy user eagerly loaded.
 	 * Used by the NotificationDispatcher on an async thread where no Hibernate session is active.
 	 */
+	@Query("SELECT i FROM Invite i WHERE i.id = :id")
 	@EntityGraph(attributePaths = {"invitedBy"})
-	Optional<Invite> findWithInvitedByById(UUID id);
+	Optional<Invite> findWithInvitedByById(@Param("id") UUID id);
 }

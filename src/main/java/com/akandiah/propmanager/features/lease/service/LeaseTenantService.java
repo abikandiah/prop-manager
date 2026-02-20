@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,9 @@ import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
+import com.akandiah.propmanager.common.notification.NotificationReferenceType;
+import com.akandiah.propmanager.features.notification.domain.NotificationDelivery;
+import com.akandiah.propmanager.features.notification.domain.NotificationDeliveryRepository;
 import com.akandiah.propmanager.features.tenant.domain.Tenant;
 import com.akandiah.propmanager.features.tenant.domain.TenantRepository;
 import com.akandiah.propmanager.features.user.domain.User;
@@ -44,12 +48,24 @@ public class LeaseTenantService {
 	private final InviteService inviteService;
 	private final InviteRepository inviteRepository;
 	private final TenantRepository tenantRepository;
+	private final NotificationDeliveryRepository deliveryRepository;
 
 	// ───────────────────────── Queries ─────────────────────────
 
 	public List<LeaseTenantResponse> findByLeaseId(UUID leaseId) {
-		return leaseTenantRepository.findByLease_Id(leaseId).stream()
-				.map(LeaseTenantResponse::from)
+		List<LeaseTenant> tenants = leaseTenantRepository.findByLease_Id(leaseId);
+
+		// Batch-fetch the latest email delivery for each invite to avoid N+1
+		List<UUID> inviteIds = tenants.stream()
+				.map(lt -> lt.getInvite().getId())
+				.toList();
+		Map<UUID, NotificationDelivery> latestByInvite = deliveryRepository
+				.findLatestByReferenceTypeAndReferenceIdIn(NotificationReferenceType.INVITE, inviteIds)
+				.stream()
+				.collect(Collectors.toMap(NotificationDelivery::getReferenceId, d -> d));
+
+		return tenants.stream()
+				.map(lt -> LeaseTenantResponse.from(lt, latestByInvite.get(lt.getInvite().getId())))
 				.toList();
 	}
 

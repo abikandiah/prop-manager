@@ -9,6 +9,7 @@ import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
 
 import com.akandiah.propmanager.common.notification.NotificationChannel;
+import com.akandiah.propmanager.common.notification.NotificationReferenceType;
 import com.akandiah.propmanager.common.notification.NotificationType;
 
 import jakarta.persistence.Column;
@@ -62,8 +63,9 @@ public class NotificationDelivery {
 	@Column(name = "reference_id")
 	private UUID referenceId;
 
+	@Enumerated(EnumType.STRING)
 	@Column(name = "reference_type", length = 64)
-	private String referenceType;
+	private NotificationReferenceType referenceType;
 
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "template_context")
