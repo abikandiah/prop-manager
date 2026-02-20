@@ -1,89 +1,80 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            background-color: #2196F3;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            border-radius: 5px 5px 0 0;
-        }
-        .content {
-            background-color: #f9f9f9;
-            padding: 30px;
-            border-radius: 0 0 5px 5px;
-        }
-        .button {
-            display: inline-block;
-            padding: 12px 24px;
-            margin: 20px 0;
-            background-color: #2196F3;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            font-size: 12px;
-            color: #666;
-        }
-    </style>
+    <title>Invitation to Manage a Property</title>
 </head>
-<body>
-    <div class="header">
-        <h1 th:text="${appName}">Prop Manager</h1>
-    </div>
-    <div class="content">
-        <h2>You've Been Invited to Manage a Property</h2>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
 
-        <p>Hello,</p>
+    <div style="padding: 40px 16px;">
+        <div style="max-width: 600px; margin: 0 auto;">
 
-        <p>
-            <strong th:text="${inviterName}">Inviter Name</strong> has invited you to manage a property:
-        </p>
+            <!-- Card -->
+            <div style="background-color: #ffffff; border-radius: 8px; border: 1px solid #e4e4e7; overflow: hidden;">
 
-        <p style="font-size: 18px; margin: 20px 0;">
-            <strong th:text="${propertyName}">Property Name</strong>
-        </p>
+                <!-- Header -->
+                <div style="background-color: #18181b; padding: 24px 32px;">
+                    <p style="margin: 0; font-size: 18px; font-weight: 600; color: #fafafa; letter-spacing: -0.025em;" th:text="${appName}">Prop Manager</p>
+                </div>
 
-        <p th:if="${propertyAddress}">
-            Address: <strong th:text="${propertyAddress}">Property Address</strong>
-        </p>
+                <!-- Body -->
+                <div style="padding: 32px;">
 
-        <p>Role: <strong th:text="${role}">Manager</strong></p>
+                    <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 600; color: #09090b; letter-spacing: -0.025em;">You've been invited to manage a property</h1>
+                    <p style="margin: 0 0 24px 0; font-size: 15px; color: #71717a; line-height: 1.5;">
+                        <strong style="color: #09090b;" th:text="${inviterName}">Your Colleague</strong>
+                        has invited you to help manage a property as a <strong style="color: #09090b;" th:text="${role}">Manager</strong>.
+                    </p>
 
-        <p>
-            To accept this invitation and get started, click the button below:
-        </p>
+                    <!-- Property Info Box -->
+                    <div style="background-color: #f4f4f5; border-radius: 6px; padding: 20px; margin-bottom: 24px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding-bottom: 12px; vertical-align: top; width: 50%;">
+                                    <p style="margin: 0 0 2px 0; font-size: 11px; font-weight: 500; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">Property</p>
+                                    <p style="margin: 0; font-size: 15px; font-weight: 600; color: #09090b;" th:text="${propertyName}">Property Name</p>
+                                </td>
+                                <td th:if="${propertyAddress}" style="padding-bottom: 12px; vertical-align: top; width: 50%;">
+                                    <p style="margin: 0 0 2px 0; font-size: 11px; font-weight: 500; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">Address</p>
+                                    <p style="margin: 0; font-size: 15px; font-weight: 600; color: #09090b;" th:text="${propertyAddress}">123 Main St</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
 
-        <a th:href="${inviteLink}" class="button">Accept Invitation</a>
+                    <p style="margin: 0 0 20px 0; font-size: 15px; color: #3f3f46; line-height: 1.6;">
+                        Click the button below to accept your invitation and get started.
+                    </p>
 
-        <p style="margin-top: 20px;">
-            Or copy and paste this link into your browser:<br>
-            <a th:href="${inviteLink}" th:text="${inviteLink}">Invite Link</a>
-        </p>
+                    <!-- CTA Button -->
+                    <div style="margin-bottom: 24px;">
+                        <a th:href="${inviteLink}" style="display: inline-block; padding: 12px 24px; background-color: #18181b; color: #fafafa; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500; letter-spacing: -0.01em;">Accept Invitation</a>
+                    </div>
 
-        <p style="color: #e74c3c; font-weight: bold;">
-            This invitation expires on <span th:text="${#temporals.format(expiresAt, 'MMM dd, yyyy HH:mm')}">expiry date</span>
-        </p>
+                    <p style="margin: 0 0 4px 0; font-size: 13px; color: #71717a;">Or copy this link into your browser:</p>
+                    <p style="margin: 0 0 24px 0; font-size: 13px; word-break: break-all;">
+                        <a th:href="${inviteLink}" th:text="${inviteLink}" style="color: #18181b;">Invite Link</a>
+                    </p>
 
-        <div class="footer">
-            <p>If you did not expect this invitation, you can safely ignore this email.</p>
-            <p th:text="'© ' + ${#temporals.year(#temporals.createNow())} + ' ' + ${appName}">© 2026 Prop Manager</p>
+                    <!-- Expiry Warning -->
+                    <div style="background-color: #fef2f2; border-left: 3px solid #dc2626; border-radius: 4px; padding: 12px 16px; margin-bottom: 8px;">
+                        <p style="margin: 0; font-size: 13px; color: #991b1b;">
+                            This invitation expires on <strong th:text="${expiresAt}">expiry date</strong>.
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div style="padding: 20px 32px; border-top: 1px solid #f4f4f5; background-color: #fafafa;">
+                    <p style="margin: 0 0 4px 0; font-size: 12px; color: #71717a; line-height: 1.5;">If you did not expect this invitation, you can safely ignore this email.</p>
+                    <p style="margin: 0; font-size: 12px; color: #a1a1aa;" th:text="'© ' + ${#temporals.year(#temporals.createNow())} + ' ' + ${appName} + '. All rights reserved.'">© 2026 Prop Manager. All rights reserved.</p>
+                </div>
+
+            </div>
         </div>
     </div>
+
 </body>
 </html>

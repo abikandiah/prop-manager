@@ -1,5 +1,7 @@
 package com.akandiah.propmanager.features.notification.service;
 
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,15 +33,20 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Central dispatcher that listens to domain events and delegates delivery
- * to {@link NotificationDeliveryService} and {@link NotificationDeliverySender}.
+ * to {@link NotificationDeliveryService} and
+ * {@link NotificationDeliverySender}.
  *
- * <p>Outbox pattern: each handler runs synchronously on the committing thread
+ * <p>
+ * Outbox pattern: each handler runs synchronously on the committing thread
  * (AFTER_COMMIT, no @Async). It first commits a PENDING row via
- * {@code deliveryService.createPending()} (REQUIRES_NEW), then enqueues the async
- * send via {@code notificationSender.sendAsync()}. A JVM crash between commit and
+ * {@code deliveryService.createPending()} (REQUIRES_NEW), then enqueues the
+ * async
+ * send via {@code notificationSender.sendAsync()}. A JVM crash between commit
+ * and
  * enqueue leaves a recoverable PENDING row that the scheduler will pick up.
  *
- * <p>No {@code @Transactional} here — each call to the delivery service opens its
+ * <p>
+ * No {@code @Transactional} here — each call to the delivery service opens its
  * own {@code REQUIRES_NEW} transaction, isolating failures per recipient.
  */
 @Component
@@ -54,6 +61,9 @@ public class NotificationDispatcher {
 	private final LeaseTenantRepository leaseTenantRepository;
 	private final UserRepository userRepository;
 	private final NotificationProperties notificationProperties;
+
+	private static final DateTimeFormatter INVITE_DATE_FORMAT = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")
+			.withZone(ZoneId.systemDefault());
 
 	// ─────────────────────────── Invite ───────────────────────────
 
@@ -71,7 +81,7 @@ public class NotificationDispatcher {
 		context.put("inviteLink", inviteLink);
 		context.put("inviterName", invite.getInvitedBy().getName());
 		context.put("role", invite.getRole());
-		context.put("expiresAt", invite.getExpiresAt());
+		context.put("expiresAt", INVITE_DATE_FORMAT.format(invite.getExpiresAt()));
 
 		NotificationType type = invite.getTargetType() == TargetType.PROPERTY
 				? NotificationType.INVITE_PROPERTY
@@ -117,12 +127,12 @@ public class NotificationDispatcher {
 				"unitNumber", lease.getUnit().getUnitNumber(),
 				"startDate", lease.getStartDate(),
 				"endDate", lease.getEndDate(),
-				"eventType", event.type().name()
-		);
+				"eventType", event.type().name());
 
 		List<LeaseTenant> tenants = leaseTenantRepository.findByLease_IdWithTenantUser(event.leaseId());
 		if (tenants.isEmpty()) {
-			log.info("No accepted tenants for lease={}, skipping lifecycle notification type={}", event.leaseId(), type);
+			log.info("No accepted tenants for lease={}, skipping lifecycle notification type={}", event.leaseId(),
+					type);
 			return;
 		}
 
@@ -141,7 +151,8 @@ public class NotificationDispatcher {
 					notificationSender.sendAsync(deliveryId);
 				}
 			} catch (Exception e) {
-				log.error("Failed to dispatch lease lifecycle notification: leaseId={}, userId={}", lease.getId(), user.getId(), e);
+				log.error("Failed to dispatch lease lifecycle notification: leaseId={}, userId={}", lease.getId(),
+						user.getId(), e);
 			}
 		}
 	}
@@ -158,8 +169,7 @@ public class NotificationDispatcher {
 
 		Map<String, Object> context = Map.of(
 				"name", user.getName(),
-				"email", user.getEmail()
-		);
+				"email", user.getEmail());
 
 		UUID deliveryId = deliveryService.createPending(
 				user.getId(),

@@ -1,6 +1,8 @@
 package com.akandiah.propmanager.common.notification;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +20,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Service for sending email notifications using JavaMail and Thymeleaf templates.
+ * Service for sending email notifications using JavaMail and Thymeleaf
+ * templates.
  */
 @Service
 @Slf4j
@@ -62,10 +65,18 @@ public class EmailNotificationService {
 	private String renderTemplate(NotificationTemplate template, Map<String, Object> context) {
 		try {
 			Context thymeleafContext = new Context();
-			thymeleafContext.setVariables(context);
 
 			// Add common variables available to all templates
 			thymeleafContext.setVariable("appName", "Prop Manager");
+
+			// Globally transform Instants to ZonedDateTime so #temporals can read them
+			context.forEach((key, value) -> {
+				Object processedValue = value;
+				if (value instanceof Instant i) {
+					processedValue = i.atZone(ZoneId.systemDefault());
+				}
+				thymeleafContext.setVariable(key, processedValue);
+			});
 
 			return templateEngine.process(template.getTemplatePath(), thymeleafContext);
 		} catch (Exception e) {
