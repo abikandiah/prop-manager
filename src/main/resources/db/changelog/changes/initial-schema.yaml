@@ -819,3 +819,190 @@ databaseChangeLog:
                   constraints:
                     nullable: false
                   defaultValueComputed: now()
+
+  # notification_deliveries — general delivery log for all notification types
+  - changeSet:
+      id: "add-notification-deliveries"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: notification_deliveries
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+              - column:
+                  name: recipient_address
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notification_type
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: channel
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reference_id
+                  type: uuid
+              - column:
+                  name: reference_type
+                  type: varchar(64)
+              - column:
+                  name: template_context
+                  type: jsonb
+              - column:
+                  name: status
+                  type: varchar(16)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: retry_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: error_message
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sent_at
+                  type: timestamptz
+              - column:
+                  name: viewed_at
+                  type: timestamptz
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: notification_deliveries
+            baseColumnNames: user_id
+            constraintName: fk_notification_deliveries_user
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: SET NULL
+        - createIndex:
+            tableName: notification_deliveries
+            indexName: idx_notification_deliveries_retry
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: retry_count
+              - column:
+                  name: updated_at
+        - createIndex:
+            tableName: notification_deliveries
+            indexName: idx_notification_deliveries_reference
+            columns:
+              - column:
+                  name: reference_type
+              - column:
+                  name: reference_id
+        - createIndex:
+            tableName: notification_deliveries
+            indexName: idx_notification_deliveries_user
+            columns:
+              - column:
+                  name: user_id
+
+  # user_notification_preferences — per-user opt-out settings
+  - changeSet:
+      id: "add-user-notification-preferences"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: user_notification_preferences
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notification_type
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: channel
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: user_notification_preferences
+            baseColumnNames: user_id
+            constraintName: fk_user_notification_preferences_user
+            referencedTableName: users
+            referencedColumnNames: id
+        - addUniqueConstraint:
+            tableName: user_notification_preferences
+            columnNames: user_id, notification_type, channel
+            constraintName: uk_user_notification_preferences
+
+  # remove invite email tracking columns — now handled by notification_deliveries
+  - changeSet:
+      id: "remove-invite-email-tracking-columns"
+      author: "prop-manager"
+      changes:
+        - dropColumn:
+            tableName: invite
+            columnName: email_status
+        - dropColumn:
+            tableName: invite
+            columnName: email_retry_count
+        - dropColumn:
+            tableName: invite
+            columnName: email_error

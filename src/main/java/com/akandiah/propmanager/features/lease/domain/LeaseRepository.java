@@ -1,6 +1,8 @@
 package com.akandiah.propmanager.features.lease.domain;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -25,12 +27,6 @@ public interface LeaseRepository extends JpaRepository<Lease, UUID> {
 	long countByLeaseTemplate_IdAndStatusIn(UUID leaseTemplateId, java.util.Collection<LeaseStatus> statuses);
 
 	/**
-	 * Clears the template reference on all leases that used this template.
-	 * Leases keep their denormalized snapshot (leaseTemplateName,
-	 * leaseTemplateVersionTag,
-	 * executedContentMarkdown) so they remain valid after the template is deleted.
-	 */
-	/**
 	 * Checks whether a unit already has an active lease, excluding the given lease ID.
 	 * Used before activation to prevent concurrent active leases on the same unit.
 	 */
@@ -39,4 +35,17 @@ public interface LeaseRepository extends JpaRepository<Lease, UUID> {
 	@Modifying
 	@Query("UPDATE Lease l SET l.leaseTemplate = null WHERE l.leaseTemplate.id = :templateId")
 	int clearTemplateReference(@Param("templateId") UUID templateId);
+
+	/**
+	 * Find active leases expiring on a specific date.
+	 * Used by the expiry scheduler to send advance notice.
+	 */
+	List<Lease> findByStatusAndEndDate(LeaseStatus status, LocalDate endDate);
+
+	/**
+	 * Fetch lease with unit and property eagerly loaded.
+	 * Used by the NotificationDispatcher on an async thread where no Hibernate session is active.
+	 */
+	@Query("SELECT l FROM Lease l JOIN FETCH l.unit JOIN FETCH l.property WHERE l.id = :id")
+	Optional<Lease> findByIdWithUnitAndProperty(@Param("id") UUID id);
 }

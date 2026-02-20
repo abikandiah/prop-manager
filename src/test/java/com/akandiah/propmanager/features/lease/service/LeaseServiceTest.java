@@ -34,6 +34,8 @@ import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseResponse;
 import com.akandiah.propmanager.features.lease.api.dto.UpdateLeaseRequest;
+import org.springframework.context.ApplicationEventPublisher;
+
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
@@ -75,13 +77,16 @@ class LeaseServiceTest {
 	@Mock
 	private LeaseTemplateRenderer renderer;
 
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
+
 	private LeaseService leaseService;
 
 	@BeforeEach
 	void setUp() {
 		leaseService = new LeaseService(leaseRepository, templateService,
 				unitRepository, propRepository, leaseTenantRepository,
-				stateMachine, renderer);
+				stateMachine, renderer, eventPublisher);
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════

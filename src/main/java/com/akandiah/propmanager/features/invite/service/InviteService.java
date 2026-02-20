@@ -16,7 +16,6 @@ import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.config.InviteProperties;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.Invite;
-import com.akandiah.propmanager.features.invite.domain.EmailDeliveryStatus;
 import com.akandiah.propmanager.features.invite.domain.InviteAcceptedEvent;
 import com.akandiah.propmanager.features.invite.domain.InviteEmailRequestedEvent;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
@@ -32,8 +31,8 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>Email sending is deliberately outside this service's scope.
  * After each DB write commits, an {@link InviteEmailRequestedEvent} is published
- * and handled asynchronously by {@link InviteEmailListener}, which writes
- * the SENT/FAILED status back in its own transaction.
+ * and handled asynchronously by {@link NotificationDispatcher}, which writes
+ * the SENT/FAILED status to notification_deliveries in its own transaction.
  */
 @Service
 @Slf4j
@@ -79,9 +78,10 @@ public class InviteService {
 				.expiresAt(now.plus(Duration.ofHours(inviteProperties.expiryHours())))
 				.build();
 
+		invite.setSentAt(Instant.now());
 		invite = inviteRepository.save(invite);
 
-		// Email is sent after this transaction commits — see InviteEmailListener
+		// Email is sent after this transaction commits — see NotificationDispatcher
 		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), false, metadata));
 
 		log.info("Invite created: id={}, email={}, targetType={}, targetId={}", invite.getId(), email, targetType,
@@ -118,10 +118,12 @@ public class InviteService {
 		if (invite.isExpired() || invite.getStatus() == InviteStatus.EXPIRED) {
 			invite.setExpiresAt(Instant.now().plus(Duration.ofHours(inviteProperties.expiryHours())));
 			invite.setStatus(InviteStatus.PENDING);
-			invite = inviteRepository.save(invite);
 		}
 
-		// Email is sent after this transaction commits — see InviteEmailListener
+		invite.setLastResentAt(Instant.now());
+		invite = inviteRepository.save(invite);
+
+		// Email is sent after this transaction commits — see NotificationDispatcher
 		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), true, metadata));
 
 		log.info("Invite resend requested: id={}, email={}", inviteId, invite.getEmail());
@@ -210,29 +212,6 @@ public class InviteService {
 		Invite invite = inviteRepository.findById(inviteId)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite", inviteId));
 		return InviteResponse.from(invite);
-	}
-
-	/**
-	 * Re-publish send events for all PENDING invites whose last email delivery failed
-	 * and that have not yet exceeded the configured retry limit.
-	 *
-	 * <p>Each event fires after this transaction commits, picked up asynchronously by
-	 * {@link InviteEmailListener}. Called periodically by {@code InviteEmailRetryScheduler}.
-	 *
-	 * @return Number of retries dispatched
-	 */
-	@Transactional
-	public int retryFailedEmails() {
-		Instant retryBefore = Instant.now().minus(Duration.ofMinutes(inviteProperties.emailRetryIntervalMinutes()));
-		List<Invite> retryable = inviteRepository.findRetryableFailedInvites(
-				EmailDeliveryStatus.FAILED, InviteStatus.PENDING,
-				inviteProperties.maxEmailRetries(), retryBefore);
-
-		for (Invite invite : retryable) {
-			eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), false, null));
-		}
-
-		return retryable.size();
 	}
 
 	/**

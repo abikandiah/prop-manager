@@ -2,10 +2,12 @@ package com.akandiah.propmanager.features.user.service;
 
 import java.util.Optional;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.features.user.domain.User;
+import com.akandiah.propmanager.features.user.domain.UserRegisteredEvent;
 import com.akandiah.propmanager.features.user.domain.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 public class UserService {
 
 	private final UserRepository userRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional(readOnly = true)
 	public Optional<User> findByEmail(String email) {
@@ -49,6 +52,7 @@ public class UserService {
 		return userRepository.save(user);
 	}
 
+	@Transactional
 	public User registerUser(String idpSub, String name, String email) {
 		return syncUserIfExists(idpSub, name, email)
 				.orElseGet(() -> {
@@ -59,7 +63,9 @@ public class UserService {
 							.name(displayName)
 							.email(email)
 							.build();
-					return userRepository.save(newUser);
+					User saved = userRepository.save(newUser);
+					eventPublisher.publishEvent(new UserRegisteredEvent(saved.getId()));
+					return saved;
 				});
 	}
 }

@@ -1,9 +1,7 @@
 package com.akandiah.propmanager.common.notification;
 
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -31,27 +29,6 @@ public class NotificationService {
 	public void send(String toEmail, NotificationTemplate template, Map<String, Object> context) {
 		log.info("Sending notification: template={}, to={}", template.name(), toEmail);
 		emailNotificationService.send(toEmail, template, context);
-	}
-
-	/**
-	 * Send a notification email asynchronously (non-blocking).
-	 *
-	 * @param toEmail  Recipient email address
-	 * @param template Template to use
-	 * @param context  Data to populate the template
-	 * @return CompletableFuture that completes when email is sent
-	 */
-	@Async
-	public CompletableFuture<Void> sendAsync(String toEmail, NotificationTemplate template,
-			Map<String, Object> context) {
-		log.info("Sending notification async: template={}, to={}", template.name(), toEmail);
-		try {
-			emailNotificationService.send(toEmail, template, context);
-			return CompletableFuture.completedFuture(null);
-		} catch (Exception e) {
-			log.error("Failed to send async notification: template={}, to={}", template.name(), toEmail, e);
-			return CompletableFuture.failedFuture(e);
-		}
 	}
 
 	/**

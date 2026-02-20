@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,8 +21,7 @@ public interface InviteRepository extends JpaRepository<Invite, UUID> {
 	Optional<Invite> findByToken(String token);
 
 	/**
-	 * Find all invites for a specific target (e.g., all invites for a specific
-	 * lease).
+	 * Find all invites for a specific target (e.g., all invites for a specific lease).
 	 */
 	List<Invite> findByTargetTypeAndTargetId(TargetType targetType, UUID targetId);
 
@@ -42,23 +42,6 @@ public interface InviteRepository extends JpaRepository<Invite, UUID> {
 	List<Invite> findExpiredPendingInvites(@Param("now") Instant now);
 
 	/**
-	 * Find PENDING invites whose last email delivery failed, have not yet exceeded
-	 * the retry limit, and have been in FAILED state long enough to warrant another attempt.
-	 */
-	@Query("""
-			SELECT i FROM Invite i
-			WHERE i.emailStatus = :emailStatus
-			AND i.status = :inviteStatus
-			AND i.emailRetryCount < :maxRetries
-			AND i.updatedAt < :retryBefore
-			""")
-	List<Invite> findRetryableFailedInvites(
-			@Param("emailStatus") EmailDeliveryStatus emailStatus,
-			@Param("inviteStatus") InviteStatus inviteStatus,
-			@Param("maxRetries") int maxRetries,
-			@Param("retryBefore") Instant retryBefore);
-
-	/**
 	 * Find a pending invite by email and target.
 	 * Useful to check if a user already has a pending invite for a resource.
 	 */
@@ -70,4 +53,11 @@ public interface InviteRepository extends JpaRepository<Invite, UUID> {
 	 */
 	boolean existsByEmailAndTargetTypeAndTargetIdAndStatus(String email, TargetType targetType, UUID targetId,
 			InviteStatus status);
+
+	/**
+	 * Fetch invite with its invitedBy user eagerly loaded.
+	 * Used by the NotificationDispatcher on an async thread where no Hibernate session is active.
+	 */
+	@EntityGraph(attributePaths = {"invitedBy"})
+	Optional<Invite> findWithInvitedByById(UUID id);
 }

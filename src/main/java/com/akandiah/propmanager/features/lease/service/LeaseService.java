@@ -3,6 +3,7 @@ package com.akandiah.propmanager.features.lease.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,8 @@ import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseResponse;
 import com.akandiah.propmanager.features.lease.api.dto.UpdateLeaseRequest;
 import com.akandiah.propmanager.features.lease.domain.Lease;
+import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEvent;
+import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEventType;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
@@ -36,6 +39,7 @@ public class LeaseService {
 	private final LeaseTenantRepository leaseTenantRepository;
 	private final LeaseStateMachine stateMachine;
 	private final LeaseTemplateRenderer renderer;
+	private final ApplicationEventPublisher eventPublisher;
 
 	// ───────────────────────── Queries ─────────────────────────
 
@@ -171,7 +175,9 @@ public class LeaseService {
 			lease.setLeaseTemplateName(t.getName());
 			lease.setLeaseTemplateVersionTag(t.getVersionTag());
 		}
-		return LeaseResponse.from(leaseRepository.save(lease));
+		Lease saved = leaseRepository.save(lease);
+		eventPublisher.publishEvent(new LeaseLifecycleEvent(saved.getId(), LeaseLifecycleEventType.SUBMITTED_FOR_REVIEW));
+		return LeaseResponse.from(saved);
 	}
 
 	/** Both parties signed — lease becomes active and read-only. */
@@ -182,7 +188,9 @@ public class LeaseService {
 			throw new IllegalStateException("Cannot activate: unit already has an active lease.");
 		}
 		stateMachine.activate(lease);
-		return LeaseResponse.from(leaseRepository.save(lease));
+		Lease saved = leaseRepository.save(lease);
+		eventPublisher.publishEvent(new LeaseLifecycleEvent(saved.getId(), LeaseLifecycleEventType.ACTIVATED));
+		return LeaseResponse.from(saved);
 	}
 
 	/**
