@@ -690,6 +690,15 @@ databaseChangeLog:
                   name: claimed_user_id
                   type: uuid
               - column:
+                  name: email_status
+                  type: varchar(16)
+                  defaultValue: NOT_SENT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email_error
+                  type: varchar(500)
+              - column:
                   name: updated_at
                   type: timestamptz
                   constraints:
@@ -732,6 +741,21 @@ databaseChangeLog:
             columns:
               - column:
                   name: status
+
+  # add email_retry_count to invite — tracks automatic retry attempts after FAILED delivery
+  - changeSet:
+      id: "add-invite-email-retry-count"
+      author: "prop-manager"
+      changes:
+        - addColumn:
+            tableName: invite
+            columns:
+              - column:
+                  name: email_retry_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
 
   # alter lease_tenants: make tenant_id nullable, add invite_id FK, add missing audit/lifecycle columns
   - changeSet:

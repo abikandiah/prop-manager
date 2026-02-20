@@ -74,6 +74,18 @@ public class Invite {
 	@Builder.Default
 	private InviteStatus status = InviteStatus.PENDING;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "email_status", nullable = false, length = 16)
+	@Builder.Default
+	private EmailDeliveryStatus emailStatus = EmailDeliveryStatus.NOT_SENT;
+
+	@Column(name = "email_error", length = 500)
+	private String emailError;
+
+	@Column(name = "email_retry_count", nullable = false)
+	@Builder.Default
+	private int emailRetryCount = 0;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 

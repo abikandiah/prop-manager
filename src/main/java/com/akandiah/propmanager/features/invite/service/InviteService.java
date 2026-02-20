@@ -4,7 +4,6 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -14,13 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
-import com.akandiah.propmanager.common.notification.NotificationService;
-import com.akandiah.propmanager.common.notification.NotificationTemplate;
 import com.akandiah.propmanager.config.InviteProperties;
-import com.akandiah.propmanager.config.NotificationProperties;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.Invite;
+import com.akandiah.propmanager.features.invite.domain.EmailDeliveryStatus;
 import com.akandiah.propmanager.features.invite.domain.InviteAcceptedEvent;
+import com.akandiah.propmanager.features.invite.domain.InviteEmailRequestedEvent;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.invite.domain.InviteStatus;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
@@ -31,17 +29,21 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Service for managing invitations.
+ *
+ * <p>Email sending is deliberately outside this service's scope.
+ * After each DB write commits, an {@link InviteEmailRequestedEvent} is published
+ * and handled asynchronously by {@link InviteEmailListener}, which writes
+ * the SENT/FAILED status back in its own transaction.
  */
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class InviteService {
 
 	private final InviteRepository inviteRepository;
-	private final NotificationService notificationService;
 	private final ApplicationEventPublisher eventPublisher;
 	private final InviteProperties inviteProperties;
-	private final NotificationProperties notificationProperties;
 
 	private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -57,44 +59,33 @@ public class InviteService {
 	 * @return Created invite
 	 */
 	@Transactional
-	public InviteResponse createAndSendInvite(String email, TargetType targetType, UUID targetId, String role, User invitedBy,
-			Map<String, Object> metadata) {
+	public InviteResponse createAndSendInvite(String email, TargetType targetType, UUID targetId, String role,
+			User invitedBy, Map<String, Object> metadata) {
 
-		// Check if a pending invite already exists
 		if (inviteRepository.existsByEmailAndTargetTypeAndTargetIdAndStatus(email, targetType, targetId,
 				InviteStatus.PENDING)) {
 			throw new IllegalStateException("An active invitation already exists for this email and resource");
 		}
 
-		// Generate secure token
-		String token = generateSecureToken();
-
-		// Create invite
 		Instant now = Instant.now();
-		Instant expiresAt = now.plus(Duration.ofHours(inviteProperties.expiryHours()));
-
 		Invite invite = Invite.builder()
 				.email(email)
-				.token(token)
+				.token(generateSecureToken())
 				.targetType(targetType)
 				.targetId(targetId)
 				.role(role)
 				.invitedBy(invitedBy)
 				.status(InviteStatus.PENDING)
-				.expiresAt(expiresAt)
+				.expiresAt(now.plus(Duration.ofHours(inviteProperties.expiryHours())))
 				.build();
 
 		invite = inviteRepository.save(invite);
 
-		// Send email notification
-		sendInviteEmail(invite, metadata);
+		// Email is sent after this transaction commits — see InviteEmailListener
+		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), false, metadata));
 
-		// Update sent timestamp
-		invite.setSentAt(Instant.now());
-		invite = inviteRepository.save(invite);
-
-		log.info("Invite created and sent: id={}, email={}, targetType={}, targetId={}", invite.getId(), email,
-				targetType, targetId);
+		log.info("Invite created: id={}, email={}, targetType={}, targetId={}", invite.getId(), email, targetType,
+				targetId);
 
 		return InviteResponse.from(invite);
 	}
@@ -111,33 +102,29 @@ public class InviteService {
 		Invite invite = inviteRepository.findById(inviteId)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite", inviteId));
 
-		// Cannot resend accepted or revoked invites
 		if (invite.getStatus() == InviteStatus.ACCEPTED || invite.getStatus() == InviteStatus.REVOKED) {
 			throw new IllegalStateException("Only pending or expired invites can be resent");
 		}
 
-		// Check resend cooldown
 		if (invite.getLastResentAt() != null) {
-			Instant cooldownExpiry = invite.getLastResentAt().plus(Duration.ofMinutes(inviteProperties.resendCooldownMinutes()));
+			Instant cooldownExpiry = invite.getLastResentAt()
+					.plus(Duration.ofMinutes(inviteProperties.resendCooldownMinutes()));
 			if (Instant.now().isBefore(cooldownExpiry)) {
 				throw new IllegalStateException("Please wait before resending this invitation");
 			}
 		}
 
-		// Renew expired invites so the recipient gets a fresh window
+		// Renew window for expired invites
 		if (invite.isExpired() || invite.getStatus() == InviteStatus.EXPIRED) {
 			invite.setExpiresAt(Instant.now().plus(Duration.ofHours(inviteProperties.expiryHours())));
 			invite.setStatus(InviteStatus.PENDING);
+			invite = inviteRepository.save(invite);
 		}
 
-		// Send email
-		sendInviteEmail(invite, metadata);
+		// Email is sent after this transaction commits — see InviteEmailListener
+		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), true, metadata));
 
-		// Update timestamp
-		invite.setLastResentAt(Instant.now());
-		invite = inviteRepository.save(invite);
-
-		log.info("Invite resent: id={}, email={}", inviteId, invite.getEmail());
+		log.info("Invite resend requested: id={}, email={}", inviteId, invite.getEmail());
 
 		return InviteResponse.from(invite);
 	}
@@ -145,8 +132,8 @@ public class InviteService {
 	/**
 	 * Redeem an invitation by token.
 	 *
-	 * @param token      Invitation token
-	 * @param claimedBy  User who is claiming the invite
+	 * @param token     Invitation token
+	 * @param claimedBy User who is claiming the invite
 	 * @return Accepted invite
 	 */
 	@Transactional
@@ -154,9 +141,9 @@ public class InviteService {
 		Invite invite = inviteRepository.findByToken(token)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite not found or invalid token"));
 
-		// Validate invite
 		if (invite.getStatus() != InviteStatus.PENDING) {
-			throw new IllegalStateException("This invitation has already been " + invite.getStatus().name().toLowerCase());
+			throw new IllegalStateException(
+					"This invitation has already been " + invite.getStatus().name().toLowerCase());
 		}
 
 		if (invite.isExpired()) {
@@ -165,7 +152,6 @@ public class InviteService {
 			throw new IllegalStateException("This invitation has expired");
 		}
 
-		// Accept invite
 		invite.setStatus(InviteStatus.ACCEPTED);
 		invite.setAcceptedAt(Instant.now());
 		invite.setClaimedUser(claimedBy);
@@ -202,7 +188,6 @@ public class InviteService {
 	/**
 	 * Find all invites for a specific resource.
 	 */
-	@Transactional(readOnly = true)
 	public List<InviteResponse> findInvitesByTarget(TargetType targetType, UUID targetId) {
 		return inviteRepository.findByTargetTypeAndTargetId(targetType, targetId).stream()
 				.map(InviteResponse::from)
@@ -212,7 +197,6 @@ public class InviteService {
 	/**
 	 * Find all invites for a specific email.
 	 */
-	@Transactional(readOnly = true)
 	public List<InviteResponse> findInvitesByEmail(String email) {
 		return inviteRepository.findByEmail(email).stream()
 				.map(InviteResponse::from)
@@ -222,7 +206,6 @@ public class InviteService {
 	/**
 	 * Find an invite by ID.
 	 */
-	@Transactional(readOnly = true)
 	public InviteResponse findById(UUID inviteId) {
 		Invite invite = inviteRepository.findById(inviteId)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite", inviteId));
@@ -230,8 +213,31 @@ public class InviteService {
 	}
 
 	/**
+	 * Re-publish send events for all PENDING invites whose last email delivery failed
+	 * and that have not yet exceeded the configured retry limit.
+	 *
+	 * <p>Each event fires after this transaction commits, picked up asynchronously by
+	 * {@link InviteEmailListener}. Called periodically by {@code InviteEmailRetryScheduler}.
+	 *
+	 * @return Number of retries dispatched
+	 */
+	@Transactional
+	public int retryFailedEmails() {
+		Instant retryBefore = Instant.now().minus(Duration.ofMinutes(inviteProperties.emailRetryIntervalMinutes()));
+		List<Invite> retryable = inviteRepository.findRetryableFailedInvites(
+				EmailDeliveryStatus.FAILED, InviteStatus.PENDING,
+				inviteProperties.maxEmailRetries(), retryBefore);
+
+		for (Invite invite : retryable) {
+			eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), false, null));
+		}
+
+		return retryable.size();
+	}
+
+	/**
 	 * Expire all pending invites that have passed their expiration date.
-	 * This should be called periodically (e.g., via scheduled job).
+	 * Called periodically via scheduled job.
 	 *
 	 * @return Number of invites expired
 	 */
@@ -249,30 +255,6 @@ public class InviteService {
 		return expiredInvites.size();
 	}
 
-	/**
-	 * Send the invitation email using the notification service.
-	 */
-	private void sendInviteEmail(Invite invite, Map<String, Object> metadata) {
-		String inviteLink = notificationProperties.baseUrl() + "/invite/accept?token=" + invite.getToken();
-
-		Map<String, Object> emailContext = new HashMap<>(metadata != null ? metadata : Map.of());
-		emailContext.put("inviteLink", inviteLink);
-		emailContext.put("inviterName", invite.getInvitedBy().getName());
-		emailContext.put("role", invite.getRole());
-		emailContext.put("expiresAt", invite.getExpiresAt());
-
-		NotificationTemplate template = switch (invite.getTargetType()) {
-		case LEASE -> NotificationTemplate.INVITE_LEASE;
-		case PROPERTY -> NotificationTemplate.INVITE_PROPERTY;
-		default -> NotificationTemplate.INVITE_LEASE; // Default fallback
-		};
-
-		notificationService.sendAsync(invite.getEmail(), template, emailContext);
-	}
-
-	/**
-	 * Generate a secure random token for invites.
-	 */
 	private String generateSecureToken() {
 		byte[] bytes = new byte[32];
 		RANDOM.nextBytes(bytes);

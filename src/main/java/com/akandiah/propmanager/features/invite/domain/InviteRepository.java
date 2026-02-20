@@ -42,6 +42,23 @@ public interface InviteRepository extends JpaRepository<Invite, UUID> {
 	List<Invite> findExpiredPendingInvites(@Param("now") Instant now);
 
 	/**
+	 * Find PENDING invites whose last email delivery failed, have not yet exceeded
+	 * the retry limit, and have been in FAILED state long enough to warrant another attempt.
+	 */
+	@Query("""
+			SELECT i FROM Invite i
+			WHERE i.emailStatus = :emailStatus
+			AND i.status = :inviteStatus
+			AND i.emailRetryCount < :maxRetries
+			AND i.updatedAt < :retryBefore
+			""")
+	List<Invite> findRetryableFailedInvites(
+			@Param("emailStatus") EmailDeliveryStatus emailStatus,
+			@Param("inviteStatus") InviteStatus inviteStatus,
+			@Param("maxRetries") int maxRetries,
+			@Param("retryBefore") Instant retryBefore);
+
+	/**
 	 * Find a pending invite by email and target.
 	 * Useful to check if a user already has a pending invite for a resource.
 	 */

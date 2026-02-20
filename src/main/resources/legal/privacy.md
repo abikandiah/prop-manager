@@ -1,26 +1,49 @@
 # Privacy Policy
-**Last Updated: February 6, 2026**
+**Last Updated: February 20, 2026**
 
 ---
 
-Your privacy is important to us. It is PropMange's policy to respect your privacy regarding any information we may collect from you across our platform.
+> **IMPORTANT NOTICE:** PropMange is a **development/demo project only**. This privacy policy reflects the limited, demo-only nature of this application. Do not enter real personal information into this system.
 
-## 1. Information We Collect
-We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent. We also let you know why we’re collecting it and how it will be used.
+## 1. Demo Project — No Privacy Guarantees
 
-### Types of Data Collected:
-*   **Identity Data:** Name, email address, and authentication identifiers (sub).
-*   **Property Data:** Information you provide regarding properties you manage.
-*   **Usage Data:** Information about how you use our application.
+PropMange is a non-production demo application intended for development and experimentation. **No guarantees are made** regarding the privacy, security, or confidentiality of any data you enter. This application should not be used to store real personal information about tenants, property owners, or any other individuals.
 
-## 2. Use of Information
-We only retain collected information for as long as necessary to provide you with your requested service. What data we store, we’ll protect within commercially acceptable means to prevent loss and theft, as well as unauthorized access, disclosure, copying, use or modification.
+## 2. What This Application May Collect
 
-## 3. Data Sharing
-We don’t share any personally identifying information publicly or with third-parties, except when required to by law. 
+For the purposes of enabling demo functionality, this application may store:
 
-## 4. Your Rights
-You are free to refuse our request for your personal information, with the understanding that we may be unable to provide you with some of your desired services. Your continued use of our website will be regarded as acceptance of our practices around privacy and personal information.
+- **Account Data:** Email address and authentication identifiers used to log in.
+- **Property & Tenant Data:** Any property, unit, tenant, or lease data you choose to enter for testing purposes.
+- **Usage Data:** Basic information about how the application is used.
+
+All data is entered voluntarily and solely for demo/testing purposes.
+
+## 3. No Production Data Storage
+
+This application uses an **in-memory or development database** that may be reset or wiped at any time without notice. Do not rely on this application to retain any data. The developer makes no commitment to store, back up, or preserve any information entered.
+
+## 4. No Data Sharing Commitments
+
+While the developer does not intentionally share demo data with third parties, **no guarantees are made** about data isolation, security, or confidentiality given the development nature of this project. Any data you enter may be accessible to others with access to the development environment.
+
+## 5. Use at Your Own Risk
+
+By using this application you acknowledge that:
+
+- It is a demo project not intended for real-world use
+- The developer holds no liability for any data entered
+- You should not enter real personal information, sensitive financial data, or any information you expect to remain private
+- Data may be lost, reset, or exposed at any time
+
+## 6. Your Responsibility
+
+You are solely responsible for any data you choose to enter into this system. If you are testing with real data, that decision is yours and the developer accepts no responsibility for any resulting consequences.
+
+## 7. Contact
+
+This is a personal development project. There is no formal support or data request process.
 
 ---
-*If you have any questions about how we handle user data and personal information, feel free to contact us.*
+
+*This is a demo project. The developer holds no liability. Use at your own risk.*

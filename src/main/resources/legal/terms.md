@@ -1,25 +1,57 @@
 # Terms and Conditions
-**Last Updated: February 6, 2026**
+**Last Updated: February 20, 2026**
 
 ---
 
-Welcome to **PropMange**. These Terms and Conditions ("Terms") govern your use of our property management platform. By accessing or using our services, you agree to be bound by these Terms.
+> **IMPORTANT NOTICE:** PropMange is a **development/demo project only**. It is not intended for production use, real property management operations, or any commercial purpose. Use at your own risk.
 
-## 1. Acceptance of Terms
-By accessing this application, you agree to be bound by these terms of service, all applicable laws and regulations, and agree that you are responsible for compliance with any applicable local laws. If you do not agree with any of these terms, you are prohibited from using or accessing this site.
+Welcome to **PropMange**, a property management demo application built for development and experimentation purposes. By accessing or using this application, you acknowledge and agree to the following terms.
 
-## 2. Use License
-Permission is granted to use PropMange for personal or commercial property management purposes. Under this license you may not:
-*   Modify or copy the software materials;
-*   Use the materials for any unauthorized commercial purpose;
-*   Attempt to decompile or reverse engineer any software contained in PropMange;
-*   Remove any copyright or other proprietary notations from the materials.
+## 1. Nature of This Project
 
-## 3. Disclaimer
-The materials on PropMange's website are provided on an 'as is' basis. PropMange makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.
+PropMange is a **non-production, demo-only application** created solely for development, experimentation, and learning purposes. It is not a commercial product, does not guarantee availability or data persistence, and should not be relied upon for managing real properties, tenants, leases, or any legally binding transactions.
 
-## 4. Limitations
-In no event shall PropMange or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on PropMange's website, even if PropMange or a PropMange authorized representative has been notified orally or in writing of the possibility of such damage.
+## 2. No Warranties — As-Is Basis
+
+This application is provided strictly on an **"as is" and "as available" basis**, with no warranties of any kind, express or implied. The developer makes no representations or guarantees regarding:
+
+- Accuracy, completeness, or reliability of any data
+- Uptime, availability, or continuity of service
+- Fitness for any particular purpose
+- Security or integrity of data stored within the application
+
+## 3. Limitation of Liability
+
+**The developer assumes no liability whatsoever** for any damages, losses, or harm arising from your use of this application, including but not limited to:
+
+- Loss of data or financial loss
+- Business interruption
+- Incorrect or incomplete property, tenant, or lease information
+- Security breaches or unauthorized access to demo data
+
+By using this application you accept that it is a demo project with no production guarantees, and you use it entirely **at your own risk**.
+
+## 4. Not for Production Use
+
+This application is **explicitly not suitable for production use**. Do not use PropMange to:
+
+- Manage real tenant relationships or lease agreements
+- Store sensitive personal or financial information
+- Make legally binding decisions about properties or tenants
+- Replace professional property management software or legal counsel
+
+## 5. Acceptable Use
+
+You may use PropMange to explore its features, test functionality, and experiment with property management workflows in a development context. You may not attempt to exploit, disrupt, or reverse-engineer the application.
+
+## 6. Data
+
+Any data entered into this application is for demo/testing purposes only. The developer makes no guarantees regarding data retention, backups, or security. Do not enter real personal information, sensitive financial data, or any data you expect to remain private or persistent.
+
+## 7. Changes
+
+These terms may be updated at any time without notice given the development nature of this project.
 
 ---
-*For questions regarding these terms, please contact support@propmange.com.*
+
+*This is a demo project. The developer holds no liability. Use at your own risk.*

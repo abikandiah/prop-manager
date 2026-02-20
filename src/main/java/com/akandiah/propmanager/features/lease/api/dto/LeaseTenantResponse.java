@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import com.akandiah.propmanager.features.invite.domain.EmailDeliveryStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRole;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantStatus;
@@ -23,6 +24,10 @@ public record LeaseTenantResponse(
 		LocalDate signedDate,
 		/** Timestamp of the last resend, null if never resent. */
 		Instant lastResentAt,
+		/** Delivery status of the most recent invite email. */
+		EmailDeliveryStatus emailStatus,
+		/** Error message from the last failed send attempt, null if last send succeeded. */
+		String emailError,
 		Integer version,
 		Instant createdAt,
 		Instant updatedAt) {
@@ -48,6 +53,8 @@ public record LeaseTenantResponse(
 				lt.getInvitedDate(),
 				lt.getSignedDate(),
 				lt.getInvite().getLastResentAt(),
+				lt.getInvite().getEmailStatus(),
+				lt.getInvite().getEmailError(),
 				lt.getVersion(),
 				lt.getCreatedAt(),
 				lt.getUpdatedAt());

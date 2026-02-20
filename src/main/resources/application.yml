@@ -50,6 +50,8 @@ app:
   invite:
     expiry-hours: ${INVITE_EXPIRY_HOURS:72}
     resend-cooldown-minutes: ${INVITE_RESEND_COOLDOWN_MINUTES:15}
+    max-email-retries: ${INVITE_MAX_EMAIL_RETRIES:3}
+    email-retry-interval-minutes: ${INVITE_EMAIL_RETRY_INTERVAL_MINUTES:15}
 
 springdoc:
   api-docs:
