@@ -67,7 +67,7 @@ public class EmailNotificationService {
 			Context thymeleafContext = new Context();
 
 			// Add common variables available to all templates
-			thymeleafContext.setVariable("appName", "Prop Manager");
+			thymeleafContext.setVariable("appName", "PropMange");
 
 			// Globally transform Instants to ZonedDateTime so #temporals can read them
 			context.forEach((key, value) -> {

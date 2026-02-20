@@ -30,7 +30,7 @@ public enum NotificationTemplate {
 
 	// Account/Auth
 	PASSWORD_RESET("Password Reset Request", "password-reset"),
-	ACCOUNT_CREATED("Welcome to Prop Manager", "account-created");
+	ACCOUNT_CREATED("Welcome to PropMange", "account-created");
 
 	private final String subject;
 	private final String templateName;

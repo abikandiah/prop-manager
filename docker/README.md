@@ -1,6 +1,6 @@
-# Docker: Authentik + Caddy + Prop Manager
+# Docker: Authentik + Caddy + PropMange
 
-Stack: **single PostgreSQL** (propmanager + authentik DBs), **Caddy** (reverse proxy + forward auth), **Authentik** (OIDC), **Prop Manager** (API).
+Stack: **single PostgreSQL** (propmanager + authentik DBs), **Caddy** (reverse proxy + forward auth), **Authentik** (OIDC), **PropMange** (API).
 
 ## Quick start
 
@@ -20,7 +20,7 @@ Stack: **single PostgreSQL** (propmanager + authentik DBs), **Caddy** (reverse p
 3. **Initial Authentik setup**
 
    - Open **http://localhost:9000/if/flow/initial-setup/** (trailing slash) and set the admin password.
-   - Create an **Application** (e.g. "Prop Manager").
+   - Create an **Application** (e.g. "PropMange").
    - Create a **Provider** → **Proxy Provider**:
      - Name: e.g. `prop-manager`
      - **Forward auth** mode (e.g. "Forward auth (single application)").

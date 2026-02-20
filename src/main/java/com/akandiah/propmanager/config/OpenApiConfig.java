@@ -16,7 +16,7 @@ public class OpenApiConfig {
 		String bearerAuth = "bearerAuth";
 		return new OpenAPI()
 				.info(new Info()
-						.title("Prop Manager API")
+						.title("PropMange API")
 						.description("REST API for the prop management system.")
 						.version("1.0"))
 				.addSecurityItem(new SecurityRequirement().addList(bearerAuth))
