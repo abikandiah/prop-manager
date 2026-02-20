@@ -23,6 +23,7 @@ import com.nimbusds.jwt.SignedJWT;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,21 +48,21 @@ public class DevAuthController {
 	@PostMapping("/login")
 	@Operation(summary = "Generate a dev JWT", description = "Generates a signed JWT with specified roles. ONLY for local development.")
 	public Map<String, String> login(@Valid @RequestBody DevLoginRequest request) throws Exception {
-		log.warn("DEV LOGIN ATTEMPT - User: {}", request.username());
+		log.warn("DEV LOGIN ATTEMPT - User: {}", request.email());
 
 		if (!devJwtConfig.getDevLoginSecret().equals(request.password())) {
-			log.error("DEV LOGIN FAILED - Invalid password for user: {}", request.username());
+			log.error("DEV LOGIN FAILED - Invalid password for user: {}", request.email());
 			throw new BadCredentialsException("Invalid dev secret");
 		}
 
 		JWSSigner signer = new MACSigner(jwtSecret.getBytes());
 
 		JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-				.subject(request.username())
+				.subject(request.email())
 				.issuer("prop-manager-dev")
 				.expirationTime(new Date(new Date().getTime() + 3600 * 1000)) // 1 hour
-				.claim("name", request.username())
-				.claim("email", request.username() + "@example.com")
+				.claim("name", request.email())
+				.claim("email", request.email())
 				.claim("groups", request.roles())
 				.build();
 
@@ -72,7 +73,7 @@ public class DevAuthController {
 	}
 
 	public record DevLoginRequest(
-			@NotBlank String username,
+			@NotBlank @Email String email,
 			@NotBlank String password,
 			List<String> roles) {
 
