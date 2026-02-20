@@ -27,6 +27,10 @@ spring:
           issuer-uri: ${AUTH_ISSUER_URI}
 
 app:
+  # Public base URL used for generated links (e.g. invite emails).
+  # Often differs from server port/address (e.g. https behind Caddy vs internal :8080).
+  # Override with APP_BASE_URL.
+  base-url: ${APP_BASE_URL:https://propmanager.com}
   rate-limit:
     cache-expire-minutes: 15
   cors:
@@ -44,9 +48,6 @@ app:
   notification:
     email:
       enabled: ${NOTIFICATION_EMAIL_ENABLED:true}
-    # Public base URL for links (e.g. invite emails). Override with APP_BASE_URL.
-    # Often differs from server port/address (e.g. https behind Caddy vs internal :8080).
-    base-url: ${APP_BASE_URL:https://propmanager.com}
   invite:
     expiry-hours: ${INVITE_EXPIRY_HOURS:72}
     resend-cooldown-minutes: ${INVITE_RESEND_COOLDOWN_MINUTES:15}

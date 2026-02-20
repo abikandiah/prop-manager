@@ -31,6 +31,7 @@ spring:
           issuer-uri: null
 
 app:
+  base-url: ${APP_BASE_URL:http://localhost:3000}
   jwt:
     secret: "dev-secret-key-at-least-32-chars-long-123456"
   rate-limit:
@@ -42,8 +43,6 @@ app:
     enabled: true
     include-query-string: true
     include-client-info: true
-  notification:
-    base-url: ${APP_BASE_URL:http://localhost:8080}
 
 logging:
   level:

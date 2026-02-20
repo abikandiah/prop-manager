@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.config.AppProperties;
 import com.akandiah.propmanager.config.InviteProperties;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.Invite;
@@ -43,6 +45,7 @@ public class InviteService {
 	private final InviteRepository inviteRepository;
 	private final ApplicationEventPublisher eventPublisher;
 	private final InviteProperties inviteProperties;
+	private final AppProperties appProperties;
 
 	private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -82,7 +85,7 @@ public class InviteService {
 		invite = inviteRepository.save(invite);
 
 		// Email is sent after this transaction commits — see NotificationDispatcher
-		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), false, metadata));
+		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), false, withInviteLink(invite, metadata)));
 
 		log.info("Invite created: id={}, email={}, targetType={}, targetId={}", invite.getId(), email, targetType,
 				targetId);
@@ -124,7 +127,7 @@ public class InviteService {
 		invite = inviteRepository.save(invite);
 
 		// Email is sent after this transaction commits — see NotificationDispatcher
-		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), true, metadata));
+		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), true, withInviteLink(invite, metadata)));
 
 		log.info("Invite resend requested: id={}, email={}", inviteId, invite.getEmail());
 
@@ -232,6 +235,12 @@ public class InviteService {
 
 		log.info("Expired {} old invites", expiredInvites.size());
 		return expiredInvites.size();
+	}
+
+	private Map<String, Object> withInviteLink(Invite invite, Map<String, Object> metadata) {
+		Map<String, Object> enriched = new HashMap<>(metadata != null ? metadata : Map.of());
+		enriched.put("inviteLink", appProperties.baseUrl() + "/invite/accept?token=" + invite.getToken());
+		return enriched;
 	}
 
 	private String generateSecureToken() {

@@ -14,7 +14,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import com.akandiah.propmanager.common.notification.NotificationChannel;
 import com.akandiah.propmanager.common.notification.NotificationReferenceType;
 import com.akandiah.propmanager.common.notification.NotificationType;
-import com.akandiah.propmanager.config.NotificationProperties;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteEmailRequestedEvent;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
@@ -60,7 +59,6 @@ public class NotificationDispatcher {
 	private final LeaseRepository leaseRepository;
 	private final LeaseTenantRepository leaseTenantRepository;
 	private final UserRepository userRepository;
-	private final NotificationProperties notificationProperties;
 
 	private static final DateTimeFormatter INVITE_DATE_FORMAT = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")
 			.withZone(ZoneId.systemDefault());
@@ -75,10 +73,7 @@ public class NotificationDispatcher {
 			return;
 		}
 
-		String inviteLink = notificationProperties.baseUrl() + "/invite/accept?token=" + invite.getToken();
-
 		Map<String, Object> context = new HashMap<>(event.metadata() != null ? event.metadata() : Map.of());
-		context.put("inviteLink", inviteLink);
 		context.put("inviterName", invite.getInvitedBy().getName());
 		context.put("role", invite.getRole());
 		context.put("expiresAt", INVITE_DATE_FORMAT.format(invite.getExpiresAt()));
