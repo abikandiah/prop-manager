@@ -78,9 +78,7 @@ public class NotificationDispatcher {
 		context.put("role", invite.getRole());
 		context.put("expiresAt", INVITE_DATE_FORMAT.format(invite.getExpiresAt()));
 
-		NotificationType type = invite.getTargetType() == TargetType.PROPERTY
-				? NotificationType.INVITE_PROPERTY
-				: NotificationType.INVITE_LEASE;
+		NotificationType type = NotificationType.INVITE_LEASE;
 
 		// On resend: cancel any active deliveries to prevent duplicate sends
 		if (event.isResend()) {

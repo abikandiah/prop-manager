@@ -48,4 +48,11 @@ public interface LeaseRepository extends JpaRepository<Lease, UUID> {
 	 */
 	@Query("SELECT l FROM Lease l JOIN FETCH l.unit JOIN FETCH l.property WHERE l.id = :id")
 	Optional<Lease> findByIdWithUnitAndProperty(@Param("id") UUID id);
+
+	/**
+	 * Fetch lease with unit, property and property address eagerly loaded.
+	 * Used by the invite preview endpoint to resolve all contextual data in one query.
+	 */
+	@Query("SELECT l FROM Lease l JOIN FETCH l.unit JOIN FETCH l.property p JOIN FETCH p.address WHERE l.id = :id")
+	Optional<Lease> findByIdWithUnitPropertyAndAddress(@Param("id") UUID id);
 }
