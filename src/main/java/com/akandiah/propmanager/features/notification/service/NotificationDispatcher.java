@@ -17,7 +17,6 @@ import com.akandiah.propmanager.common.notification.NotificationType;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteEmailRequestedEvent;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
-import com.akandiah.propmanager.features.invite.domain.TargetType;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEvent;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;

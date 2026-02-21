@@ -294,7 +294,7 @@ public class InviteService {
 
 	private Map<String, Object> withInviteLink(Invite invite, Map<String, Object> metadata) {
 		Map<String, Object> enriched = new HashMap<>(metadata != null ? metadata : Map.of());
-		enriched.put("inviteLink", appProperties.baseUrl() + "/invite/accept?token=" + invite.getToken());
+		enriched.put("inviteLink", appProperties.baseUrl() + "/invite/" + invite.getToken());
 		return enriched;
 	}
 
