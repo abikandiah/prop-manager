@@ -9,14 +9,16 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
-import com.akandiah.propmanager.features.prop.domain.Address;
-import com.akandiah.propmanager.features.prop.domain.AddressRepository;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
+import com.akandiah.propmanager.features.organization.domain.Organization;
+import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest.AddressInput;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
+import com.akandiah.propmanager.features.prop.domain.Address;
+import com.akandiah.propmanager.features.prop.domain.AddressRepository;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
@@ -26,15 +28,18 @@ public class PropService {
 
 	private final PropRepository repository;
 	private final AddressRepository addressRepository;
+	private final OrganizationRepository organizationRepository;
 	private final UnitRepository unitRepository;
 	private final AssetRepository assetRepository;
 	private final LeaseRepository leaseRepository;
 
 	public PropService(PropRepository repository, AddressRepository addressRepository,
+			OrganizationRepository organizationRepository,
 			UnitRepository unitRepository, AssetRepository assetRepository,
 			LeaseRepository leaseRepository) {
 		this.repository = repository;
 		this.addressRepository = addressRepository;
+		this.organizationRepository = organizationRepository;
 		this.unitRepository = unitRepository;
 		this.assetRepository = assetRepository;
 		this.leaseRepository = leaseRepository;
@@ -58,12 +63,17 @@ public class PropService {
 	public PropResponse create(CreatePropRequest request) {
 		Address address = mapToAddress(request.address());
 		address = addressRepository.save(address);
+		Organization organization = request.organizationId() != null
+				? organizationRepository.findById(request.organizationId())
+						.orElseThrow(() -> new ResourceNotFoundException("Organization", request.organizationId()))
+				: null;
 		Prop prop = Prop.builder()
 				.legalName(request.legalName())
 				.address(address)
 				.propertyType(request.propertyType())
 				.description(request.description())
 				.parcelNumber(request.parcelNumber())
+				.organization(organization)
 				.ownerId(request.ownerId())
 				.totalArea(request.totalArea())
 				.yearBuilt(request.yearBuilt())
@@ -116,6 +126,11 @@ public class PropService {
 		}
 		if (request.parcelNumber() != null) {
 			prop.setParcelNumber(request.parcelNumber());
+		}
+		if (request.organizationId() != null) {
+			Organization org = organizationRepository.findById(request.organizationId())
+					.orElseThrow(() -> new ResourceNotFoundException("Organization", request.organizationId()));
+			prop.setOrganization(org);
 		}
 		if (request.ownerId() != null) {
 			prop.setOwnerId(request.ownerId());

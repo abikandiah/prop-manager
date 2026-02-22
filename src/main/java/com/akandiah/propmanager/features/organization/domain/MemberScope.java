@@ -1,11 +1,9 @@
-package com.akandiah.propmanager.features.prop.domain;
+package com.akandiah.propmanager.features.organization.domain;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
-
-import com.akandiah.propmanager.features.organization.domain.Organization;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,11 +12,13 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -27,49 +27,39 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Granular scope for a membership. When present, the membership's role applies only
+ * to these (scopeType, scopeId) resources within the org. No rows = org-wide access.
+ */
 @Entity
-@Table(name = "prop")
+@Table(name = "member_scopes", uniqueConstraints = {
+		@UniqueConstraint(name = "uk_member_scopes_membership_scope", columnNames = { "membership_id", "scope_type", "scope_id" })
+}, indexes = {
+		@Index(name = "idx_member_scopes_membership_id", columnList = "membership_id"),
+		@Index(name = "idx_member_scopes_scope", columnList = "scope_type, scope_id")
+})
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Prop {
+public class MemberScope {
 
 	@Id
 	@GeneratedValue
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
-	@Column(name = "legal_name", nullable = false, length = 255)
-	private String legalName;
-
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "address_id", nullable = false)
-	private Address address;
+	@JoinColumn(name = "membership_id", nullable = false)
+	private Membership membership;
 
-	@Column(name = "property_type", nullable = false, length = 32)
+	@Column(name = "scope_type", nullable = false, length = 32)
 	@Enumerated(EnumType.STRING)
-	private PropertyType propertyType;
+	private ScopeType scopeType;
 
-	@Column(name = "description", length = 2000)
-	private String description;
-
-	@Column(name = "parcel_number", length = 64)
-	private String parcelNumber;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "organization_id")
-	private Organization organization;
-
-	@Column(name = "owner_id", nullable = false)
-	private UUID ownerId;
-
-	@Column(name = "total_area")
-	private Integer totalArea;
-
-	@Column(name = "year_built")
-	private Integer yearBuilt;
+	@Column(name = "scope_id", nullable = false)
+	private UUID scopeId;
 
 	@Version
 	@Column(nullable = false)

@@ -20,6 +20,8 @@ public record UpdatePropRequest(
 
 		@Size(max = 64) String parcelNumber,
 
+		UUID organizationId,
+
 		UUID ownerId,
 
 		Integer totalArea,

@@ -1,21 +1,17 @@
-package com.akandiah.propmanager.features.prop.domain;
+package com.akandiah.propmanager.features.organization.domain;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
-
-import com.akandiah.propmanager.features.organization.domain.Organization;
+import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -28,48 +24,28 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "prop")
+@Table(name = "organizations")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Prop {
+public class Organization {
 
 	@Id
 	@GeneratedValue
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
-	@Column(name = "legal_name", nullable = false, length = 255)
-	private String legalName;
+	@Column(nullable = false, length = 255)
+	private String name;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "address_id", nullable = false)
-	private Address address;
+	@Column(name = "tax_id", length = 64)
+	private String taxId;
 
-	@Column(name = "property_type", nullable = false, length = 32)
-	@Enumerated(EnumType.STRING)
-	private PropertyType propertyType;
-
-	@Column(name = "description", length = 2000)
-	private String description;
-
-	@Column(name = "parcel_number", length = 64)
-	private String parcelNumber;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "organization_id")
-	private Organization organization;
-
-	@Column(name = "owner_id", nullable = false)
-	private UUID ownerId;
-
-	@Column(name = "total_area")
-	private Integer totalArea;
-
-	@Column(name = "year_built")
-	private Integer yearBuilt;
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "settings")
+	private Map<String, Object> settings;
 
 	@Version
 	@Column(nullable = false)

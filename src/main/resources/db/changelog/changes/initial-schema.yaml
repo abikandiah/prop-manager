@@ -1090,3 +1090,215 @@ databaseChangeLog:
         - dropColumn:
             tableName: invite
             columnName: email_error
+
+  # organizations — multi-tenant root
+  - changeSet:
+      id: "add-organizations-table"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: organizations
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tax_id
+                  type: varchar(64)
+              - column:
+                  name: settings
+                  type: jsonb
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+
+  # memberships — bridge user <-> organization with role
+  - changeSet:
+      id: "add-memberships-table"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: memberships
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: org_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+            constraints:
+              - uniqueConstraint:
+                  tableName: memberships
+                  columnNames: user_id, org_id
+                  constraintName: uk_memberships_user_org
+        - addForeignKeyConstraint:
+            baseTableName: memberships
+            baseColumnNames: user_id
+            constraintName: fk_memberships_user
+            referencedTableName: users
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: memberships
+            baseColumnNames: org_id
+            constraintName: fk_memberships_org
+            referencedTableName: organizations
+            referencedColumnNames: id
+        - createIndex:
+            indexName: idx_memberships_user_id
+            tableName: memberships
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            indexName: idx_memberships_org_id
+            tableName: memberships
+            columns:
+              - column:
+                  name: org_id
+
+  # member_scopes — granular access per membership
+  - changeSet:
+      id: "add-member-scopes-table"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: member_scopes
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: membership_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scope_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scope_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+            constraints:
+              - uniqueConstraint:
+                  tableName: member_scopes
+                  columnNames: membership_id, scope_type, scope_id
+                  constraintName: uk_member_scopes_membership_scope
+        - addForeignKeyConstraint:
+            baseTableName: member_scopes
+            baseColumnNames: membership_id
+            constraintName: fk_member_scopes_membership
+            referencedTableName: memberships
+            referencedColumnNames: id
+        - createIndex:
+            indexName: idx_member_scopes_membership_id
+            tableName: member_scopes
+            columns:
+              - column:
+                  name: membership_id
+        - createIndex:
+            indexName: idx_member_scopes_scope
+            tableName: member_scopes
+            columns:
+              - column:
+                  name: scope_type
+              - column:
+                  name: scope_id
+
+  # prop — add organization_id (nullable for existing rows)
+  - changeSet:
+      id: "add-prop-organization-id"
+      author: "prop-manager"
+      changes:
+        - addColumn:
+            tableName: prop
+            columns:
+              - column:
+                  name: organization_id
+                  type: uuid
+        - addForeignKeyConstraint:
+            baseTableName: prop
+            baseColumnNames: organization_id
+            constraintName: fk_prop_organization
+            referencedTableName: organizations
+            referencedColumnNames: id
+        - createIndex:
+            indexName: idx_prop_organization_id
+            tableName: prop
+            columns:
+              - column:
+                  name: organization_id

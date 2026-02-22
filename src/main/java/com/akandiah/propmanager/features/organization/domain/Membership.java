@@ -1,11 +1,11 @@
-package com.akandiah.propmanager.features.prop.domain;
+package com.akandiah.propmanager.features.organization.domain;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
-import com.akandiah.propmanager.features.organization.domain.Organization;
+import com.akandiah.propmanager.features.user.domain.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,11 +14,13 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -27,49 +29,39 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Bridge between User and Organization. One row per (user, org) with a single role.
+ */
 @Entity
-@Table(name = "prop")
+@Table(name = "memberships", uniqueConstraints = {
+		@UniqueConstraint(name = "uk_memberships_user_org", columnNames = { "user_id", "org_id" })
+}, indexes = {
+		@Index(name = "idx_memberships_user_id", columnList = "user_id"),
+		@Index(name = "idx_memberships_org_id", columnList = "org_id")
+})
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Prop {
+public class Membership {
 
 	@Id
 	@GeneratedValue
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
-	@Column(name = "legal_name", nullable = false, length = 255)
-	private String legalName;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id", nullable = false)
+	private User user;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "address_id", nullable = false)
-	private Address address;
-
-	@Column(name = "property_type", nullable = false, length = 32)
-	@Enumerated(EnumType.STRING)
-	private PropertyType propertyType;
-
-	@Column(name = "description", length = 2000)
-	private String description;
-
-	@Column(name = "parcel_number", length = 64)
-	private String parcelNumber;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "organization_id")
+	@JoinColumn(name = "org_id", nullable = false)
 	private Organization organization;
 
-	@Column(name = "owner_id", nullable = false)
-	private UUID ownerId;
-
-	@Column(name = "total_area")
-	private Integer totalArea;
-
-	@Column(name = "year_built")
-	private Integer yearBuilt;
+	@Column(nullable = false, length = 32)
+	@Enumerated(EnumType.STRING)
+	private Role role;
 
 	@Version
 	@Column(nullable = false)

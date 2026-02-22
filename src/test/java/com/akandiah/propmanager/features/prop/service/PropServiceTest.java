@@ -25,6 +25,7 @@ import com.akandiah.propmanager.common.exception.HasChildrenException;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
+import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
@@ -59,12 +60,15 @@ class PropServiceTest {
 	@Mock
 	private LeaseRepository leaseRepository;
 
+	@Mock
+	private OrganizationRepository organizationRepository;
+
 	private PropService propService;
 
 	@BeforeEach
 	void setUp() {
 		propService = new PropService(propRepository, addressRepository,
-				unitRepository, assetRepository, leaseRepository);
+				organizationRepository, unitRepository, assetRepository, leaseRepository);
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -242,6 +246,7 @@ class PropServiceTest {
 				null, // propertyType not updated
 				null, // description not updated
 				null, // parcelNumber not updated
+				null, // organizationId not updated
 				null, // ownerId not updated
 				null, // totalArea not updated
 				null, // yearBuilt not updated

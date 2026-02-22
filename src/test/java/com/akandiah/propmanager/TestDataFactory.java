@@ -11,6 +11,7 @@ import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
+import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest.AddressInput;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
@@ -265,6 +266,7 @@ public final class TestDataFactory {
 		private PropertyType propertyType = PropertyType.APARTMENT_BUILDING;
 		private String description = "Modern apartment building in downtown";
 		private String parcelNumber = "1234-5678-9012";
+		private Organization organization;
 		private UUID ownerId = UUID.randomUUID();
 		private Integer totalArea = 10000;
 		private Integer yearBuilt = 2015;
@@ -300,6 +302,11 @@ public final class TestDataFactory {
 			return this;
 		}
 
+		public PropBuilder organization(Organization organization) {
+			this.organization = organization;
+			return this;
+		}
+
 		public PropBuilder ownerId(UUID ownerId) {
 			this.ownerId = ownerId;
 			return this;
@@ -331,6 +338,7 @@ public final class TestDataFactory {
 					.propertyType(propertyType)
 					.description(description)
 					.parcelNumber(parcelNumber)
+					.organization(organization)
 					.ownerId(ownerId)
 					.totalArea(totalArea)
 					.yearBuilt(yearBuilt)
@@ -354,6 +362,7 @@ public final class TestDataFactory {
 					propertyType,
 					description,
 					parcelNumber,
+					organization != null ? organization.getId() : null,
 					ownerId,
 					totalArea,
 					yearBuilt);
@@ -375,6 +384,7 @@ public final class TestDataFactory {
 					propertyType,
 					description,
 					parcelNumber,
+					organization != null ? organization.getId() : null,
 					ownerId,
 					totalArea,
 					yearBuilt,
