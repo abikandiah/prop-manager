@@ -21,13 +21,13 @@ import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 import com.akandiah.propmanager.features.unit.domain.UnitStatus;
 import com.akandiah.propmanager.features.unit.domain.UnitType;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.domain.UserRepository;
+import com.akandiah.propmanager.features.user.service.UserService;
 
 /**
  * Seeds default properties and units for local development.
  *
  * <p>Only active in the 'dev' profile. Idempotent — skips seeding if any props
- * already exist. Creates a dev user (idpSub = "dev") if none is found, so
+ * already exist. Creates a dev user (identity prop-manager-dev / dev@example.com) if none is found, so
  * seeded props always have a real ownerId.
  *
  * <p>Props and units are defined declaratively via {@link PropBlueprint} and
@@ -40,7 +40,8 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 
 	private static final Logger log = LoggerFactory.getLogger(DefaultDevDataInitializer.class);
 
-	private static final String DEV_IDP_SUB = "dev";
+	private static final String DEV_ISSUER = "prop-manager-dev";
+	private static final String DEV_EMAIL = "dev@example.com";
 
 	/**
 	 * Cycles across units to produce a realistic ~65% occupied / 20% vacant /
@@ -187,17 +188,17 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	// Dependencies
 	// -------------------------------------------------------------------------
 
-	private final UserRepository userRepository;
+	private final UserService userService;
 	private final PropRepository propRepository;
 	private final AddressRepository addressRepository;
 	private final UnitRepository unitRepository;
 
 	public DefaultDevDataInitializer(
-			UserRepository userRepository,
+			UserService userService,
 			PropRepository propRepository,
 			AddressRepository addressRepository,
 			UnitRepository unitRepository) {
-		this.userRepository = userRepository;
+		this.userService = userService;
 		this.propRepository = propRepository;
 		this.addressRepository = addressRepository;
 		this.unitRepository = unitRepository;
@@ -234,19 +235,11 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Finds the dev user by idpSub or creates one if absent.
-	 * The idpSub "dev" matches the username used by DevAuthController's dev login.
+	 * Finds the dev user by identity (prop-manager-dev / dev@example.com) or creates one if absent.
+	 * Matches the issuer and subject used by DevAuthController's dev login.
 	 */
 	private User resolveDevUser() {
-		return userRepository.findByIdpSub(DEV_IDP_SUB).orElseGet(() -> {
-			log.info("[Data Init] No dev user found (idpSub='{}'), creating one", DEV_IDP_SUB);
-			User user = User.builder()
-					.idpSub(DEV_IDP_SUB)
-					.name("Dev User")
-					.email("dev@example.com")
-					.build();
-			return userRepository.save(user);
-		});
+		return userService.getOrCreateUser(DEV_ISSUER, DEV_EMAIL, "Dev User", DEV_EMAIL);
 	}
 
 	/** Creates a prop from a blueprint and generates all its units. Returns the unit count. */

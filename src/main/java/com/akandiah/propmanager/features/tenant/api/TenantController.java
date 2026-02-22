@@ -18,7 +18,7 @@ import com.akandiah.propmanager.features.tenant.api.dto.TenantResponse;
 import com.akandiah.propmanager.features.tenant.api.dto.UpdateTenantRequest;
 import com.akandiah.propmanager.features.tenant.service.TenantService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.domain.UserRepository;
+import com.akandiah.propmanager.features.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 public class TenantController {
 
 	private final TenantService tenantService;
-	private final UserRepository userRepository;
+	private final UserService userService;
 
 	// ───────────────────────── Admin queries ─────────────────────────
 
@@ -75,7 +75,7 @@ public class TenantController {
 	// ───────────────────────── Helpers ─────────────────────────
 
 	private User getCurrentUser(Jwt jwt) {
-		return userRepository.findByIdpSub(jwt.getSubject())
+		return userService.findUserFromJwt(jwt)
 				.orElseThrow(() -> new IllegalStateException("User not found for authenticated subject"));
 	}
 }

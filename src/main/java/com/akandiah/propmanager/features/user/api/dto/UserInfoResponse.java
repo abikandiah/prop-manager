@@ -1,4 +1,4 @@
-package com.akandiah.propmanager.features.auth.api.dto;
+package com.akandiah.propmanager.features.user.api.dto;
 
 import java.util.List;
 import java.util.UUID;
@@ -11,5 +11,6 @@ public record UserInfoResponse(
 		UUID id,
 		String name,
 		String email,
-		List<String> roles) {
+		List<String> roles,
+		boolean termsAccepted) {
 }

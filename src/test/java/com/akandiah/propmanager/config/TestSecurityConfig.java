@@ -31,6 +31,7 @@ public class TestSecurityConfig {
 			}
 			return Jwt.withTokenValue(token)
 					.header("alg", "RS256")
+					.claim("iss", "https://test")
 					.claim("sub", "test-user")
 					.claim("groups", List.of("USER"))
 					.build();

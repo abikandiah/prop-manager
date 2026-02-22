@@ -7,11 +7,14 @@ import org.hibernate.annotations.UuidGenerator;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,58 +22,44 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Links an OIDC identity (issuer + subject) to a single user account.
+ * One user can have multiple identities (e.g. Google and Meta with the same email).
+ */
 @Entity
-@Table(name = "users")
+@Table(name = "user_identities", uniqueConstraints = {
+		@UniqueConstraint(name = "uk_user_identities_issuer_sub", columnNames = { "issuer", "sub" })
+})
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class UserIdentity {
 
 	@Id
 	@GeneratedValue
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "user_id", nullable = false)
+	private User user;
+
+	@Column(nullable = false, length = 512)
+	private String issuer;
+
 	@Column(nullable = false, length = 255)
-	private String name;
-
-	@Column(nullable = false, unique = true, length = 255)
-	private String email;
-
-	@Column(name = "phone_number", length = 50)
-	private String phoneNumber;
-
-	@Column(name = "avatar_url", length = 512)
-	private String avatarUrl;
-
-	@Column(name = "terms_accepted", nullable = false)
-	@Builder.Default
-	private Boolean termsAccepted = false;
-
-	@Column(name = "last_logged_in_at")
-	private Instant lastLoggedInAt;
+	private String sub;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	@Setter(AccessLevel.NONE)
 	private Instant createdAt;
 
-	@Column(name = "updated_at", nullable = false)
-	@Setter(AccessLevel.NONE)
-	private Instant updatedAt;
-
 	@PrePersist
 	void prePersist() {
-		Instant now = Instant.now();
 		if (createdAt == null) {
-			createdAt = now;
+			createdAt = Instant.now();
 		}
-		updatedAt = now;
-	}
-
-	@PreUpdate
-	void preUpdate() {
-		updatedAt = Instant.now();
 	}
 }

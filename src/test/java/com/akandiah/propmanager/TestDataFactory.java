@@ -43,7 +43,6 @@ public final class TestDataFactory {
 
 	public static class UserBuilder {
 		private UUID id = UUID.randomUUID();
-		private String idpSub = "test-user";
 		private String name = "Alice Tenant";
 		private String email = "alice@example.com";
 		private String phoneNumber = "+1-416-555-0100";
@@ -51,11 +50,6 @@ public final class TestDataFactory {
 
 		public UserBuilder id(UUID id) {
 			this.id = id;
-			return this;
-		}
-
-		public UserBuilder idpSub(String idpSub) {
-			this.idpSub = idpSub;
 			return this;
 		}
 
@@ -77,7 +71,6 @@ public final class TestDataFactory {
 		public User build() {
 			return User.builder()
 					.id(id)
-					.idpSub(idpSub)
 					.name(name)
 					.email(email)
 					.phoneNumber(phoneNumber)

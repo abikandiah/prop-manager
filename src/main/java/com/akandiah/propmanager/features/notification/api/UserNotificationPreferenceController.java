@@ -16,7 +16,7 @@ import com.akandiah.propmanager.features.notification.api.dto.NotificationPrefer
 import com.akandiah.propmanager.features.notification.api.dto.UpdateNotificationPreferenceRequest;
 import com.akandiah.propmanager.features.notification.service.UserNotificationPreferenceService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.domain.UserRepository;
+import com.akandiah.propmanager.features.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -31,7 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class UserNotificationPreferenceController {
 
 	private final UserNotificationPreferenceService preferenceService;
-	private final UserRepository userRepository;
+	private final UserService userService;
 
 	@GetMapping
 	@PreAuthorize("isAuthenticated()")
@@ -56,7 +56,7 @@ public class UserNotificationPreferenceController {
 	}
 
 	private User getCurrentUser(Jwt jwt) {
-		return userRepository.findByIdpSub(jwt.getSubject())
+		return userService.findUserFromJwt(jwt)
 				.orElseThrow(() -> new IllegalStateException("User not found for authenticated subject"));
 	}
 }

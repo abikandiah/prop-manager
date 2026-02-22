@@ -11,7 +11,7 @@ import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.domain.UserRepository;
+import com.akandiah.propmanager.features.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 public class InviteAuthorizationService {
 
 	private final InviteRepository inviteRepository;
-	private final UserRepository userRepository;
+	private final UserService userService;
 
 	/**
 	 * Check if the current user can manage (resend, revoke, view) a specific
@@ -108,9 +108,7 @@ public class InviteAuthorizationService {
 		}
 
 		Jwt jwt = (Jwt) authentication.getPrincipal();
-		String userSub = jwt.getSubject();
-
-		return userRepository.findByIdpSub(userSub)
+		return userService.findUserFromJwt(jwt)
 				.orElseThrow(() -> new IllegalStateException("User not found for authenticated subject"));
 	}
 

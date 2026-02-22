@@ -20,7 +20,7 @@ import com.akandiah.propmanager.features.lease.api.dto.InviteLeaseTenantRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseTenantResponse;
 import com.akandiah.propmanager.features.lease.service.LeaseTenantService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.domain.UserRepository;
+import com.akandiah.propmanager.features.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,7 +34,7 @@ import lombok.RequiredArgsConstructor;
 public class LeaseTenantController {
 
 	private final LeaseTenantService leaseTenantService;
-	private final UserRepository userRepository;
+	private final UserService userService;
 
 	@GetMapping
 	@Operation(summary = "List tenants for a lease")
@@ -74,7 +74,7 @@ public class LeaseTenantController {
 	}
 
 	private User getCurrentUser(Jwt jwt) {
-		return userRepository.findByIdpSub(jwt.getSubject())
+		return userService.findUserFromJwt(jwt)
 				.orElseThrow(() -> new IllegalStateException("User not found for authenticated subject"));
 	}
 }

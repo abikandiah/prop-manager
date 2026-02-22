@@ -108,6 +108,90 @@ databaseChangeLog:
                   constraints:
                     nullable: false
 
+  # user_identities - links OIDC (issuer + sub) to users; allows multiple IdPs per account
+  - changeSet:
+      id: "user-identities-table"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: user_identities
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: issuer
+                  type: varchar(512)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sub
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+            constraints:
+              - uniqueConstraint:
+                  tableName: user_identities
+                  columnNames: issuer, sub
+                  constraintName: uk_user_identities_issuer_sub
+        - addForeignKeyConstraint:
+            baseTableName: user_identities
+            baseColumnNames: user_id
+            constraintName: fk_user_identities_user
+            referencedTableName: users
+            referencedColumnNames: id
+
+  # Migrate existing users: one identity per user with issuer 'legacy'
+  - changeSet:
+      id: "user-identities-migrate-from-idp-sub"
+      author: "prop-manager"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO user_identities (id, user_id, issuer, sub, created_at)
+              SELECT gen_random_uuid(), id, 'legacy', idp_sub, created_at FROM users
+
+  # Remove idp_sub from users; account is now keyed by email + identities
+  - changeSet:
+      id: "users-drop-idp-sub"
+      author: "prop-manager"
+      changes:
+        - dropColumn:
+            tableName: users
+            columnName: idp_sub
+
+  # users: terms and last login
+  - changeSet:
+      id: "users-terms-and-last-logged-in"
+      author: "prop-manager"
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: terms_accepted
+                  type: boolean
+                  constraints:
+                    nullable: false
+                  defaultValueBoolean: false
+              - column:
+                  name: last_logged_in_at
+                  type: timestamptz
+
   # prop - FK addresses
   - changeSet:
       id: "initial-prop"

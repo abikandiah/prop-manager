@@ -24,7 +24,7 @@ import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
 import com.akandiah.propmanager.features.invite.service.InviteService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.domain.UserRepository;
+import com.akandiah.propmanager.features.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -41,7 +41,7 @@ import lombok.RequiredArgsConstructor;
 public class InviteController {
 
 	private final InviteService inviteService;
-	private final UserRepository userRepository;
+	private final UserService userService;
 
 	// ───────────────────────── Public (no auth) ─────────────────────────
 
@@ -132,8 +132,7 @@ public class InviteController {
 	// ───────────────────────── Helpers ─────────────────────────
 
 	private User getCurrentUser(Jwt jwt) {
-		String userSub = jwt.getSubject();
-		return userRepository.findByIdpSub(userSub)
+		return userService.findUserFromJwt(jwt)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
 						"User not registered. Please complete registration before accepting invites."));
 	}
