@@ -1,4 +1,4 @@
-package com.akandiah.propmanager.features.organization.domain;
+package com.akandiah.propmanager.features.permission.domain;
 
 import java.time.Instant;
 import java.util.Map;
@@ -8,16 +8,11 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
 
-import com.akandiah.propmanager.features.user.domain.User;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
@@ -32,22 +27,23 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.akandiah.propmanager.features.organization.domain.Organization;
+
 /**
- * Bridge between User and Organization. One row per (user, org) with a single role.
+ * Template for default permissions (domain key → action letters). System templates
+ * have org_id NULL; org-scoped templates have org_id set. Used when creating
+ * memberships or member_scopes to apply a named set of permissions.
  */
 @Entity
-@Table(name = "memberships", uniqueConstraints = {
-		@UniqueConstraint(name = "uk_memberships_user_org", columnNames = { "user_id", "org_id" })
-}, indexes = {
-		@Index(name = "idx_memberships_user_id", columnList = "user_id"),
-		@Index(name = "idx_memberships_org_id", columnList = "org_id")
+@Table(name = "permission_templates", uniqueConstraints = {
+		@UniqueConstraint(name = "uk_permission_templates_org_name", columnNames = { "org_id", "name" })
 })
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Membership {
+public class PermissionTemplate {
 
 	@Id
 	@GeneratedValue
@@ -55,20 +51,15 @@ public class Membership {
 	private UUID id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "user_id", nullable = false)
-	private User user;
+	@JoinColumn(name = "org_id")
+	private Organization org;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "org_id", nullable = false)
-	private Organization organization;
-
-	@Column(nullable = false, length = 32)
-	@Enumerated(EnumType.STRING)
-	private Role role;
+	@Column(name = "name", nullable = false, columnDefinition = "text")
+	private String name;
 
 	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "permissions")
-	private Map<String, String> permissions;
+	@Column(name = "default_permissions", nullable = false)
+	private Map<String, String> defaultPermissions;
 
 	@Version
 	@Column(nullable = false)

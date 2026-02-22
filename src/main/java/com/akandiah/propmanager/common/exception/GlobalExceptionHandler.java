@@ -93,6 +93,17 @@ public class GlobalExceptionHandler {
 				ex.getMessage(), request.getRequestURI(), null, null);
 	}
 
+	/** 400: Invalid permissions map (domain key or action letters) */
+	@ExceptionHandler(InvalidPermissionStringException.class)
+	public ResponseEntity<ProblemDetail> handleInvalidPermissionString(InvalidPermissionStringException ex,
+			HttpServletRequest request) {
+		List<FieldErrorDto> errors = ex.getErrors().stream()
+				.map(e -> new FieldErrorDto(e.field(), e.message()))
+				.collect(Collectors.toList());
+		return problem(HttpStatus.BAD_REQUEST, "Validation Failed", "Invalid permissions", request.getRequestURI(),
+				errors, null);
+	}
+
 	/** 422: Cannot delete because entity has child records */
 	@ExceptionHandler(HasChildrenException.class)
 	public ResponseEntity<ProblemDetail> handleHasChildren(HasChildrenException ex, HttpServletRequest request) {

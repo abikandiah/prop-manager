@@ -1,5 +1,6 @@
 package com.akandiah.propmanager.features.auth.api;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -12,7 +13,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.config.DevJwtConfig;
+import com.akandiah.propmanager.features.auth.service.JwtHydrationService;
+import com.akandiah.propmanager.features.user.domain.UserRepository;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -41,6 +45,8 @@ import lombok.extern.slf4j.Slf4j;
 public class DevAuthController {
 
 	private final DevJwtConfig devJwtConfig;
+	private final UserRepository userRepository;
+	private final JwtHydrationService jwtHydrationService;
 
 	@Value("${app.jwt.secret:dev-secret-key-at-least-32-chars-long-123456}")
 	private String jwtSecret;
@@ -55,16 +61,25 @@ public class DevAuthController {
 			throw new BadCredentialsException("Invalid dev secret");
 		}
 
+		List<Map<String, Object>> accessClaim = new ArrayList<>();
+		userRepository.findByEmail(request.email())
+				.ifPresent(user -> jwtHydrationService.hydrate(user.getId()).stream()
+						.map(AccessEntry::toClaimMap)
+						.forEach(accessClaim::add));
+
 		JWSSigner signer = new MACSigner(jwtSecret.getBytes());
 
-		JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+		JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
 				.subject(request.email())
 				.issuer("https://prop-manager-dev")
 				.expirationTime(new Date(new Date().getTime() + 3600 * 1000)) // 1 hour
 				.claim("name", request.email())
 				.claim("email", request.email())
-				.claim("groups", request.roles())
-				.build();
+				.claim("groups", request.roles());
+		if (!accessClaim.isEmpty()) {
+			claimsBuilder.claim("access", accessClaim);
+		}
+		JWTClaimsSet claimsSet = claimsBuilder.build();
 
 		SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
 		signedJWT.sign(signer);

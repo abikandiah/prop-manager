@@ -1,9 +1,13 @@
 package com.akandiah.propmanager.features.organization.domain;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.Map;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -60,6 +64,11 @@ public class MemberScope {
 
 	@Column(name = "scope_id", nullable = false)
 	private UUID scopeId;
+
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "permissions", nullable = false)
+	@Builder.Default
+	private Map<String, String> permissions = Collections.emptyMap();
 
 	@Version
 	@Column(nullable = false)

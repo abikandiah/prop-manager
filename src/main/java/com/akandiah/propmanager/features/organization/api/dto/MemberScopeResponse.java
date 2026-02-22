@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.features.organization.api.dto;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 import com.akandiah.propmanager.features.organization.domain.MemberScope;
@@ -11,6 +12,7 @@ public record MemberScopeResponse(
 		UUID membershipId,
 		ScopeType scopeType,
 		UUID scopeId,
+		Map<String, String> permissions,
 		Integer version,
 		Instant createdAt,
 		Instant updatedAt) {
@@ -26,6 +28,7 @@ public record MemberScopeResponse(
 				membershipId,
 				s.getScopeType(),
 				s.getScopeId(),
+				s.getPermissions(),
 				s.getVersion(),
 				s.getCreatedAt(),
 				s.getUpdatedAt());

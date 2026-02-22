@@ -1279,6 +1279,33 @@ databaseChangeLog:
               - column:
                   name: scope_id
 
+  # memberships.permissions (JSONB, nullable) — Piece 5
+  - changeSet:
+      id: "add-memberships-permissions-column"
+      author: "prop-manager"
+      changes:
+        - addColumn:
+            tableName: memberships
+            columns:
+              - column:
+                  name: permissions
+                  type: jsonb
+
+  # member_scopes.permissions (JSONB, NOT NULL, backfill existing with {})
+  - changeSet:
+      id: "add-member-scopes-permissions-column"
+      author: "prop-manager"
+      changes:
+        - addColumn:
+            tableName: member_scopes
+            columns:
+              - column:
+                  name: permissions
+                  type: jsonb
+                  defaultValueComputed: "'{}'::jsonb"
+                  constraints:
+                    nullable: false
+
   # prop — add organization_id (nullable for existing rows)
   - changeSet:
       id: "add-prop-organization-id"
@@ -1302,3 +1329,65 @@ databaseChangeLog:
             columns:
               - column:
                   name: organization_id
+
+  # permission_templates — system (org_id NULL) or org-scoped templates; default_permissions = domain -> action letters
+  - changeSet:
+      id: "add-permission-templates-table"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: permission_templates
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: org_id
+                  type: uuid
+              - column:
+                  name: name
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: default_permissions
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+            constraints:
+              - uniqueConstraint:
+                  tableName: permission_templates
+                  columnNames: org_id, name
+                  constraintName: uk_permission_templates_org_name
+        - addForeignKeyConstraint:
+            baseTableName: permission_templates
+            baseColumnNames: org_id
+            constraintName: fk_permission_templates_org
+            referencedTableName: organizations
+            referencedColumnNames: id
+            onDelete: SET NULL
+        - createIndex:
+            indexName: idx_permission_templates_org_id
+            tableName: permission_templates
+            columns:
+              - column:
+                  name: org_id

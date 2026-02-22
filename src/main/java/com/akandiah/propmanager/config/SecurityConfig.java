@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.server.resource.web.authentication.Be
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import com.akandiah.propmanager.security.JwtAccessHydrationFilter;
 import com.akandiah.propmanager.security.RateLimitFilter;
 
 /**
@@ -25,14 +26,17 @@ import com.akandiah.propmanager.security.RateLimitFilter;
 public class SecurityConfig {
 
 	private final RateLimitFilter rateLimitFilter;
+	private final JwtAccessHydrationFilter jwtAccessHydrationFilter;
 	private final JwtAuthenticationConverter jwtAuthenticationConverter;
 
 	private final CorsConfigurationSource corsConfigurationSource;
 	private final Environment environment;
 
-	public SecurityConfig(RateLimitFilter rateLimitFilter, JwtAuthenticationConverter jwtAuthenticationConverter,
+	public SecurityConfig(RateLimitFilter rateLimitFilter, JwtAccessHydrationFilter jwtAccessHydrationFilter,
+			JwtAuthenticationConverter jwtAuthenticationConverter,
 			CorsConfigurationSource corsConfigurationSource, Environment environment) {
 		this.rateLimitFilter = rateLimitFilter;
+		this.jwtAccessHydrationFilter = jwtAccessHydrationFilter;
 		this.jwtAuthenticationConverter = jwtAuthenticationConverter;
 		this.corsConfigurationSource = corsConfigurationSource;
 		this.environment = environment;
@@ -94,7 +98,9 @@ public class SecurityConfig {
 						.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
 
 				// Place Rate Limiting at the very front of the line
-				.addFilterBefore(rateLimitFilter, BearerTokenAuthenticationFilter.class);
+				.addFilterBefore(rateLimitFilter, BearerTokenAuthenticationFilter.class)
+				// After JWT auth: hydrate "access" from token or DB and set request attribute
+				.addFilterAfter(jwtAccessHydrationFilter, BearerTokenAuthenticationFilter.class);
 
 		return http.build();
 	}
