@@ -59,7 +59,7 @@ public class DevAuthController {
 
 		JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
 				.subject(request.email())
-				.issuer("prop-manager-dev")
+				.issuer("https://prop-manager-dev")
 				.expirationTime(new Date(new Date().getTime() + 3600 * 1000)) // 1 hour
 				.claim("name", request.email())
 				.claim("email", request.email())

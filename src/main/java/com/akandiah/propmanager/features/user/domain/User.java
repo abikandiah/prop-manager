@@ -47,7 +47,7 @@ public class User {
 
 	@Column(name = "terms_accepted", nullable = false)
 	@Builder.Default
-	private Boolean termsAccepted = false;
+	private boolean termsAccepted = false;
 
 	@Column(name = "last_logged_in_at")
 	private Instant lastLoggedInAt;

@@ -79,7 +79,7 @@ public class LeaseService {
 		}
 
 		LeaseTemplate template = templateService.getEntity(request.leaseTemplateId());
-		if (!template.isActive()) {
+		if (!template.getActive()) {
 			throw new IllegalArgumentException("Lease template is not active and cannot be used for new leases.");
 		}
 		Unit unit = unitRepository.findById(request.unitId())

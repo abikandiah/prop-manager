@@ -63,10 +63,10 @@ public class NotificationDeliveryService {
 			Map<String, Object> templateContext) {
 
 		// Check opt-out preference for known users
-		if (userId != null && type.isOptOutAllowed()) {
+		if (userId != null && type.getOptOutAllowed()) {
 			boolean disabled = preferenceRepository
 					.findByUserIdAndNotificationTypeAndChannel(userId, type, channel)
-					.map(p -> !p.isEnabled())
+					.map(p -> !p.getEnabled())
 					.orElse(false);
 			if (disabled) {
 				log.info("Skipping notification: user={} has opted out of type={}", userId, type);

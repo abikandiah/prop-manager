@@ -35,7 +35,7 @@ public class CurrentUserController {
 	@GetMapping("/me")
 	@Operation(summary = "Get current user info", description = "Returns the authenticated user. If no account exists, one is auto-created with termsAccepted=false. Updates last_logged_in_at and name/email from JWT.")
 	public UserInfoResponse me(@AuthenticationPrincipal Jwt jwt, Authentication auth) {
-		String issuer = jwt.getIssuer() != null ? jwt.getIssuer().toString() : null;
+		String issuer = UserService.getIssuerString(jwt);
 		String sub = jwt.getSubject();
 		String name = jwt.getClaimAsString("name");
 		String email = jwt.getClaimAsString("email");
@@ -59,7 +59,7 @@ public class CurrentUserController {
 			@AuthenticationPrincipal Jwt jwt,
 			Authentication auth,
 			@Valid @RequestBody PatchMeRequest request) {
-		String issuer = jwt.getIssuer() != null ? jwt.getIssuer().toString() : null;
+		String issuer = UserService.getIssuerString(jwt);
 		String sub = jwt.getSubject();
 		String name = jwt.getClaimAsString("name");
 		String email = jwt.getClaimAsString("email");

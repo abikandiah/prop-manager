@@ -48,7 +48,7 @@ public class UserNotificationPreferenceService {
 	public NotificationPreferenceResponse updatePreference(
 			UUID userId, NotificationType type, NotificationChannel channel, boolean enabled) {
 
-		if (!type.isOptOutAllowed() && !enabled) {
+		if (!type.getOptOutAllowed() && !enabled) {
 			throw new IllegalArgumentException(
 					"Notifications of type " + type + " cannot be disabled.");
 		}

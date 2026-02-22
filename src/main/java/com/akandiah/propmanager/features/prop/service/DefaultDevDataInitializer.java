@@ -40,7 +40,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 
 	private static final Logger log = LoggerFactory.getLogger(DefaultDevDataInitializer.class);
 
-	private static final String DEV_ISSUER = "prop-manager-dev";
+	private static final String DEV_ISSUER = "https://prop-manager-dev";
 	private static final String DEV_EMAIL = "dev@example.com";
 
 	/**

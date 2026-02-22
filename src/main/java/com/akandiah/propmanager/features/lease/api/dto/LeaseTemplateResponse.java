@@ -32,7 +32,7 @@ public record LeaseTemplateResponse(
 				t.getDefaultLateFeeType(),
 				t.getDefaultLateFeeAmount(),
 				t.getDefaultNoticePeriodDays(),
-				t.isActive(),
+				t.getActive(),
 				t.getTemplateParameters(),
 				t.getCreatedAt(),
 				t.getUpdatedAt());

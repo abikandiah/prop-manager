@@ -48,12 +48,27 @@ public class UserService {
 	 */
 	@Transactional(readOnly = true)
 	public Optional<User> findUserFromJwt(Jwt jwt) {
-		String issuer = normalizeIssuer(jwt.getIssuer() != null ? jwt.getIssuer().toString() : null);
+		String issuer = normalizeIssuer(getIssuerString(jwt));
 		String sub = jwt.getSubject();
 		if (sub == null || sub.isBlank()) {
 			return Optional.empty();
 		}
 		return findUserByIdentity(issuer, sub);
+	}
+
+	/**
+	 * Issuer string from JWT. Prefers {@link Jwt#getIssuer()} (spec-correct); falls back to
+	 * {@code iss} claim as string when conversion to URL fails (e.g. some dev decoders).
+	 */
+	public static String getIssuerString(Jwt jwt) {
+		try {
+			if (jwt.getIssuer() != null) {
+				return jwt.getIssuer().toString();
+			}
+		} catch (Exception ignored) {
+			// e.g. IllegalArgumentException when iss cannot be converted to URL
+		}
+		return jwt.getClaimAsString("iss");
 	}
 
 	private static String normalizeIssuer(String issuer) {

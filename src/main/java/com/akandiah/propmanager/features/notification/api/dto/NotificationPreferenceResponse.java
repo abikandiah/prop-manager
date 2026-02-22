@@ -21,8 +21,8 @@ public record NotificationPreferenceResponse(
 				pref.getVersion(),
 				pref.getNotificationType(),
 				pref.getChannel(),
-				pref.isEnabled(),
-				pref.getNotificationType().isOptOutAllowed()
+				pref.getEnabled(),
+				pref.getNotificationType().getOptOutAllowed()
 		);
 	}
 
@@ -33,7 +33,7 @@ public record NotificationPreferenceResponse(
 				type,
 				channel,
 				true,
-				type.isOptOutAllowed()
+				type.getOptOutAllowed()
 		);
 	}
 }
