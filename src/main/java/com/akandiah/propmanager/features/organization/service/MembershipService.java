@@ -1,16 +1,14 @@
 package com.akandiah.propmanager.features.organization.service;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
-import com.akandiah.propmanager.common.permission.PermissionStringValidator;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
+import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMembershipRequest;
 import com.akandiah.propmanager.features.organization.api.dto.MembershipResponse;
 import com.akandiah.propmanager.features.organization.api.dto.UpdateMembershipRequest;
@@ -19,8 +17,6 @@ import com.akandiah.propmanager.features.organization.domain.Membership;
 import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
-import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
-import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRepository;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.domain.UserRepository;
 
@@ -33,9 +29,9 @@ public class MembershipService {
 
 	private final MembershipRepository membershipRepository;
 	private final MemberScopeRepository memberScopeRepository;
+	private final MemberScopeService memberScopeService;
 	private final OrganizationRepository organizationRepository;
 	private final UserRepository userRepository;
-	private final PermissionTemplateRepository permissionTemplateRepository;
 
 	public List<MembershipResponse> findByOrganizationId(UUID organizationId) {
 		return membershipRepository.findByOrganizationIdWithUserAndOrg(organizationId).stream()
@@ -62,21 +58,27 @@ public class MembershipService {
 		User user = userRepository.findById(request.userId())
 				.orElseThrow(() -> new ResourceNotFoundException("User", request.userId()));
 
-		Map<String, String> permissions = resolvePermissionsForCreate(
-				organizationId, request.permissions(), request.templateId());
-		if (permissions != null) {
-			PermissionStringValidator.validate(permissions);
-		}
-
 		// Duplicate (user, org) is rejected by uk_memberships_user_org → DataIntegrityViolationException → 409
 		Membership m = Membership.builder()
 				.user(user)
 				.organization(org)
-				.role(request.role())
-				.permissions(permissions)
 				.build();
 		m = membershipRepository.save(m);
 		return MembershipResponse.from(m);
+	}
+
+	/**
+	 * Creates a membership and immediately grants an initial scope. Pass {@code null} for
+	 * {@code initialScope} when no scope is needed (e.g. tenant onboarding — access comes from LeaseTenant).
+	 */
+	@Transactional
+	public MembershipResponse createWithInitialScope(UUID organizationId, CreateMembershipRequest request,
+			CreateMemberScopeRequest initialScope) {
+		MembershipResponse membership = create(organizationId, request);
+		if (initialScope != null) {
+			memberScopeService.create(membership.id(), initialScope);
+		}
+		return membership;
 	}
 
 	@Transactional
@@ -84,11 +86,18 @@ public class MembershipService {
 		Membership m = membershipRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Membership", id));
 		OptimisticLockingUtil.requireVersionMatch("Membership", id, m.getVersion(), request.version());
-		m.setRole(request.role());
-		if (request.permissions() != null) {
-			PermissionStringValidator.validate(request.permissions());
-			m.setPermissions(request.permissions());
-		}
+		m = membershipRepository.save(m);
+		return MembershipResponse.from(m);
+	}
+
+	/**
+	 * Updates a membership, verifying it belongs to the given organization.
+	 */
+	@Transactional
+	public MembershipResponse update(UUID organizationId, UUID membershipId, UpdateMembershipRequest request) {
+		Membership m = membershipRepository.findByIdAndOrganizationId(membershipId, organizationId)
+				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
+		OptimisticLockingUtil.requireVersionMatch("Membership", membershipId, m.getVersion(), request.version());
 		m = membershipRepository.save(m);
 		return MembershipResponse.from(m);
 	}
@@ -102,23 +111,13 @@ public class MembershipService {
 	}
 
 	/**
-	 * Resolve permissions for create: request.permissions if non-null; else copy from template if templateId present; else null.
+	 * Deletes a membership, verifying it belongs to the given organization.
 	 */
-	private Map<String, String> resolvePermissionsForCreate(UUID orgId, Map<String, String> requestPermissions, UUID templateId) {
-		if (requestPermissions != null) {
-			return requestPermissions;
-		}
-		if (templateId != null) {
-			PermissionTemplate template = permissionTemplateRepository.findById(templateId)
-					.orElseThrow(() -> new ResourceNotFoundException("PermissionTemplate", templateId));
-			if (template.getOrg() != null && !template.getOrg().getId().equals(orgId)) {
-				throw new IllegalArgumentException("Permission template does not belong to this organization");
-			}
-			Map<String, String> defaultPerms = template.getDefaultPermissions();
-			return defaultPerms == null || defaultPerms.isEmpty()
-					? null
-					: new HashMap<>(defaultPerms);
-		}
-		return null;
+	@Transactional
+	public void deleteById(UUID organizationId, UUID membershipId) {
+		Membership m = membershipRepository.findByIdAndOrganizationId(membershipId, organizationId)
+				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
+		memberScopeRepository.deleteByMembershipId(membershipId);
+		membershipRepository.delete(m);
 	}
 }

@@ -19,6 +19,8 @@ public interface MembershipRepository extends JpaRepository<Membership, UUID> {
 
 	boolean existsByUserIdAndOrganizationId(UUID userId, UUID organizationId);
 
+	Optional<Membership> findByIdAndOrganizationId(UUID id, UUID organizationId);
+
 	@Query("SELECT m FROM Membership m JOIN FETCH m.organization WHERE m.user.id = :userId")
 	List<Membership> findByUserIdWithOrganization(UUID userId);
 

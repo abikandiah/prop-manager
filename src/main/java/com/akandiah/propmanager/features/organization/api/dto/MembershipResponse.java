@@ -1,18 +1,14 @@
 package com.akandiah.propmanager.features.organization.api.dto;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
 import com.akandiah.propmanager.features.organization.domain.Membership;
-import com.akandiah.propmanager.features.organization.domain.Role;
 
 public record MembershipResponse(
 		UUID id,
 		UUID userId,
 		UUID organizationId,
-		Role role,
-		Map<String, String> permissions,
 		Integer version,
 		Instant createdAt,
 		Instant updatedAt) {
@@ -22,8 +18,6 @@ public record MembershipResponse(
 				m.getId(),
 				m.getUser().getId(),
 				m.getOrganization().getId(),
-				m.getRole(),
-				m.getPermissions(),
 				m.getVersion(),
 				m.getCreatedAt(),
 				m.getUpdatedAt());

@@ -18,7 +18,9 @@ public final class PermissionDomains {
 	public static final String MAINTENANCE = "m";
 	/** Finances */
 	public static final String FINANCES = "f";
+	/** Tenants (profiles, PII: emergency contacts, vehicle info, notes) */
+	public static final String TENANTS = "t";
 
 	/** All valid domain keys for validation. */
-	public static final Set<String> VALID_KEYS = Set.of(LEASES, MAINTENANCE, FINANCES);
+	public static final Set<String> VALID_KEYS = Set.of(LEASES, MAINTENANCE, FINANCES, TENANTS);
 }

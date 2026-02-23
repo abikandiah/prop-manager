@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.features.organization.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -9,12 +10,16 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
+import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
+import com.akandiah.propmanager.features.organization.api.dto.CreateMembershipRequest;
 import com.akandiah.propmanager.features.organization.api.dto.CreateOrganizationRequest;
+import com.akandiah.propmanager.features.organization.api.dto.MembershipResponse;
 import com.akandiah.propmanager.features.organization.api.dto.OrganizationResponse;
 import com.akandiah.propmanager.features.organization.api.dto.UpdateOrganizationRequest;
 import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
+import com.akandiah.propmanager.features.organization.domain.ScopeType;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -26,9 +31,19 @@ public class OrganizationService {
 
 	private final OrganizationRepository repository;
 	private final MembershipRepository membershipRepository;
+	private final MembershipService membershipService;
+	private final MemberScopeService memberScopeService;
 	private final PropRepository propRepository;
 
-	public List<OrganizationResponse> findAll() {
+	/** Returns only the organizations the given user is a member of (data-isolated). */
+	public List<OrganizationResponse> findAll(UUID currentUserId) {
+		return membershipRepository.findByUserIdWithOrganization(currentUserId).stream()
+				.map(m -> OrganizationResponse.from(m.getOrganization()))
+				.toList();
+	}
+
+	/** Returns all organizations — for system-level ADMIN use only. */
+	public List<OrganizationResponse> findAllForAdmin() {
 		return repository.findAll().stream()
 				.map(OrganizationResponse::from)
 				.toList();
@@ -40,14 +55,28 @@ public class OrganizationService {
 		return OrganizationResponse.from(org);
 	}
 
+	/**
+	 * Creates an organization and auto-enrolls the creator as an org-wide admin
+	 * (full CRUD on all 4 permission domains).
+	 */
 	@Transactional
-	public OrganizationResponse create(CreateOrganizationRequest request) {
+	public OrganizationResponse create(CreateOrganizationRequest request, UUID creatorUserId) {
 		Organization org = Organization.builder()
 				.name(request.name())
 				.taxId(request.taxId())
 				.settings(request.settings())
 				.build();
 		org = repository.save(org);
+
+		// Auto-enroll creator with full ORG-scoped permissions
+		MembershipResponse membership = membershipService.create(org.getId(),
+				new CreateMembershipRequest(creatorUserId));
+		memberScopeService.create(membership.id(), new CreateMemberScopeRequest(
+				ScopeType.ORG,
+				org.getId(),
+				Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud"),
+				null));
+
 		return OrganizationResponse.from(org);
 	}
 

@@ -1391,3 +1391,21 @@ databaseChangeLog:
             columns:
               - column:
                   name: org_id
+
+  # Piece 11: drop memberships.role — replaced by member_scopes
+  - changeSet:
+      id: "drop-memberships-role-column"
+      author: "prop-manager"
+      changes:
+        - dropColumn:
+            tableName: memberships
+            columnName: role
+
+  # Piece 11: drop memberships.permissions — replaced by member_scopes.permissions
+  - changeSet:
+      id: "drop-memberships-permissions-column"
+      author: "prop-manager"
+      changes:
+        - dropColumn:
+            tableName: memberships
+            columnName: permissions

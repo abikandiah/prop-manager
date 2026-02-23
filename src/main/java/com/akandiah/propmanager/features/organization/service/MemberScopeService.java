@@ -11,8 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.PermissionStringValidator;
+import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.organization.api.dto.MemberScopeResponse;
+import com.akandiah.propmanager.features.organization.api.dto.UpdateMemberScopeRequest;
 import com.akandiah.propmanager.features.organization.domain.MemberScope;
 import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.organization.domain.Membership;
@@ -41,6 +43,12 @@ public class MemberScopeService {
 				.toList();
 	}
 
+	public MemberScopeResponse findById(UUID membershipId, UUID scopeId) {
+		MemberScope scope = memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId)
+				.orElseThrow(() -> new ResourceNotFoundException("MemberScope", scopeId));
+		return MemberScopeResponse.from(scope, membershipId);
+	}
+
 	@Transactional
 	public MemberScopeResponse create(UUID membershipId, CreateMemberScopeRequest request) {
 		Membership membership = membershipRepository.findById(membershipId)
@@ -49,7 +57,7 @@ public class MemberScopeService {
 		UUID orgId = membership.getOrganization().getId();
 		validateScopeBelongsToOrg(request, orgId);
 
-		Map<String, String> permissions = resolvePermissionsForCreate(
+		Map<String, String> permissions = resolvePermissions(
 				orgId, request.permissions(), request.templateId());
 		PermissionStringValidator.validate(permissions);
 
@@ -64,6 +72,22 @@ public class MemberScopeService {
 	}
 
 	@Transactional
+	public MemberScopeResponse update(UUID membershipId, UUID scopeId, UpdateMemberScopeRequest request) {
+		MemberScope scope = memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId)
+				.orElseThrow(() -> new ResourceNotFoundException("MemberScope", scopeId));
+		OptimisticLockingUtil.requireVersionMatch("MemberScope", scopeId, scope.getVersion(), request.version());
+
+		// Lazy-load membership → org (safe inside @Transactional)
+		UUID orgId = scope.getMembership().getOrganization().getId();
+		Map<String, String> permissions = resolvePermissions(orgId, request.permissions(), request.templateId());
+		PermissionStringValidator.validate(permissions);
+
+		scope.setPermissions(permissions);
+		scope = memberScopeRepository.save(scope);
+		return MemberScopeResponse.from(scope, membershipId);
+	}
+
+	@Transactional
 	public void deleteById(UUID membershipId, UUID scopeId) {
 		if (!memberScopeRepository.existsByIdAndMembershipId(scopeId, membershipId)) {
 			throw new ResourceNotFoundException("MemberScope", scopeId);
@@ -73,6 +97,7 @@ public class MemberScopeService {
 
 	private void validateScopeBelongsToOrg(CreateMemberScopeRequest request, UUID orgId) {
 		boolean valid = switch (request.scopeType()) {
+			case ORG -> request.scopeId().equals(orgId);
 			case PROPERTY -> propRepository.existsByIdAndOrganization_Id(request.scopeId(), orgId);
 			case UNIT -> unitRepository.existsByIdAndProp_Organization_Id(request.scopeId(), orgId);
 		};
@@ -82,9 +107,9 @@ public class MemberScopeService {
 	}
 
 	/**
-	 * Resolve permissions for create: request.permissions if non-null; else copy from template if templateId present; else empty map.
+	 * Resolves permissions: explicit map takes priority; else copy from template if provided; else empty map.
 	 */
-	private Map<String, String> resolvePermissionsForCreate(UUID orgId, Map<String, String> requestPermissions, UUID templateId) {
+	private Map<String, String> resolvePermissions(UUID orgId, Map<String, String> requestPermissions, UUID templateId) {
 		if (requestPermissions != null && !requestPermissions.isEmpty()) {
 			return requestPermissions;
 		}

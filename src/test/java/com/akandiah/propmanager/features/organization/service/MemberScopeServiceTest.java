@@ -26,7 +26,6 @@ import com.akandiah.propmanager.features.organization.domain.MemberScopeReposito
 import com.akandiah.propmanager.features.organization.domain.Membership;
 import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
-import com.akandiah.propmanager.features.organization.domain.Role;
 import com.akandiah.propmanager.features.organization.domain.ScopeType;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
 import com.akandiah.propmanager.features.user.domain.User;
@@ -161,7 +160,6 @@ class MemberScopeServiceTest {
 				.id(id)
 				.user(user)
 				.organization(org(orgId))
-				.role(Role.ADMIN)
 				.version(0)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())

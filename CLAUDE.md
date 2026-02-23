@@ -411,6 +411,15 @@ Available test infrastructure:
 - TestDataFactory      — builder-based factory for entity defaults
 ```
 
+### Known pre-existing test failures
+
+These failures exist in the repo independently of any feature work. Do not investigate them unless directly relevant to the task at hand.
+
+| Test | Failure reason |
+|---|---|
+| `PropManagerApplicationTests.contextLoads` | `JavaMailSender` bean not available in the test context — mail sender not mocked |
+| `LeaseServiceTest.shouldActivateAndStampTemplate` | Mockito interaction on `LeaseTemplateRenderer` — `stampMarkdownFromLease` never called |
+
 ### Unit Test (Service)
 
 ```java

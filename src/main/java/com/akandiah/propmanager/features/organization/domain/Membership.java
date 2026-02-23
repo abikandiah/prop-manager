@@ -1,19 +1,14 @@
 package com.akandiah.propmanager.features.organization.domain;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
-import org.hibernate.type.SqlTypes;
 
 import com.akandiah.propmanager.features.user.domain.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -33,7 +28,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Bridge between User and Organization. One row per (user, org) with a single role.
+ * Bridge between User and Organization. One row per (user, org).
  */
 @Entity
 @Table(name = "memberships", uniqueConstraints = {
@@ -61,14 +56,6 @@ public class Membership {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "org_id", nullable = false)
 	private Organization organization;
-
-	@Column(nullable = false, length = 32)
-	@Enumerated(EnumType.STRING)
-	private Role role;
-
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "permissions")
-	private Map<String, String> permissions;
 
 	@Version
 	@Column(nullable = false)
