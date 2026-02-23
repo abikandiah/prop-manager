@@ -37,13 +37,15 @@ public class TenantController {
 	// ───────────────────────── Admin queries ─────────────────────────
 
 	@GetMapping
-	@Operation(summary = "List all tenants")
+	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(summary = "List all tenants (admin only)")
 	public ResponseEntity<List<TenantResponse>> list() {
 		return ResponseEntity.ok(tenantService.findAll());
 	}
 
 	@GetMapping("/{id}")
-	@Operation(summary = "Get tenant by ID")
+	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(summary = "Get tenant by ID (admin only)")
 	public ResponseEntity<TenantResponse> getById(@PathVariable UUID id) {
 		return ResponseEntity.ok(tenantService.findById(id));
 	}

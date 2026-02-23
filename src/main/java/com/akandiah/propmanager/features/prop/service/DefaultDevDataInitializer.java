@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.features.organization.domain.Organization;
+import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.domain.Address;
 import com.akandiah.propmanager.features.prop.domain.AddressRepository;
 import com.akandiah.propmanager.features.prop.domain.Prop;
@@ -192,16 +194,19 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	private final PropRepository propRepository;
 	private final AddressRepository addressRepository;
 	private final UnitRepository unitRepository;
+	private final OrganizationRepository organizationRepository;
 
 	public DefaultDevDataInitializer(
 			UserService userService,
 			PropRepository propRepository,
 			AddressRepository addressRepository,
-			UnitRepository unitRepository) {
+			UnitRepository unitRepository,
+			OrganizationRepository organizationRepository) {
 		this.userService = userService;
 		this.propRepository = propRepository;
 		this.addressRepository = addressRepository;
 		this.unitRepository = unitRepository;
+		this.organizationRepository = organizationRepository;
 	}
 
 	// -------------------------------------------------------------------------
@@ -220,10 +225,11 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 		log.info("[Data Init] No props found. Seeding {} dev props...", PROP_BLUEPRINTS.size());
 
 		User devUser = resolveDevUser();
+		Organization devOrg = resolveDevOrganization();
 
 		int totalUnits = 0;
 		for (PropBlueprint blueprint : PROP_BLUEPRINTS) {
-			int count = seedProp(blueprint, devUser);
+			int count = seedProp(blueprint, devUser, devOrg);
 			totalUnits += count;
 		}
 
@@ -242,8 +248,18 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 		return userService.getOrCreateUser(DEV_ISSUER, DEV_EMAIL, "Dev User", DEV_EMAIL);
 	}
 
+	/**
+	 * Returns the first existing organization, or creates a "Dev Organization" if none exists.
+	 */
+	private Organization resolveDevOrganization() {
+		return organizationRepository.findAll().stream()
+				.findFirst()
+				.orElseGet(() -> organizationRepository.save(
+						Organization.builder().name("Dev Organization").build()));
+	}
+
 	/** Creates a prop from a blueprint and generates all its units. Returns the unit count. */
-	private int seedProp(PropBlueprint blueprint, User owner) {
+	private int seedProp(PropBlueprint blueprint, User owner, Organization organization) {
 		Address address = addressRepository.save(Address.builder()
 				.addressLine1(blueprint.addressLine1())
 				.city(blueprint.city())
@@ -257,6 +273,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 				.address(address)
 				.propertyType(blueprint.propertyType())
 				.description(blueprint.description())
+				.organization(organization)
 				.ownerId(owner.getId())
 				.totalArea(blueprint.totalArea())
 				.yearBuilt(blueprint.yearBuilt())

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.AccessListUtil.LeaseAccessFilter;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseRequest;
@@ -45,6 +46,13 @@ public class LeaseService {
 
 	public List<LeaseResponse> findAll() {
 		return leaseRepository.findAll().stream()
+				.map(LeaseResponse::from)
+				.toList();
+	}
+
+	public List<LeaseResponse> findAll(LeaseAccessFilter filter) {
+		if (filter.isEmpty()) return List.of();
+		return leaseRepository.findByAccessFilter(filter.orgIds(), filter.propIds(), filter.unitIds()).stream()
 				.map(LeaseResponse::from)
 				.toList();
 	}

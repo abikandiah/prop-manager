@@ -35,7 +35,9 @@ public class OrganizationService {
 	private final MemberScopeService memberScopeService;
 	private final PropRepository propRepository;
 
-	/** Returns only the organizations the given user is a member of (data-isolated). */
+	/**
+	 * Returns only the organizations the given user is a member of (data-isolated).
+	 */
 	public List<OrganizationResponse> findAll(UUID currentUserId) {
 		return membershipRepository.findByUserIdWithOrganization(currentUserId).stream()
 				.map(m -> OrganizationResponse.from(m.getOrganization()))
@@ -106,7 +108,8 @@ public class OrganizationService {
 		}
 
 		long membershipCount = membershipRepository.countByOrganizationId(id);
-		DeleteGuardUtil.requireNoChildren("Organization", id, membershipCount, "membership(s)", "Remove members first.");
+		DeleteGuardUtil.requireNoChildren("Organization", id, membershipCount, "membership(s)",
+				"Remove members first.");
 		long propCount = propRepository.countByOrganization_Id(id);
 		DeleteGuardUtil.requireNoChildren("Organization", id, propCount, "prop(s)", "Move or delete those first.");
 

@@ -9,6 +9,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.common.permission.ResourceType;
+import com.akandiah.propmanager.features.lease.domain.Lease;
+import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class PermissionAuth {
 
 	private final HierarchyAwareAuthorizationService authorizationService;
+	private final LeaseRepository leaseRepository;
 
 	/**
 	 * Returns true if the current user's access list grants the required action
@@ -31,7 +34,7 @@ public class PermissionAuth {
 	 * request attribute set by {@link JwtAccessHydrationFilter}.
 	 *
 	 * @param requiredAction action bit, e.g. {@link com.akandiah.propmanager.common.permission.Actions#READ}
-	 * @param domain         domain key (l, m, f)
+	 * @param domain         domain key (l, m, f, t)
 	 * @param resourceType   ORG, PROPERTY, or UNIT
 	 * @param resourceId     id of the resource
 	 * @param orgId          organization context
@@ -42,6 +45,29 @@ public class PermissionAuth {
 			UUID resourceId, UUID orgId) {
 		List<AccessEntry> access = getAccessFromRequest();
 		return authorizationService.allow(access, requiredAction, domain, resourceType, resourceId, orgId);
+	}
+
+	/**
+	 * Convenience method for lease endpoints: looks up the lease by ID,
+	 * derives the unit ID, then checks UNIT-level access.
+	 * Returns false if the lease does not exist.
+	 *
+	 * @param requiredAction action bit
+	 * @param domain         domain key (l, m, f, t)
+	 * @param leaseId        lease ID (resolved to its unit for the UNIT-scope check)
+	 * @param orgId          organization context
+	 * @return true if access is granted
+	 */
+	@SuppressWarnings("unused")
+	public boolean hasLeaseAccess(int requiredAction, String domain, UUID leaseId, UUID orgId) {
+		return leaseRepository.findById(leaseId)
+				.map(Lease::getUnit)
+				.map(unit -> {
+					List<AccessEntry> access = getAccessFromRequest();
+					return authorizationService.allow(
+							access, requiredAction, domain, ResourceType.UNIT, unit.getId(), orgId);
+				})
+				.orElse(false);
 	}
 
 	@SuppressWarnings("unchecked")

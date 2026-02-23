@@ -20,7 +20,7 @@ public record CreatePropRequest(
 
 		@Size(max = 64) String parcelNumber,
 
-		java.util.UUID organizationId,
+		@NotNull(message = "Organization ID is required") java.util.UUID organizationId,
 
 		java.util.UUID ownerId,
 

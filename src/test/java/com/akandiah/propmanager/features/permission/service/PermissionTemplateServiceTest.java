@@ -21,7 +21,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
-import com.akandiah.propmanager.common.permission.PermissionStringValidator;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.permission.api.dto.CreatePermissionTemplateRequest;

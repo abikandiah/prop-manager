@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,36 +37,40 @@ public class UnitController {
 	}
 
 	@GetMapping
-	@Operation(summary = "List units, optionally by property ID")
-	public List<UnitResponse> list(@RequestParam(required = false) UUID propId) {
-		if (propId != null) {
-			return unitService.findByPropId(propId);
-		}
-		return unitService.findAll();
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #propId, #orgId)")
+	@Operation(summary = "List units for a property")
+	public List<UnitResponse> list(@RequestParam UUID propId, @RequestParam UUID orgId) {
+		return unitService.findByPropId(propId);
 	}
 
 	@GetMapping("/{id}")
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
 	@Operation(summary = "Get unit by ID")
-	public UnitResponse getById(@PathVariable UUID id) {
+	public UnitResponse getById(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return unitService.findById(id);
 	}
 
 	@PostMapping
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #request.propertyId, #orgId)")
 	@Operation(summary = "Create a unit")
-	public ResponseEntity<UnitResponse> create(@Valid @RequestBody CreateUnitRequest request) {
+	public ResponseEntity<UnitResponse> create(@Valid @RequestBody CreateUnitRequest request,
+			@RequestParam UUID orgId) {
 		UnitResponse created = unitService.create(request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
 	}
 
 	@PatchMapping("/{id}")
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
 	@Operation(summary = "Update a unit")
-	public UnitResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUnitRequest request) {
+	public UnitResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUnitRequest request,
+			@RequestParam UUID orgId) {
 		return unitService.update(id, request);
 	}
 
 	@DeleteMapping("/{id}")
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
 	@Operation(summary = "Delete a unit")
-	public ResponseEntity<Void> delete(@PathVariable UUID id) {
+	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID orgId) {
 		unitService.deleteById(id);
 		return ResponseEntity.noContent().build();
 	}

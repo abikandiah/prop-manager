@@ -47,7 +47,7 @@ public class DefaultHierarchyResolver implements HierarchyResolver {
 	}
 
 	private List<ScopeLevel> resolveUnit(UUID unitId, UUID orgId) {
-		return unitRepository.findById(unitId)
+		return unitRepository.findByIdWithPropAndOrg(unitId)
 				.filter(unit -> unit.getProp() != null && unit.getProp().getOrganization() != null)
 				.filter(unit -> unit.getProp().getOrganization().getId().equals(orgId))
 				.map(unit -> {

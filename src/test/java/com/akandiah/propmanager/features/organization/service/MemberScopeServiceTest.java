@@ -19,7 +19,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.akandiah.propmanager.common.exception.InvalidPermissionStringException;
-import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.organization.domain.MemberScope;
 import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
@@ -68,7 +67,8 @@ class MemberScopeServiceTest {
 		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ScopeType.PROPERTY, scopeId, perms, null);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
-		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId())).thenReturn(true);
+		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
+				.thenReturn(true);
 		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 		var result = service.create(membershipId, req);
@@ -112,7 +112,8 @@ class MemberScopeServiceTest {
 		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ScopeType.PROPERTY, scopeId, null, null);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
-		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId())).thenReturn(true);
+		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
+				.thenReturn(true);
 		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 		var result = service.create(membershipId, req);
@@ -132,7 +133,8 @@ class MemberScopeServiceTest {
 		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ScopeType.PROPERTY, scopeId, invalidPerms, null);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
-		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId())).thenReturn(true);
+		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
+				.thenReturn(true);
 
 		assertThatThrownBy(() -> service.create(membershipId, req))
 				.isInstanceOf(InvalidPermissionStringException.class);

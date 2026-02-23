@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -12,8 +13,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.akandiah.propmanager.common.permission.AccessListUtil;
+import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilter;
+import com.akandiah.propmanager.common.permission.Actions;
+import com.akandiah.propmanager.common.permission.PermissionDomains;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
@@ -23,6 +30,7 @@ import com.akandiah.propmanager.features.unit.service.UnitService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -39,24 +47,30 @@ public class PropController {
 	}
 
 	@GetMapping
-	@Operation(summary = "List all props")
-	public List<PropResponse> list() {
-		return propService.findAll();
+	@PreAuthorize("isAuthenticated()")
+	@Operation(summary = "List props visible to the caller")
+	public List<PropResponse> list(HttpServletRequest request) {
+		PropAccessFilter filter = AccessListUtil.forProps(
+				AccessListUtil.fromRequest(request), PermissionDomains.LEASES, Actions.READ);
+		return propService.findAll(filter);
 	}
 
 	@GetMapping("/{id}")
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #id, #orgId)")
 	@Operation(summary = "Get prop by ID")
-	public PropResponse getById(@PathVariable UUID id) {
+	public PropResponse getById(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return propService.findById(id);
 	}
 
 	@GetMapping("/{id}/units")
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #id, #orgId)")
 	@Operation(summary = "List units for a prop")
-	public List<UnitResponse> listUnits(@PathVariable UUID id) {
+	public List<UnitResponse> listUnits(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return unitService.findByPropId(id);
 	}
 
 	@PostMapping
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).ORG, #request.organizationId, #request.organizationId)")
 	@Operation(summary = "Create a prop")
 	public ResponseEntity<PropResponse> create(@Valid @RequestBody CreatePropRequest request) {
 		PropResponse created = propService.create(request);
@@ -64,14 +78,17 @@ public class PropController {
 	}
 
 	@PatchMapping("/{id}")
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #id, #orgId)")
 	@Operation(summary = "Update a prop")
-	public PropResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePropRequest request) {
+	public PropResponse update(@PathVariable UUID id, @Valid @RequestBody UpdatePropRequest request,
+			@RequestParam UUID orgId) {
 		return propService.update(id, request);
 	}
 
 	@DeleteMapping("/{id}")
+	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #id, #orgId)")
 	@Operation(summary = "Delete a prop")
-	public ResponseEntity<Void> delete(@PathVariable UUID id) {
+	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID orgId) {
 		propService.deleteById(id);
 		return ResponseEntity.noContent().build();
 	}

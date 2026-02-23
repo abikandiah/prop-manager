@@ -82,7 +82,7 @@ class DefaultHierarchyResolverTest {
 				.unitNumber("101")
 				.status(UnitStatus.VACANT)
 				.build();
-		when(unitRepository.findById(UNIT_ID)).thenReturn(Optional.of(unit));
+		when(unitRepository.findByIdWithPropAndOrg(UNIT_ID)).thenReturn(Optional.of(unit));
 
 		List<ScopeLevel> result = resolver.resolve(ResourceType.UNIT, UNIT_ID, ORG_ID);
 
@@ -97,7 +97,7 @@ class DefaultHierarchyResolverTest {
 
 	@Test
 	void resolve_unitReturnsEmptyWhenUnitNotFound() {
-		when(unitRepository.findById(UNIT_ID)).thenReturn(Optional.empty());
+		when(unitRepository.findByIdWithPropAndOrg(UNIT_ID)).thenReturn(Optional.empty());
 
 		List<ScopeLevel> result = resolver.resolve(ResourceType.UNIT, UNIT_ID, ORG_ID);
 
@@ -110,7 +110,7 @@ class DefaultHierarchyResolverTest {
 		Organization org = Organization.builder().id(otherOrgId).build();
 		Prop prop = Prop.builder().id(PROP_ID).organization(org).build();
 		Unit unit = Unit.builder().id(UNIT_ID).prop(prop).build();
-		when(unitRepository.findById(UNIT_ID)).thenReturn(Optional.of(unit));
+		when(unitRepository.findByIdWithPropAndOrg(UNIT_ID)).thenReturn(Optional.of(unit));
 
 		List<ScopeLevel> result = resolver.resolve(ResourceType.UNIT, UNIT_ID, ORG_ID);
 

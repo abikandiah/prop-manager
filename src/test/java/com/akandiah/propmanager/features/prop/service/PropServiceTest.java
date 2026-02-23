@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +24,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.akandiah.propmanager.common.exception.HasChildrenException;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilter;
+import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
@@ -77,12 +80,15 @@ class PropServiceTest {
 
 	@Test
 	void shouldReturnAllProps() {
+		UUID orgId = UUID.randomUUID();
 		Prop prop1 = prop().id(UUID.randomUUID()).legalName("Prop 1").build();
 		Prop prop2 = prop().id(UUID.randomUUID()).legalName("Prop 2").build();
+		PropAccessFilter filter = new PropAccessFilter(Set.of(orgId), Set.of());
 
-		when(propRepository.findAll()).thenReturn(Arrays.asList(prop1, prop2));
+		when(propRepository.findByOrganizationIdInOrIdIn(Set.of(orgId), Set.of()))
+				.thenReturn(Arrays.asList(prop1, prop2));
 
-		List<PropResponse> responses = propService.findAll();
+		List<PropResponse> responses = propService.findAll(filter);
 
 		assertThat(responses).hasSize(2);
 		assertThat(responses).extracting("legalName").containsExactly("Prop 1", "Prop 2");
@@ -90,9 +96,9 @@ class PropServiceTest {
 
 	@Test
 	void shouldReturnEmptyListWhenNoProps() {
-		when(propRepository.findAll()).thenReturn(List.of());
+		PropAccessFilter emptyFilter = new PropAccessFilter(Set.of(), Set.of());
 
-		List<PropResponse> responses = propService.findAll();
+		List<PropResponse> responses = propService.findAll(emptyFilter);
 
 		assertThat(responses).isEmpty();
 	}
@@ -138,9 +144,12 @@ class PropServiceTest {
 
 	@Test
 	void shouldCreatePropWithAddress() {
+		UUID orgId = UUID.randomUUID();
+		Organization org = Organization.builder().id(orgId).build();
 		Address savedAddress = address().id(UUID.randomUUID()).build();
-		CreatePropRequest request = prop().buildCreateRequest();
+		CreatePropRequest request = prop().organization(org).buildCreateRequest();
 
+		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
 		when(addressRepository.save(any(Address.class))).thenReturn(savedAddress);
 		when(propRepository.save(any(Prop.class))).thenAnswer(invocation -> {
 			Prop prop = invocation.getArgument(0);
@@ -163,7 +172,10 @@ class PropServiceTest {
 
 	@Test
 	void shouldMapAddressFieldsCorrectly() {
+		UUID orgId = UUID.randomUUID();
+		Organization org = Organization.builder().id(orgId).build();
 		CreatePropRequest request = prop()
+				.organization(org)
 				.address(address()
 						.addressLine1("456 Oak Avenue")
 						.city("Vancouver")
@@ -173,6 +185,7 @@ class PropServiceTest {
 
 		ArgumentCaptor<Address> addressCaptor = ArgumentCaptor.forClass(Address.class);
 
+		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
 		when(addressRepository.save(addressCaptor.capture())).thenAnswer(invocation -> {
 			Address addr = invocation.getArgument(0);
 			return address()

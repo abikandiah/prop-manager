@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
+import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilter;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
@@ -46,8 +47,9 @@ public class PropService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<PropResponse> findAll() {
-		return repository.findAll().stream()
+	public List<PropResponse> findAll(PropAccessFilter filter) {
+		if (filter.isEmpty()) return List.of();
+		return repository.findByOrganizationIdInOrIdIn(filter.orgIds(), filter.propIds()).stream()
 				.map(PropResponse::from)
 				.toList();
 	}
@@ -63,10 +65,8 @@ public class PropService {
 	public PropResponse create(CreatePropRequest request) {
 		Address address = mapToAddress(request.address());
 		address = addressRepository.save(address);
-		Organization organization = request.organizationId() != null
-				? organizationRepository.findById(request.organizationId())
-						.orElseThrow(() -> new ResourceNotFoundException("Organization", request.organizationId()))
-				: null;
+		Organization organization = organizationRepository.findById(request.organizationId())
+				.orElseThrow(() -> new ResourceNotFoundException("Organization", request.organizationId()));
 		Prop prop = Prop.builder()
 				.legalName(request.legalName())
 				.address(address)

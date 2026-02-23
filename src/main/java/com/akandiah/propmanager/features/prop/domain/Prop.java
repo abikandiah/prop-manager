@@ -59,7 +59,7 @@ public class Prop {
 	private String parcelNumber;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "organization_id")
+	@JoinColumn(name = "organization_id", nullable = false)
 	private Organization organization;
 
 	@Column(name = "owner_id", nullable = false)

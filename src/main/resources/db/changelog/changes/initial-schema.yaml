@@ -1330,6 +1330,16 @@ databaseChangeLog:
               - column:
                   name: organization_id
 
+  # prop.organization_id — make NOT NULL now that all rows have an org
+  - changeSet:
+      id: "prop-organization-id-not-null"
+      author: "prop-manager"
+      changes:
+        - addNotNullConstraint:
+            tableName: prop
+            columnName: organization_id
+            columnDataType: uuid
+
   # permission_templates — system (org_id NULL) or org-scoped templates; default_permissions = domain -> action letters
   - changeSet:
       id: "add-permission-templates-table"

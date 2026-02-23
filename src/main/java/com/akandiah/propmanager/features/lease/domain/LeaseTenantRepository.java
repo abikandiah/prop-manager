@@ -31,4 +31,28 @@ public interface LeaseTenantRepository extends JpaRepository<LeaseTenant, UUID> 
 			AND lt.tenant IS NOT NULL
 			""")
 	List<LeaseTenant> findByLease_IdWithTenantUser(@Param("leaseId") UUID leaseId);
+
+	/**
+	 * Find active lease-tenant rows for a given user, eagerly loading the full chain
+	 * needed for permission hydration: tenant → user, lease → unit → prop → organization.
+	 * Only returns rows where:
+	 * - tenant is non-null (invite accepted)
+	 * - lease status is ACTIVE or REVIEW (terminated/expired leases grant no access)
+	 * - prop has an organization (org-less props are excluded)
+	 */
+	@Query("""
+			SELECT lt FROM LeaseTenant lt
+			JOIN FETCH lt.tenant t
+			JOIN FETCH t.user u
+			JOIN FETCH lt.lease l
+			JOIN FETCH l.unit unit
+			JOIN FETCH unit.prop p
+			JOIN FETCH p.organization org
+			WHERE u.id = :userId
+			AND lt.tenant IS NOT NULL
+			AND l.status IN (com.akandiah.propmanager.features.lease.domain.LeaseStatus.ACTIVE,
+			                 com.akandiah.propmanager.features.lease.domain.LeaseStatus.REVIEW)
+			AND p.organization IS NOT NULL
+			""")
+	List<LeaseTenant> findActiveByUserIdWithLeaseUnitPropOrg(@Param("userId") UUID userId);
 }

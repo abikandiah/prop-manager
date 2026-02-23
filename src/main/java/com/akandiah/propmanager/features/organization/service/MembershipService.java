@@ -58,7 +58,8 @@ public class MembershipService {
 		User user = userRepository.findById(request.userId())
 				.orElseThrow(() -> new ResourceNotFoundException("User", request.userId()));
 
-		// Duplicate (user, org) is rejected by uk_memberships_user_org → DataIntegrityViolationException → 409
+		// Duplicate (user, org) is rejected by uk_memberships_user_org →
+		// DataIntegrityViolationException → 409
 		Membership m = Membership.builder()
 				.user(user)
 				.organization(org)
@@ -68,8 +69,10 @@ public class MembershipService {
 	}
 
 	/**
-	 * Creates a membership and immediately grants an initial scope. Pass {@code null} for
-	 * {@code initialScope} when no scope is needed (e.g. tenant onboarding — access comes from LeaseTenant).
+	 * Creates a membership and immediately grants an initial scope. Pass
+	 * {@code null} for
+	 * {@code initialScope} when no scope is needed (e.g. tenant onboarding — access
+	 * comes from LeaseTenant).
 	 */
 	@Transactional
 	public MembershipResponse createWithInitialScope(UUID organizationId, CreateMembershipRequest request,

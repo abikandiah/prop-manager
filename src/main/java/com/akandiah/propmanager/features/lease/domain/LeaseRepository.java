@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.features.lease.domain;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,4 +56,15 @@ public interface LeaseRepository extends JpaRepository<Lease, UUID> {
 	 */
 	@Query("SELECT l FROM Lease l JOIN FETCH l.unit JOIN FETCH l.property p JOIN FETCH p.address WHERE l.id = :id")
 	Optional<Lease> findByIdWithUnitPropertyAndAddress(@Param("id") UUID id);
+
+	@Query("""
+			SELECT l FROM Lease l
+			WHERE l.unit.prop.organization.id IN :orgIds
+			   OR l.property.id IN :propIds
+			   OR l.unit.id IN :unitIds
+			""")
+	List<Lease> findByAccessFilter(
+			@Param("orgIds") Collection<UUID> orgIds,
+			@Param("propIds") Collection<UUID> propIds,
+			@Param("unitIds") Collection<UUID> unitIds);
 }
