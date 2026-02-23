@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,6 +23,7 @@ import com.akandiah.propmanager.features.invite.api.dto.CreateInviteRequest;
 import com.akandiah.propmanager.features.invite.api.dto.InvitePreviewResponse;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
+import com.akandiah.propmanager.features.invite.service.InviteAuthorizationService;
 import com.akandiah.propmanager.features.invite.service.InviteService;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.service.UserService;
@@ -41,6 +43,7 @@ import lombok.RequiredArgsConstructor;
 public class InviteController {
 
 	private final InviteService inviteService;
+	private final InviteAuthorizationService inviteAuthService;
 	private final UserService userService;
 
 	// ───────────────────────── Public (no auth) ─────────────────────────
@@ -54,13 +57,10 @@ public class InviteController {
 	// ───────────────────────── Authenticated commands ─────────────────────────
 
 	@PostMapping("/api/invites")
-	@PreAuthorize("isAuthenticated()")
-	@Operation(summary = "Create and send an invitation", security = @SecurityRequirement(name = "bearer-jwt"), description = "Create an invitation. User must be authenticated. TODO: Add permission check to verify user owns/manages the target resource.")
+	@PreAuthorize("@inviteAuthService.canCreateInviteForTarget(#request.targetType(), #request.targetId())")
+	@Operation(summary = "Create and send an invitation", security = @SecurityRequirement(name = "bearer-jwt"), description = "Create an invitation. Caller must have CREATE access on the leases domain for the target resource.")
 	public ResponseEntity<InviteResponse> createInvite(@Valid @RequestBody CreateInviteRequest request,
 			@AuthenticationPrincipal Jwt jwt) {
-
-		// TODO: Verify user has permission to invite to the target resource
-		// e.g., check if user owns the property/lease before allowing invite creation
 
 		User inviter = getCurrentUser(jwt);
 
@@ -108,7 +108,7 @@ public class InviteController {
 
 	@GetMapping("/api/invites")
 	@PreAuthorize("isAuthenticated()")
-	@Operation(summary = "List invitations", description = "Filter by email, targetType, or targetId. Results are filtered based on user permissions.", security = @SecurityRequirement(name = "bearer-jwt"))
+	@Operation(summary = "List invitations", description = "Filter by email (own email only, unless ADMIN) or targetType+targetId (requires READ access on the target). Admins may query any email.", security = @SecurityRequirement(name = "bearer-jwt"))
 	public ResponseEntity<List<InviteResponse>> listInvites(@RequestParam(required = false) String email,
 			@RequestParam(required = false) TargetType targetType, @RequestParam(required = false) UUID targetId,
 			@AuthenticationPrincipal Jwt jwt) {
@@ -116,15 +116,21 @@ public class InviteController {
 		List<InviteResponse> invites;
 
 		if (email != null) {
+			User currentUser = getCurrentUser(jwt);
+			boolean isAdmin = jwt.getClaimAsStringList("groups") != null
+					&& jwt.getClaimAsStringList("groups").contains("ADMIN");
+			if (!isAdmin && !currentUser.getEmail().equalsIgnoreCase(email)) {
+				throw new AccessDeniedException("Cannot list invites for another user's email");
+			}
 			invites = inviteService.findInvitesByEmail(email);
 		} else if (targetType != null && targetId != null) {
+			if (!inviteAuthService.canViewInvitesForTarget(targetType, targetId)) {
+				throw new AccessDeniedException("No access to invites for this target");
+			}
 			invites = inviteService.findInvitesByTarget(targetType, targetId);
 		} else {
 			throw new IllegalArgumentException("Must provide either email or (targetType and targetId)");
 		}
-
-		// TODO: Filter results based on user permissions
-		// Users should only see invites they created, received, or for resources they manage
 
 		return ResponseEntity.ok(invites);
 	}

@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -26,6 +27,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/assets")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "Assets", description = "Asset/equipment resource (linked to Prop or Unit)")
 public class AssetController {
 
@@ -56,6 +58,7 @@ public class AssetController {
 	}
 
 	@PostMapping
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Create an asset (set exactly one of propertyId or unitId)")
 	public ResponseEntity<AssetResponse> create(@Valid @RequestBody CreateAssetRequest request) {
 		AssetResponse created = assetService.create(request);
@@ -63,12 +66,14 @@ public class AssetController {
 	}
 
 	@PatchMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Update an asset")
 	public AssetResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateAssetRequest request) {
 		return assetService.update(id, request);
 	}
 
 	@DeleteMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Delete an asset")
 	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		assetService.deleteById(id);

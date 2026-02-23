@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -29,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/memberships")
+@PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 @Tag(name = "Memberships", description = "User-organization membership and granular scopes")
 public class MembershipController {
@@ -49,6 +51,7 @@ public class MembershipController {
 	}
 
 	@PatchMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Update membership role")
 	public ResponseEntity<MembershipResponse> update(
 			@PathVariable UUID id,
@@ -57,6 +60,7 @@ public class MembershipController {
 	}
 
 	@DeleteMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Delete membership")
 	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		membershipService.deleteById(id);
@@ -70,6 +74,7 @@ public class MembershipController {
 	}
 
 	@PostMapping("/{id}/scopes")
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Add a scope to a membership")
 	public ResponseEntity<MemberScopeResponse> addScope(
 			@PathVariable UUID id,
@@ -78,6 +83,7 @@ public class MembershipController {
 	}
 
 	@DeleteMapping("/{id}/scopes/{scopeId}")
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Remove a scope from a membership")
 	public ResponseEntity<Void> removeScope(@PathVariable UUID id, @PathVariable UUID scopeId) {
 		memberScopeService.deleteById(id, scopeId);

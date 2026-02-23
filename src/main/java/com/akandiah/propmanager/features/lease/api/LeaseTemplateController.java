@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -26,6 +27,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/lease-templates")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "Lease Templates", description = "Lease template CRUD & versioning")
 public class LeaseTemplateController {
 
@@ -53,6 +55,7 @@ public class LeaseTemplateController {
 	}
 
 	@PostMapping
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Create a lease template")
 	public ResponseEntity<LeaseTemplateResponse> create(
 			@Valid @RequestBody CreateLeaseTemplateRequest request) {
@@ -60,6 +63,7 @@ public class LeaseTemplateController {
 	}
 
 	@PatchMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Update a lease template", description = "Requires 'version' for optimistic-lock verification; returns 409 if stale")
 	public ResponseEntity<LeaseTemplateResponse> update(
 			@PathVariable UUID id,
@@ -68,6 +72,7 @@ public class LeaseTemplateController {
 	}
 
 	@DeleteMapping("/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
 	@Operation(summary = "Delete a lease template")
 	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		service.deleteById(id);

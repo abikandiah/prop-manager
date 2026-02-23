@@ -46,6 +46,7 @@ import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
+import com.akandiah.propmanager.features.user.service.UserService;
 
 import jakarta.persistence.OptimisticLockException;
 
@@ -80,13 +81,16 @@ class LeaseServiceTest {
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
+	@Mock
+	private UserService userService;
+
 	private LeaseService leaseService;
 
 	@BeforeEach
 	void setUp() {
 		leaseService = new LeaseService(leaseRepository, templateService,
 				unitRepository, propRepository, leaseTenantRepository,
-				stateMachine, renderer, eventPublisher);
+				stateMachine, renderer, eventPublisher, userService);
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════

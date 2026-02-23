@@ -18,6 +18,12 @@ public interface LeaseTenantRepository extends JpaRepository<LeaseTenant, UUID> 
 
 	Optional<LeaseTenant> findByInvite_Id(UUID inviteId);
 
+	/** Returns true if the user is a tenant on the given lease. */
+	boolean existsByLease_IdAndTenant_User_Id(UUID leaseId, UUID userId);
+
+	/** Returns true if the user is a tenant on any lease belonging to the given unit. */
+	boolean existsByLease_Unit_IdAndTenant_User_Id(UUID unitId, UUID userId);
+
 	/**
 	 * Fetch lease-tenant slots with tenant and user eagerly loaded.
 	 * Only returns rows where tenant is non-null (invite accepted).

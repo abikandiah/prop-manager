@@ -1,9 +1,13 @@
 package com.akandiah.propmanager.features.lease.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +29,15 @@ import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
+import com.akandiah.propmanager.features.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class LeaseService {
 
 	private final LeaseRepository leaseRepository;
@@ -41,6 +48,7 @@ public class LeaseService {
 	private final LeaseStateMachine stateMachine;
 	private final LeaseTemplateRenderer renderer;
 	private final ApplicationEventPublisher eventPublisher;
+	private final UserService userService;
 
 	// ───────────────────────── Queries ─────────────────────────
 
@@ -70,7 +78,17 @@ public class LeaseService {
 	}
 
 	public LeaseResponse findById(UUID id) {
-		return LeaseResponse.from(getEntity(id));
+		Lease lease = getEntity(id);
+		// Tenant isolation: if the caller is a tenant on this unit, they may only see their own lease,
+		// not co-tenants' leases on the same unit.
+		getCurrentUserId().ifPresent(userId -> {
+			if (leaseTenantRepository.existsByLease_Unit_IdAndTenant_User_Id(lease.getUnit().getId(), userId)) {
+				if (!leaseTenantRepository.existsByLease_IdAndTenant_User_Id(id, userId)) {
+					throw new AccessDeniedException("Tenants can only access their own lease");
+				}
+			}
+		});
+		return LeaseResponse.from(lease);
 	}
 
 	// ───────────────────────── Stamp (create) ─────────────────────────
@@ -236,5 +254,21 @@ public class LeaseService {
 	private Lease getEntity(UUID id) {
 		return leaseRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Lease", id));
+	}
+
+	/**
+	 * Resolves the current user's internal UUID from the active Security context.
+	 * Returns empty if the context has no JWT principal or the user is not registered.
+	 */
+	private Optional<UUID> getCurrentUserId() {
+		try {
+			var auth = SecurityContextHolder.getContext().getAuthentication();
+			if (auth instanceof JwtAuthenticationToken jwtAuth) {
+				return userService.findUserFromJwt(jwtAuth.getToken()).map(u -> u.getId());
+			}
+		} catch (Exception e) {
+			log.warn("Could not resolve current user for tenant isolation check", e);
+		}
+		return Optional.empty();
 	}
 }

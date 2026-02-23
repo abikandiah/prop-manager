@@ -462,33 +462,11 @@ class PropServiceTest {
 }
 ```
 
-### Controller Slice Test (@WebMvcTest)
+### Controller Tests
 
-```java
-@WebMvcTest(PropController.class)
-@Import(TestSecurityConfig.class)
-class PropControllerTest {
+**Do NOT write controller tests with `@WebMvcTest` — it is not used in this project and will fail to compile.**
 
-    @Autowired MockMvc mockMvc;
-    @MockBean PropService service;
-
-    @Test
-    void shouldReturnCreated() throws Exception {
-        var resp = TestDataFactory.propResponse().build();
-        when(service.create(any())).thenReturn(resp);
-
-        mockMvc.perform(post("/api/props")
-                .header("Authorization", "Bearer test-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    { "legalName": "Acme", "propertyType": "RESIDENTIAL",
-                      "address": { "street": "1 Main St", "city": "NY", "state": "NY", "zip": "10001" } }
-                    """))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.legalName").value("Acme"));
-    }
-}
-```
+Controller `@PreAuthorize` rules are covered at the service layer via `@ExtendWith(MockitoExtension.class)` unit tests. There are no controller slice tests in this codebase. Do not create them.
 
 ---
 
@@ -501,4 +479,4 @@ class PropControllerTest {
 5. **Service**: `service/{Entity}Service.java` — `findAll`, `findById`, `create`, `update`, `deleteById`; use `ResourceNotFoundException`, `OptimisticLockingUtil`, `DeleteGuardUtil`
 6. **Controller**: `api/{Entity}Controller.java` — `@Tag`, `@Operation` on each method, `@Valid` on all request bodies, `@PatchMapping` for updates
 7. **Liquibase**: Add `db/changelog/changes/{NNN}-add-{name}-table.yaml` for prod schema; reference in `db.changelog-master.yaml`
-8. **Tests**: Mirror package structure in `src/test/java`; unit test service with `MockitoExtension`; slice test controller with `@WebMvcTest`
+8. **Tests**: Mirror package structure in `src/test/java`; unit test service with `@ExtendWith(MockitoExtension.class)`. Do **not** write controller tests — `@WebMvcTest` is not used in this project.

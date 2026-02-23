@@ -20,7 +20,6 @@ import com.akandiah.propmanager.common.permission.AccessListUtil;
 import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilter;
 import com.akandiah.propmanager.common.permission.Actions;
 import com.akandiah.propmanager.common.permission.PermissionDomains;
-import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
 import com.akandiah.propmanager.features.prop.api.dto.UpdatePropRequest;
