@@ -4,8 +4,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,7 @@ import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.organization.api.dto.MemberScopeResponse;
 import com.akandiah.propmanager.features.organization.api.dto.UpdateMemberScopeRequest;
+import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.organization.domain.MemberScope;
 import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.organization.domain.Membership;
@@ -36,6 +39,7 @@ public class MemberScopeService {
 	private final PermissionTemplateRepository permissionTemplateRepository;
 	private final PropRepository propRepository;
 	private final UnitRepository unitRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public List<MemberScopeResponse> findByMembershipId(UUID membershipId) {
 		return memberScopeRepository.findByMembershipId(membershipId).stream()
@@ -53,7 +57,24 @@ public class MemberScopeService {
 	public MemberScopeResponse create(UUID membershipId, CreateMemberScopeRequest request) {
 		Membership membership = membershipRepository.findById(membershipId)
 				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
+		MemberScopeResponse response = doCreate(membership, request);
+		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(membership.getUser().getId())));
+		return response;
+	}
 
+	/**
+	 * Creates a scope without publishing a {@link PermissionsChangedEvent}.
+	 * Used by {@link MembershipService#createWithInitialScope} which publishes
+	 * a single event after both the membership and scope are created.
+	 */
+	@Transactional
+	MemberScopeResponse createWithoutEvent(UUID membershipId, CreateMemberScopeRequest request) {
+		Membership membership = membershipRepository.findById(membershipId)
+				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
+		return doCreate(membership, request);
+	}
+
+	private MemberScopeResponse doCreate(Membership membership, CreateMemberScopeRequest request) {
 		UUID orgId = membership.getOrganization().getId();
 		validateScopeBelongsToOrg(request, orgId);
 
@@ -84,15 +105,18 @@ public class MemberScopeService {
 
 		scope.setPermissions(permissions);
 		scope = memberScopeRepository.save(scope);
+		eventPublisher.publishEvent(
+				new PermissionsChangedEvent(Set.of(scope.getMembership().getUser().getId())));
 		return MemberScopeResponse.from(scope, membershipId);
 	}
 
 	@Transactional
 	public void deleteById(UUID membershipId, UUID scopeId) {
-		if (!memberScopeRepository.existsByIdAndMembershipId(scopeId, membershipId)) {
-			throw new ResourceNotFoundException("MemberScope", scopeId);
-		}
+		MemberScope scope = memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId)
+				.orElseThrow(() -> new ResourceNotFoundException("MemberScope", scopeId));
+		UUID userId = scope.getMembership().getUser().getId();
 		memberScopeRepository.deleteById(scopeId);
+		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(userId)));
 	}
 
 	private void validateScopeBelongsToOrg(CreateMemberScopeRequest request, UUID orgId) {

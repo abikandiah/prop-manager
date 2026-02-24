@@ -41,6 +41,7 @@ import com.akandiah.propmanager.features.prop.domain.PropertyType;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
 import jakarta.persistence.OptimisticLockException;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * Unit tests for {@link PropService}.
@@ -70,13 +71,16 @@ class PropServiceTest {
 	@Mock
 	private MemberScopeRepository memberScopeRepository;
 
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
+
 	private PropService propService;
 
 	@BeforeEach
 	void setUp() {
 		propService = new PropService(propRepository, addressRepository,
 				organizationRepository, unitRepository, assetRepository, leaseRepository,
-				memberScopeRepository);
+				memberScopeRepository, eventPublisher);
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════

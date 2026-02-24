@@ -2,7 +2,9 @@ package com.akandiah.propmanager.features.lease.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.common.permission.AccessListUtil.ScopedAccessFilter;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
@@ -216,6 +219,7 @@ public class LeaseService {
 		stateMachine.activate(lease);
 		Lease saved = leaseRepository.save(lease);
 		eventPublisher.publishEvent(new LeaseLifecycleEvent(saved.getId(), LeaseLifecycleEventType.ACTIVATED));
+		publishPermissionsChangedForLeaseTenants(id);
 		return LeaseResponse.from(saved);
 	}
 
@@ -236,7 +240,9 @@ public class LeaseService {
 	public LeaseResponse terminate(UUID id) {
 		Lease lease = getEntity(id);
 		stateMachine.terminate(lease);
-		return LeaseResponse.from(leaseRepository.save(lease));
+		LeaseResponse response = LeaseResponse.from(leaseRepository.save(lease));
+		publishPermissionsChangedForLeaseTenants(id);
+		return response;
 	}
 
 	// ───────────────────────── Delete (DRAFT only) ─────────────────────────
@@ -250,6 +256,15 @@ public class LeaseService {
 	}
 
 	// ───────────────────────── Helpers ─────────────────────────
+
+	private void publishPermissionsChangedForLeaseTenants(UUID leaseId) {
+		Set<UUID> userIds = leaseTenantRepository.findByLease_IdWithTenantUser(leaseId).stream()
+				.map(lt -> lt.getTenant().getUser().getId())
+				.collect(Collectors.toSet());
+		if (!userIds.isEmpty()) {
+			eventPublisher.publishEvent(new PermissionsChangedEvent(userIds));
+		}
+	}
 
 	private Lease getEntity(UUID id) {
 		return leaseRepository.findById(id)

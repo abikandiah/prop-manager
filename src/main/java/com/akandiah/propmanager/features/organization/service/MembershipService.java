@@ -1,12 +1,15 @@
 package com.akandiah.propmanager.features.organization.service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMembershipRequest;
 import com.akandiah.propmanager.features.organization.api.dto.MembershipResponse;
@@ -30,6 +33,7 @@ public class MembershipService {
 	private final MemberScopeService memberScopeService;
 	private final OrganizationRepository organizationRepository;
 	private final UserRepository userRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public List<MembershipResponse> findByOrganizationId(UUID organizationId) {
 		return membershipRepository.findByOrganizationIdWithUserAndOrg(organizationId).stream()
@@ -51,6 +55,30 @@ public class MembershipService {
 
 	@Transactional
 	public MembershipResponse create(UUID organizationId, CreateMembershipRequest request) {
+		MembershipResponse membership = doCreate(organizationId, request);
+		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(request.userId())));
+		return membership;
+	}
+
+	/**
+	 * Creates a membership and immediately grants an initial scope. Pass
+	 * {@code null} for
+	 * {@code initialScope} when no scope is needed (e.g. tenant onboarding — access
+	 * comes from LeaseTenant).
+	 * Publishes a single {@link PermissionsChangedEvent} after both operations.
+	 */
+	@Transactional
+	public MembershipResponse createWithInitialScope(UUID organizationId, CreateMembershipRequest request,
+			CreateMemberScopeRequest initialScope) {
+		MembershipResponse membership = doCreate(organizationId, request);
+		if (initialScope != null) {
+			memberScopeService.createWithoutEvent(membership.id(), initialScope);
+		}
+		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(request.userId())));
+		return membership;
+	}
+
+	private MembershipResponse doCreate(UUID organizationId, CreateMembershipRequest request) {
 		Organization org = organizationRepository.findById(organizationId)
 				.orElseThrow(() -> new ResourceNotFoundException("Organization", organizationId));
 		User user = userRepository.findById(request.userId())
@@ -66,28 +94,14 @@ public class MembershipService {
 		return MembershipResponse.from(m);
 	}
 
-	/**
-	 * Creates a membership and immediately grants an initial scope. Pass
-	 * {@code null} for
-	 * {@code initialScope} when no scope is needed (e.g. tenant onboarding — access
-	 * comes from LeaseTenant).
-	 */
-	@Transactional
-	public MembershipResponse createWithInitialScope(UUID organizationId, CreateMembershipRequest request,
-			CreateMemberScopeRequest initialScope) {
-		MembershipResponse membership = create(organizationId, request);
-		if (initialScope != null) {
-			memberScopeService.create(membership.id(), initialScope);
-		}
-		return membership;
-	}
-
 	@Transactional
 	public void deleteById(UUID id) {
 		Membership m = membershipRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Membership", id));
+		UUID userId = m.getUser().getId();
 		memberScopeRepository.deleteByMembershipId(id);
 		membershipRepository.delete(m);
+		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(userId)));
 	}
 
 	/**
@@ -97,7 +111,9 @@ public class MembershipService {
 	public void deleteById(UUID organizationId, UUID membershipId) {
 		Membership m = membershipRepository.findByIdAndOrganizationId(membershipId, organizationId)
 				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
+		UUID userId = m.getUser().getId();
 		memberScopeRepository.deleteByMembershipId(membershipId);
 		membershipRepository.delete(m);
+		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(userId)));
 	}
 }

@@ -4,15 +4,18 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.event.TransactionPhase;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteAcceptedEvent;
@@ -49,6 +52,7 @@ public class LeaseTenantService {
 	private final InviteRepository inviteRepository;
 	private final TenantRepository tenantRepository;
 	private final NotificationDeliveryRepository deliveryRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	// ───────────────────────── Queries ─────────────────────────
 
@@ -176,7 +180,16 @@ public class LeaseTenantService {
 			inviteService.revokeInvite(leaseTenant.getInvite().getId());
 		}
 
+		// Capture userId before deleting (tenant may be null if invite not yet accepted)
+		UUID tenantUserId = leaseTenant.getTenant() != null
+				? leaseTenant.getTenant().getUser().getId()
+				: null;
+
 		leaseTenantRepository.delete(leaseTenant);
+
+		if (tenantUserId != null) {
+			eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(tenantUserId)));
+		}
 		log.info("Removed LeaseTenant {} from lease {}", leaseTenantId, leaseId);
 	}
 

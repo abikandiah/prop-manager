@@ -33,6 +33,10 @@ app:
   base-url: ${APP_BASE_URL:https://propmanager.com}
   rate-limit:
     cache-expire-minutes: 15
+  cache:
+    permissions:
+      max-size: ${CACHE_PERMISSIONS_MAX_SIZE:10000}
+      ttl-minutes: ${CACHE_PERMISSIONS_TTL_MINUTES:60}
   cors:
     enabled: false
     allowed-origins: []

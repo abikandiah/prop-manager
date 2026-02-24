@@ -1,8 +1,11 @@
 package com.akandiah.propmanager.features.prop.service;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +14,7 @@ import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilte
 import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
+import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
@@ -26,7 +30,10 @@ import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class PropService {
 
 	private final PropRepository repository;
@@ -36,19 +43,7 @@ public class PropService {
 	private final AssetRepository assetRepository;
 	private final LeaseRepository leaseRepository;
 	private final MemberScopeRepository memberScopeRepository;
-
-	public PropService(PropRepository repository, AddressRepository addressRepository,
-			OrganizationRepository organizationRepository,
-			UnitRepository unitRepository, AssetRepository assetRepository,
-			LeaseRepository leaseRepository, MemberScopeRepository memberScopeRepository) {
-		this.repository = repository;
-		this.addressRepository = addressRepository;
-		this.organizationRepository = organizationRepository;
-		this.unitRepository = unitRepository;
-		this.assetRepository = assetRepository;
-		this.leaseRepository = leaseRepository;
-		this.memberScopeRepository = memberScopeRepository;
-	}
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional(readOnly = true)
 	public List<PropResponse> findAll(PropAccessFilter filter) {
@@ -83,6 +78,9 @@ public class PropService {
 				.yearBuilt(request.yearBuilt())
 				.build();
 		prop = repository.save(prop);
+		if (prop.getOwnerId() != null) {
+			eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(prop.getOwnerId())));
+		}
 		return PropResponse.from(prop);
 	}
 
@@ -136,7 +134,12 @@ public class PropService {
 					.orElseThrow(() -> new ResourceNotFoundException("Organization", request.organizationId()));
 			prop.setOrganization(org);
 		}
-		if (request.ownerId() != null) {
+		Set<UUID> affectedOwners = new HashSet<>();
+		if (request.ownerId() != null && !request.ownerId().equals(prop.getOwnerId())) {
+			if (prop.getOwnerId() != null) {
+				affectedOwners.add(prop.getOwnerId());
+			}
+			affectedOwners.add(request.ownerId());
 			prop.setOwnerId(request.ownerId());
 		}
 		if (request.totalArea() != null) {
@@ -146,6 +149,9 @@ public class PropService {
 			prop.setYearBuilt(request.yearBuilt());
 		}
 		prop = repository.save(prop);
+		if (!affectedOwners.isEmpty()) {
+			eventPublisher.publishEvent(new PermissionsChangedEvent(affectedOwners));
+		}
 		return PropResponse.from(prop);
 	}
 
@@ -159,9 +165,20 @@ public class PropService {
 		DeleteGuardUtil.requireNoChildren("Prop", id, assetRepository.countByProp_Id(id), "asset(s)", "Delete those first.");
 		DeleteGuardUtil.requireNoChildren("Prop", id, leaseRepository.countByProperty_Id(id), "lease(s)", "Delete those first.");
 
+		// Collect userIds from member scopes before deleting them
+		Set<UUID> affectedUserIds = new HashSet<>();
+		memberScopeRepository.findByScopeTypeAndScopeId(ResourceType.PROPERTY, id)
+				.forEach(scope -> affectedUserIds.add(scope.getMembership().getUser().getId()));
 		memberScopeRepository.deleteByScopeTypeAndScopeId(ResourceType.PROPERTY, id);
+		UUID ownerId = prop.getOwnerId();
+		if (ownerId != null) {
+			affectedUserIds.add(ownerId);
+		}
 		Address address = prop.getAddress();
 		repository.deleteById(id);
 		addressRepository.delete(address);
+		if (!affectedUserIds.isEmpty()) {
+			eventPublisher.publishEvent(new PermissionsChangedEvent(affectedUserIds));
+		}
 	}
 }

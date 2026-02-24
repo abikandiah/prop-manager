@@ -27,6 +27,8 @@ import com.akandiah.propmanager.features.organization.domain.OrganizationReposit
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.domain.UserRepository;
 
+import org.springframework.context.ApplicationEventPublisher;
+
 @ExtendWith(MockitoExtension.class)
 class MembershipServiceTest {
 
@@ -40,6 +42,8 @@ class MembershipServiceTest {
 	private OrganizationRepository organizationRepository;
 	@Mock
 	private UserRepository userRepository;
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	private MembershipService service;
 
@@ -50,7 +54,8 @@ class MembershipServiceTest {
 				memberScopeRepository,
 				memberScopeService,
 				organizationRepository,
-				userRepository);
+				userRepository,
+				eventPublisher);
 	}
 
 	@Test

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,6 +67,7 @@ public class JwtHydrationService {
 	 * @param userId the user's ID
 	 * @return deduplicated list of access entries (empty if user has no access)
 	 */
+	@Cacheable(value = "permissions", key = "#userId", sync = true)
 	@Transactional(readOnly = true)
 	public List<AccessEntry> hydrate(UUID userId) {
 		List<AccessEntry> rawAccess = new ArrayList<>();

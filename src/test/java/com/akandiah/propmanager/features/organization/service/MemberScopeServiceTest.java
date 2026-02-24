@@ -32,6 +32,8 @@ import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRep
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
+import org.springframework.context.ApplicationEventPublisher;
+
 @ExtendWith(MockitoExtension.class)
 class MemberScopeServiceTest {
 
@@ -45,6 +47,8 @@ class MemberScopeServiceTest {
 	private PropRepository propRepository;
 	@Mock
 	private UnitRepository unitRepository;
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	private MemberScopeService service;
 
@@ -55,7 +59,8 @@ class MemberScopeServiceTest {
 				membershipRepository,
 				permissionTemplateRepository,
 				propRepository,
-				unitRepository);
+				unitRepository,
+				eventPublisher);
 	}
 
 	@Test
