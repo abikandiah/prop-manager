@@ -11,6 +11,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
+import com.akandiah.propmanager.features.membership.service.MemberScopeService;
+import com.akandiah.propmanager.features.membership.service.MembershipService;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.domain.Address;
@@ -195,18 +198,27 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	private final AddressRepository addressRepository;
 	private final UnitRepository unitRepository;
 	private final OrganizationRepository organizationRepository;
+	private final MembershipService membershipService;
+	private final MemberScopeService memberScopeService;
+	private final MembershipRepository membershipRepository;
 
 	public DefaultDevDataInitializer(
 			UserService userService,
 			PropRepository propRepository,
 			AddressRepository addressRepository,
 			UnitRepository unitRepository,
-			OrganizationRepository organizationRepository) {
+			OrganizationRepository organizationRepository,
+			MembershipService membershipService,
+			MemberScopeService memberScopeService,
+			MembershipRepository membershipRepository) {
 		this.userService = userService;
 		this.propRepository = propRepository;
 		this.addressRepository = addressRepository;
 		this.unitRepository = unitRepository;
 		this.organizationRepository = organizationRepository;
+		this.membershipService = membershipService;
+		this.memberScopeService = memberScopeService;
+		this.membershipRepository = membershipRepository;
 	}
 
 	// -------------------------------------------------------------------------
@@ -216,6 +228,12 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	@Override
 	@Transactional
 	public void run(ApplicationArguments args) {
+		User devUser = resolveDevUser();
+		Organization devOrg = resolveDevOrganization();
+
+		// Seed membership if not exists
+		seedDevMembership(devUser, devOrg);
+
 		long propCount = propRepository.count();
 		if (propCount > 0) {
 			log.info("[Data Init] Found {} existing prop(s), skipping dev seed", propCount);
@@ -223,9 +241,6 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 		}
 
 		log.info("[Data Init] No props found. Seeding {} dev props...", PROP_BLUEPRINTS.size());
-
-		User devUser = resolveDevUser();
-		Organization devOrg = resolveDevOrganization();
 
 		int totalUnits = 0;
 		for (PropBlueprint blueprint : PROP_BLUEPRINTS) {
@@ -239,6 +254,26 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	// -------------------------------------------------------------------------
 	// Seeding helpers
 	// -------------------------------------------------------------------------
+
+	/**
+	 * Ensures the dev user has an ORG-level admin membership in the dev organization.
+	 */
+	private void seedDevMembership(User user, Organization org) {
+		if (membershipRepository.existsByUserIdAndOrganizationId(user.getId(), org.getId())) {
+			log.info("[Data Init] Dev user already has membership in organization '{}'", org.getName());
+			return;
+		}
+
+		log.info("[Data Init] Seeding admin membership for dev user in organization '{}'", org.getName());
+		var membership = membershipService.create(org.getId(), 
+				new com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest(user.getId()));
+		
+		memberScopeService.create(membership.id(), new com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest(
+				com.akandiah.propmanager.common.permission.ResourceType.ORG,
+				org.getId(),
+				java.util.Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud"),
+				null));
+	}
 
 	/**
 	 * Finds the dev user by identity (prop-manager-dev / dev@example.com) or creates one if absent.

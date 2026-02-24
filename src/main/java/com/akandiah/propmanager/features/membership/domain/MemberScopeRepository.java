@@ -1,4 +1,4 @@
-package com.akandiah.propmanager.features.organization.domain;
+package com.akandiah.propmanager.features.membership.domain;
 
 import java.util.Collection;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.akandiah.propmanager.features.organization.api.dto;
+package com.akandiah.propmanager.features.membership.api.dto;
 
 import java.util.UUID;
 

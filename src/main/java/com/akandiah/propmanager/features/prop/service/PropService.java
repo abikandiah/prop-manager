@@ -17,7 +17,7 @@ import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
-import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
+import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
@@ -168,7 +168,11 @@ public class PropService {
 		// Collect userIds from member scopes before deleting them
 		Set<UUID> affectedUserIds = new HashSet<>();
 		memberScopeRepository.findByScopeTypeAndScopeId(ResourceType.PROPERTY, id)
-				.forEach(scope -> affectedUserIds.add(scope.getMembership().getUser().getId()));
+				.forEach(scope -> {
+					if (scope.getMembership().getUser() != null) {
+						affectedUserIds.add(scope.getMembership().getUser().getId());
+					}
+				});
 		memberScopeRepository.deleteByScopeTypeAndScopeId(ResourceType.PROPERTY, id);
 		UUID ownerId = prop.getOwnerId();
 		if (ownerId != null) {

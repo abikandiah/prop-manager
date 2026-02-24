@@ -1,10 +1,12 @@
-package com.akandiah.propmanager.features.organization.domain;
+package com.akandiah.propmanager.features.membership.domain;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
 
+import com.akandiah.propmanager.features.invite.domain.Invite;
+import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.user.domain.User;
 
 import jakarta.persistence.Column;
@@ -15,6 +17,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -29,13 +32,15 @@ import lombok.Setter;
 
 /**
  * Bridge between User and Organization. One row per (user, org).
+ * If user is null, it represents a pending invitation slot.
  */
 @Entity
 @Table(name = "memberships", uniqueConstraints = {
 		@UniqueConstraint(name = "uk_memberships_user_org", columnNames = { "user_id", "org_id" })
 }, indexes = {
 		@Index(name = "idx_memberships_user_id", columnList = "user_id"),
-		@Index(name = "idx_memberships_org_id", columnList = "org_id")
+		@Index(name = "idx_memberships_org_id", columnList = "org_id"),
+		@Index(name = "idx_memberships_invite_id", columnList = "invite_id")
 })
 @Getter
 @Setter
@@ -49,13 +54,24 @@ public class Membership {
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
+	/**
+	 * Null until the invited user accepts the invite.
+	 */
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "user_id", nullable = false)
+	@JoinColumn(name = "user_id")
 	private User user;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "org_id", nullable = false)
 	private Organization organization;
+
+	/**
+	 * The invite that originated this membership slot.
+	 * Null for direct additions (if supported) or after cleanup.
+	 */
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "invite_id")
+	private Invite invite;
 
 	@Version
 	@Column(nullable = false)

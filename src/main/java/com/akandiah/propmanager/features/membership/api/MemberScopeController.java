@@ -1,4 +1,4 @@
-package com.akandiah.propmanager.features.organization.api;
+package com.akandiah.propmanager.features.membership.api;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,10 +15,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
-import com.akandiah.propmanager.features.organization.api.dto.MemberScopeResponse;
-import com.akandiah.propmanager.features.organization.api.dto.UpdateMemberScopeRequest;
-import com.akandiah.propmanager.features.organization.service.MemberScopeService;
+import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest;
+import com.akandiah.propmanager.features.membership.api.dto.MemberScopeResponse;
+import com.akandiah.propmanager.features.membership.api.dto.UpdateMemberScopeRequest;
+import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
+import com.akandiah.propmanager.features.membership.service.MemberScopeService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,6 +38,12 @@ import lombok.RequiredArgsConstructor;
 public class MemberScopeController {
 
 	private final MemberScopeService memberScopeService;
+	private final MembershipRepository membershipRepository;
+
+	private void requireMembershipInOrg(UUID membershipId, UUID orgId) {
+		membershipRepository.findByIdAndOrganizationId(membershipId, orgId)
+				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
+	}
 
 	@GetMapping
 	@Operation(summary = "List scopes for a membership")
@@ -43,6 +51,7 @@ public class MemberScopeController {
 	public ResponseEntity<List<MemberScopeResponse>> list(
 			@PathVariable UUID orgId,
 			@PathVariable UUID membershipId) {
+		requireMembershipInOrg(membershipId, orgId);
 		return ResponseEntity.ok(memberScopeService.findByMembershipId(membershipId));
 	}
 
@@ -53,6 +62,7 @@ public class MemberScopeController {
 			@PathVariable UUID orgId,
 			@PathVariable UUID membershipId,
 			@PathVariable UUID scopeId) {
+		requireMembershipInOrg(membershipId, orgId);
 		return ResponseEntity.ok(memberScopeService.findById(membershipId, scopeId));
 	}
 
@@ -63,6 +73,7 @@ public class MemberScopeController {
 			@PathVariable UUID orgId,
 			@PathVariable UUID membershipId,
 			@Valid @RequestBody CreateMemberScopeRequest request) {
+		requireMembershipInOrg(membershipId, orgId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(memberScopeService.create(membershipId, request));
 	}
 
@@ -74,6 +85,7 @@ public class MemberScopeController {
 			@PathVariable UUID membershipId,
 			@PathVariable UUID scopeId,
 			@Valid @RequestBody UpdateMemberScopeRequest request) {
+		requireMembershipInOrg(membershipId, orgId);
 		return ResponseEntity.ok(memberScopeService.update(membershipId, scopeId, request));
 	}
 
@@ -84,6 +96,7 @@ public class MemberScopeController {
 			@PathVariable UUID orgId,
 			@PathVariable UUID membershipId,
 			@PathVariable UUID scopeId) {
+		requireMembershipInOrg(membershipId, orgId);
 		memberScopeService.deleteById(membershipId, scopeId);
 		return ResponseEntity.noContent().build();
 	}

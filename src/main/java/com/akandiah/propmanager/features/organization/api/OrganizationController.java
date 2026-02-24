@@ -18,13 +18,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.akandiah.propmanager.features.organization.api.dto.CreateMembershipRequest;
+import com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest;
 import com.akandiah.propmanager.features.organization.api.dto.CreateOrganizationRequest;
-import com.akandiah.propmanager.features.organization.api.dto.MembershipResponse;
+import com.akandiah.propmanager.features.membership.api.dto.InviteMemberRequest;
+import com.akandiah.propmanager.features.membership.api.dto.MembershipResponse;
 import com.akandiah.propmanager.features.organization.api.dto.OrganizationResponse;
 import com.akandiah.propmanager.features.organization.api.dto.UpdateOrganizationRequest;
-import com.akandiah.propmanager.features.organization.service.MembershipService;
+import com.akandiah.propmanager.features.membership.service.MembershipService;
 import com.akandiah.propmanager.features.organization.service.OrganizationService;
+import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -96,13 +98,16 @@ public class OrganizationController {
 		return ResponseEntity.ok(membershipService.findByOrganizationId(id));
 	}
 
-	@PostMapping("/{id}/members")
-	@Operation(summary = "Add a member to the organization")
+	@PostMapping("/{id}/members/invites")
+	@Operation(summary = "Invite a member to the organization")
 	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#id, authentication)")
-	public ResponseEntity<MembershipResponse> addMember(
+	public ResponseEntity<MembershipResponse> inviteMember(
 			@PathVariable UUID id,
-			@Valid @RequestBody CreateMembershipRequest request) {
-		return ResponseEntity.status(HttpStatus.CREATED).body(membershipService.create(id, request));
+			@Valid @RequestBody InviteMemberRequest request,
+			Authentication authentication) {
+		User invitedBy = extractCurrentUserEntity(authentication);
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(membershipService.inviteMember(id, request.email(), request.initialScopes(), invitedBy));
 	}
 
 	@DeleteMapping("/{id}/members/{membershipId}")
@@ -116,9 +121,12 @@ public class OrganizationController {
 	}
 
 	private UUID extractCurrentUserId(Authentication authentication) {
+		return extractCurrentUserEntity(authentication).getId();
+	}
+
+	private User extractCurrentUserEntity(Authentication authentication) {
 		if (authentication instanceof JwtAuthenticationToken jwtAuth) {
 			return userService.findUserFromJwt(jwtAuth.getToken())
-					.map(user -> user.getId())
 					.orElseThrow(() -> new AccessDeniedException("Authenticated user not found in system"));
 		}
 		throw new AccessDeniedException("Not authenticated");

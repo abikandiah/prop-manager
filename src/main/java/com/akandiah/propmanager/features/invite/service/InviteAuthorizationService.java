@@ -20,6 +20,8 @@ import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
+import com.akandiah.propmanager.features.membership.domain.Membership;
+import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.service.UserService;
 import com.akandiah.propmanager.security.HierarchyAwareAuthorizationService;
@@ -40,6 +42,7 @@ public class InviteAuthorizationService {
 
 	private final InviteRepository inviteRepository;
 	private final LeaseRepository leaseRepository;
+	private final MembershipRepository membershipRepository;
 	private final UserService userService;
 	private final HierarchyAwareAuthorizationService authorizationService;
 
@@ -169,6 +172,15 @@ public class InviteAuthorizationService {
 				List<AccessEntry> access = getAccessFromRequest();
 				yield authorizationService.allow(access, requiredAction, PermissionDomains.LEASES,
 						ResourceType.UNIT, unitId, orgId);
+			}
+			case MEMBERSHIP -> {
+				// For membership invites, targetId is the membership ID
+				Membership membership = membershipRepository.findById(targetId).orElse(null);
+				if (membership == null) yield false;
+				UUID orgId = membership.getOrganization().getId();
+				List<AccessEntry> access = getAccessFromRequest();
+				yield authorizationService.allow(access, requiredAction, PermissionDomains.TENANTS,
+						ResourceType.ORG, orgId, orgId);
 			}
 		};
 	}

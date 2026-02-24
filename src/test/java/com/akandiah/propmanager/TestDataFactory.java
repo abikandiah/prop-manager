@@ -6,11 +6,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseRequest;
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
+import com.akandiah.propmanager.features.membership.domain.MemberScope;
+import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest.AddressInput;
@@ -732,6 +735,161 @@ public final class TestDataFactory {
 					noticePeriodDays,
 					additionalMetadata,
 					templateParameters);
+		}
+	}
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// Organization Builders
+	// ═══════════════════════════════════════════════════════════════════════
+
+	public static OrganizationBuilder organization() {
+		return new OrganizationBuilder();
+	}
+
+	public static class OrganizationBuilder {
+		private UUID id = UUID.randomUUID();
+		private String name = "Test Organization";
+		private String taxId = null;
+		private Map<String, Object> settings = null;
+		private Integer version = 0;
+
+		public OrganizationBuilder id(UUID id) {
+			this.id = id;
+			return this;
+		}
+
+		public OrganizationBuilder name(String name) {
+			this.name = name;
+			return this;
+		}
+
+		public OrganizationBuilder taxId(String taxId) {
+			this.taxId = taxId;
+			return this;
+		}
+
+		public OrganizationBuilder settings(Map<String, Object> settings) {
+			this.settings = settings;
+			return this;
+		}
+
+		public OrganizationBuilder version(Integer version) {
+			this.version = version;
+			return this;
+		}
+
+		public Organization build() {
+			return Organization.builder()
+					.id(id)
+					.name(name)
+					.taxId(taxId)
+					.settings(settings)
+					.version(version)
+					.build();
+		}
+	}
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// Membership Builders
+	// ═══════════════════════════════════════════════════════════════════════
+
+	public static MembershipBuilder membership() {
+		return new MembershipBuilder();
+	}
+
+	public static class MembershipBuilder {
+		private UUID id = UUID.randomUUID();
+		private User user;
+		private Organization organization;
+		private Integer version = 0;
+
+		public MembershipBuilder id(UUID id) {
+			this.id = id;
+			return this;
+		}
+
+		public MembershipBuilder user(User user) {
+			this.user = user;
+			return this;
+		}
+
+		public MembershipBuilder organization(Organization organization) {
+			this.organization = organization;
+			return this;
+		}
+
+		public MembershipBuilder version(Integer version) {
+			this.version = version;
+			return this;
+		}
+
+		public Membership build() {
+			Organization org = this.organization != null ? this.organization : TestDataFactory.organization().build();
+			return Membership.builder()
+					.id(id)
+					.user(user)
+					.organization(org)
+					.version(version)
+					.build();
+		}
+	}
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// MemberScope Builders
+	// ═══════════════════════════════════════════════════════════════════════
+
+	public static MemberScopeBuilder memberScope() {
+		return new MemberScopeBuilder();
+	}
+
+	public static class MemberScopeBuilder {
+		private UUID id = UUID.randomUUID();
+		private Membership membership;
+		private ResourceType scopeType = ResourceType.ORG;
+		private UUID scopeId = UUID.randomUUID();
+		private Map<String, String> permissions = new HashMap<>();
+		private Integer version = 0;
+
+		public MemberScopeBuilder id(UUID id) {
+			this.id = id;
+			return this;
+		}
+
+		public MemberScopeBuilder membership(Membership membership) {
+			this.membership = membership;
+			return this;
+		}
+
+		public MemberScopeBuilder scopeType(ResourceType scopeType) {
+			this.scopeType = scopeType;
+			return this;
+		}
+
+		public MemberScopeBuilder scopeId(UUID scopeId) {
+			this.scopeId = scopeId;
+			return this;
+		}
+
+		public MemberScopeBuilder permissions(Map<String, String> permissions) {
+			this.permissions = permissions;
+			return this;
+		}
+
+		public MemberScopeBuilder version(Integer version) {
+			this.version = version;
+			return this;
+		}
+
+		public MemberScope build() {
+			Membership ms = this.membership != null ? this.membership : TestDataFactory.membership().build();
+			return MemberScope.builder()
+					.id(id)
+					.membership(ms)
+					.scopeType(scopeType)
+					.scopeId(scopeId)
+					.permissions(permissions)
+					.version(version)
+					.build();
 		}
 	}
 }

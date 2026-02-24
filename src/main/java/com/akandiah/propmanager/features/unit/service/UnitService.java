@@ -1,8 +1,11 @@
 package com.akandiah.propmanager.features.unit.service;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,9 +13,10 @@ import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
+import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
-import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
+import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.api.dto.CreateUnitRequest;
@@ -21,7 +25,11 @@ import com.akandiah.propmanager.features.unit.api.dto.UpdateUnitRequest;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UnitService {
 
 	private final UnitRepository unitRepository;
@@ -29,32 +37,20 @@ public class UnitService {
 	private final AssetRepository assetRepository;
 	private final LeaseRepository leaseRepository;
 	private final MemberScopeRepository memberScopeRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
-	public UnitService(UnitRepository unitRepository, PropRepository propRepository,
-			AssetRepository assetRepository, LeaseRepository leaseRepository,
-			MemberScopeRepository memberScopeRepository) {
-		this.unitRepository = unitRepository;
-		this.propRepository = propRepository;
-		this.assetRepository = assetRepository;
-		this.leaseRepository = leaseRepository;
-		this.memberScopeRepository = memberScopeRepository;
-	}
-
-	@Transactional(readOnly = true)
 	public List<UnitResponse> findAll() {
 		return unitRepository.findAll().stream()
 				.map(UnitResponse::from)
 				.toList();
 	}
 
-	@Transactional(readOnly = true)
 	public List<UnitResponse> findByPropId(UUID propId) {
 		return unitRepository.findByProp_IdOrderByUnitNumberAsc(propId).stream()
 				.map(UnitResponse::from)
 				.toList();
 	}
 
-	@Transactional(readOnly = true)
 	public UnitResponse findById(UUID id) {
 		Unit unit = unitRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Unit", id));
@@ -144,7 +140,20 @@ public class UnitService {
 		DeleteGuardUtil.requireNoChildren("Unit", id, assetRepository.countByUnit_Id(id), "asset(s)", "Delete those first.");
 		DeleteGuardUtil.requireNoChildren("Unit", id, leaseRepository.countByUnit_Id(id), "lease(s)", "Delete those first.");
 
+		// Collect userIds from member scopes before deleting them
+		Set<UUID> affectedUserIds = new HashSet<>();
+		memberScopeRepository.findByScopeTypeAndScopeId(ResourceType.UNIT, id)
+				.forEach(scope -> {
+					if (scope.getMembership().getUser() != null) {
+						affectedUserIds.add(scope.getMembership().getUser().getId());
+					}
+				});
+
 		memberScopeRepository.deleteByScopeTypeAndScopeId(ResourceType.UNIT, id);
 		unitRepository.deleteById(id);
+
+		if (!affectedUserIds.isEmpty()) {
+			eventPublisher.publishEvent(new PermissionsChangedEvent(affectedUserIds));
+		}
 	}
 }

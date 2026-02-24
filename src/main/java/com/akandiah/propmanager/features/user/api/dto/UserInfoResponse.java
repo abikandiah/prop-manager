@@ -3,6 +3,8 @@ package com.akandiah.propmanager.features.user.api.dto;
 import java.util.List;
 import java.util.UUID;
 
+import com.akandiah.propmanager.features.organization.api.dto.OrganizationResponse;
+
 /**
  * Current user info for frontend auth verification and display.
  * Returned by GET /api/me when the user is authenticated via JWT.
@@ -12,5 +14,6 @@ public record UserInfoResponse(
 		String name,
 		String email,
 		List<String> roles,
-		boolean termsAccepted) {
+		boolean termsAccepted,
+		List<OrganizationResponse> organizations) {
 }

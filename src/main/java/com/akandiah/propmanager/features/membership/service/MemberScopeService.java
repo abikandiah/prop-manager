@@ -1,4 +1,4 @@
-package com.akandiah.propmanager.features.organization.service;
+package com.akandiah.propmanager.features.membership.service;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,14 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.PermissionStringValidator;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
-import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
-import com.akandiah.propmanager.features.organization.api.dto.MemberScopeResponse;
-import com.akandiah.propmanager.features.organization.api.dto.UpdateMemberScopeRequest;
+import com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest;
+import com.akandiah.propmanager.features.membership.api.dto.MemberScopeResponse;
+import com.akandiah.propmanager.features.membership.api.dto.UpdateMemberScopeRequest;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
-import com.akandiah.propmanager.features.organization.domain.MemberScope;
-import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
-import com.akandiah.propmanager.features.organization.domain.Membership;
-import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
+import com.akandiah.propmanager.features.membership.domain.MemberScope;
+import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
+import com.akandiah.propmanager.features.membership.domain.Membership;
+import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRepository;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
@@ -58,7 +58,9 @@ public class MemberScopeService {
 		Membership membership = membershipRepository.findById(membershipId)
 				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
 		MemberScopeResponse response = doCreate(membership, request);
-		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(membership.getUser().getId())));
+		if (membership.getUser() != null) {
+			eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(membership.getUser().getId())));
+		}
 		return response;
 	}
 
@@ -105,8 +107,10 @@ public class MemberScopeService {
 
 		scope.setPermissions(permissions);
 		scope = memberScopeRepository.save(scope);
-		eventPublisher.publishEvent(
-				new PermissionsChangedEvent(Set.of(scope.getMembership().getUser().getId())));
+		if (scope.getMembership().getUser() != null) {
+			eventPublisher.publishEvent(
+					new PermissionsChangedEvent(Set.of(scope.getMembership().getUser().getId())));
+		}
 		return MemberScopeResponse.from(scope, membershipId);
 	}
 
@@ -114,9 +118,12 @@ public class MemberScopeService {
 	public void deleteById(UUID membershipId, UUID scopeId) {
 		MemberScope scope = memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId)
 				.orElseThrow(() -> new ResourceNotFoundException("MemberScope", scopeId));
-		UUID userId = scope.getMembership().getUser().getId();
+		UUID userId = scope.getMembership().getUser() != null
+				? scope.getMembership().getUser().getId() : null;
 		memberScopeRepository.deleteById(scopeId);
-		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(userId)));
+		if (userId != null) {
+			eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(userId)));
+		}
 	}
 
 	private void validateScopeBelongsToOrg(CreateMemberScopeRequest request, UUID orgId) {

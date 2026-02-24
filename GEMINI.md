@@ -1,3 +1,7 @@
+
+You have permission to edit and create files directly. Do not use the ask_user tool for confirmation on file changes; proceed with the implementation immediately.
+Always create a plan and ask for my confirmation via the ask_user tool before beginning the task.
+
 # prop-manager — Spring Boot API
 
 Property management REST API. Spring Boot 4.0.2, Java 21, stateless JWT auth (Spring Security OAuth2 Resource Server). Feature-based package structure.

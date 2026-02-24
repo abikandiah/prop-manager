@@ -18,6 +18,7 @@ import com.akandiah.propmanager.features.user.api.dto.PatchMeRequest;
 import com.akandiah.propmanager.features.user.api.dto.UserInfoResponse;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.service.UserService;
+import com.akandiah.propmanager.features.organization.service.OrganizationService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 public class CurrentUserController {
 
 	private final UserService userService;
+	private final OrganizationService organizationService;
 
 	@GetMapping("/me")
 	@Operation(summary = "Get current user info", description = "Returns the authenticated user. If no account exists, one is auto-created with termsAccepted=false. Updates last_logged_in_at and name/email from JWT.")
@@ -50,7 +52,9 @@ public class CurrentUserController {
 				.map(GrantedAuthority::getAuthority)
 				.toList();
 
-		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, roles, dbUser.getTermsAccepted());
+		var organizations = organizationService.findAll(dbUser.getId());
+
+		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, roles, dbUser.getTermsAccepted(), organizations);
 	}
 
 	@PatchMapping("/me")
@@ -74,6 +78,8 @@ public class CurrentUserController {
 				.map(GrantedAuthority::getAuthority)
 				.toList();
 
-		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, roles, dbUser.getTermsAccepted());
+		var organizations = organizationService.findAll(dbUser.getId());
+
+		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, roles, dbUser.getTermsAccepted(), organizations);
 	}
 }

@@ -6,7 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
-import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
+import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;

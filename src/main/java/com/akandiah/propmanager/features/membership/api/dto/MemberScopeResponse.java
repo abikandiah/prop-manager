@@ -1,11 +1,11 @@
-package com.akandiah.propmanager.features.organization.api.dto;
+package com.akandiah.propmanager.features.membership.api.dto;
 
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
 import com.akandiah.propmanager.common.permission.ResourceType;
-import com.akandiah.propmanager.features.organization.domain.MemberScope;
+import com.akandiah.propmanager.features.membership.domain.MemberScope;
 
 public record MemberScopeResponse(
 		UUID id,
