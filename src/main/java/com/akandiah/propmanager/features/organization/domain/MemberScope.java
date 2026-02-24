@@ -33,10 +33,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Granular scope for a membership: (scopeType, scopeId) → permissions within the org. */
+/**
+ * Granular scope for a membership: (scopeType, scopeId) → permissions within
+ * the org.
+ */
 @Entity
 @Table(name = "member_scopes", uniqueConstraints = {
-		@UniqueConstraint(name = "uk_member_scopes_membership_scope", columnNames = { "membership_id", "scope_type", "scope_id" })
+		@UniqueConstraint(name = "uk_member_scopes_membership_scope", columnNames = { "membership_id", "scope_type",
+				"scope_id" })
 }, indexes = {
 		@Index(name = "idx_member_scopes_membership_id", columnList = "membership_id"),
 		@Index(name = "idx_member_scopes_scope", columnList = "scope_type, scope_id")

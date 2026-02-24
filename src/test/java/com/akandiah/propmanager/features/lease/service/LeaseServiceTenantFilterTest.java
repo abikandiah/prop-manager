@@ -14,7 +14,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -33,22 +32,34 @@ import com.akandiah.propmanager.features.user.service.UserService;
 /**
  * Tests the tenant isolation filter in {@link LeaseService#findById(UUID)}.
  *
- * <p>Design decision 5: Tenants have UNIT-scope READ access on `l`, but the service
- * applies an additional application-level check so a tenant can only read their own
+ * <p>
+ * Design decision 5: Tenants have UNIT-scope READ access on `l`, but the
+ * service
+ * applies an additional application-level check so a tenant can only read their
+ * own
  * lease, not a co-tenant's lease on the same unit.
  */
 @ExtendWith(MockitoExtension.class)
 class LeaseServiceTenantFilterTest {
 
-	@Mock LeaseRepository leaseRepository;
-	@Mock LeaseTemplateService templateService;
-	@Mock UnitRepository unitRepository;
-	@Mock PropRepository propRepository;
-	@Mock LeaseTenantRepository leaseTenantRepository;
-	@Mock LeaseStateMachine stateMachine;
-	@Mock LeaseTemplateRenderer renderer;
-	@Mock ApplicationEventPublisher eventPublisher;
-	@Mock UserService userService;
+	@Mock
+	LeaseRepository leaseRepository;
+	@Mock
+	LeaseTemplateService templateService;
+	@Mock
+	UnitRepository unitRepository;
+	@Mock
+	PropRepository propRepository;
+	@Mock
+	LeaseTenantRepository leaseTenantRepository;
+	@Mock
+	LeaseStateMachine stateMachine;
+	@Mock
+	LeaseTemplateRenderer renderer;
+	@Mock
+	ApplicationEventPublisher eventPublisher;
+	@Mock
+	UserService userService;
 
 	LeaseService service;
 
@@ -136,8 +147,7 @@ class LeaseServiceTenantFilterTest {
 				.header("alg", "RS256")
 				.claim("sub", user.getId().toString())
 				.build();
-		var auth = new org.springframework.security.oauth2.server.resource.authentication
-				.JwtAuthenticationToken(jwt);
+		var auth = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(jwt);
 		SecurityContextHolder.getContext().setAuthentication(auth);
 		when(userService.findUserFromJwt(jwt)).thenReturn(Optional.of(user));
 	}

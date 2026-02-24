@@ -632,7 +632,8 @@ class LeaseServiceTest {
 		leaseService.create(request);
 
 		verify(leaseRepository).save(leaseCaptor.capture());
-		// Template params stored on lease for stamping on activate; renderer not called at create
+		// Template params stored on lease for stamping on activate; renderer not called
+		// at create
 		assertThat(leaseCaptor.getValue().getTemplateParameters()).isEqualTo(requestParams);
 		verify(renderer, never()).stampMarkdownFromLease(anyString(), any(), any(), any(), any());
 	}
