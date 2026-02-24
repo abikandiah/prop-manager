@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.organization.api.dto.MemberScopeResponse;
 import com.akandiah.propmanager.features.organization.api.dto.MembershipResponse;
-import com.akandiah.propmanager.features.organization.api.dto.UpdateMembershipRequest;
 import com.akandiah.propmanager.features.organization.service.MemberScopeService;
 import com.akandiah.propmanager.features.organization.service.MembershipService;
 
@@ -48,15 +46,6 @@ public class MembershipController {
 	@Operation(summary = "Get membership by ID")
 	public ResponseEntity<MembershipResponse> getById(@PathVariable UUID id) {
 		return ResponseEntity.ok(membershipService.findById(id));
-	}
-
-	@PatchMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
-	@Operation(summary = "Update membership role")
-	public ResponseEntity<MembershipResponse> update(
-			@PathVariable UUID id,
-			@Valid @RequestBody UpdateMembershipRequest request) {
-		return ResponseEntity.ok(membershipService.update(id, request));
 	}
 
 	@DeleteMapping("/{id}")

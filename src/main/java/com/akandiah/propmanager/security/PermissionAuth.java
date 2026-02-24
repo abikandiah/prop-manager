@@ -9,18 +9,12 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.common.permission.ResourceType;
-import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
-/**
- * Bean for use in @PreAuthorize SpEL: checks hierarchy-aware permissions using
- * the hydrated access list from the request attribute.
- * <p>
- * Example: {@code @PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #unitId, #orgId)")}
- */
+/** SpEL bean for @PreAuthorize: checks hierarchy-aware permissions from the hydrated access list. */
 @Component("permissionAuth")
 @RequiredArgsConstructor
 public class PermissionAuth {
@@ -28,44 +22,19 @@ public class PermissionAuth {
 	private final HierarchyAwareAuthorizationService authorizationService;
 	private final LeaseRepository leaseRepository;
 
-	/**
-	 * Returns true if the current user's access list grants the required action
-	 * for the given resource in the given domain. Reads the access list from the
-	 * request attribute set by {@link JwtAccessHydrationFilter}.
-	 *
-	 * @param requiredAction action bit, e.g. {@link com.akandiah.propmanager.common.permission.Actions#READ}
-	 * @param domain         domain key (l, m, f, t)
-	 * @param resourceType   ORG, PROPERTY, or UNIT
-	 * @param resourceId     id of the resource
-	 * @param orgId          organization context
-	 * @return true if access is granted
-	 */
-	@SuppressWarnings("unused")
 	public boolean hasAccess(int requiredAction, String domain, ResourceType resourceType,
 			UUID resourceId, UUID orgId) {
 		List<AccessEntry> access = getAccessFromRequest();
 		return authorizationService.allow(access, requiredAction, domain, resourceType, resourceId, orgId);
 	}
 
-	/**
-	 * Convenience method for lease endpoints: looks up the lease by ID,
-	 * derives the unit ID, then checks UNIT-level access.
-	 * Returns false if the lease does not exist.
-	 *
-	 * @param requiredAction action bit
-	 * @param domain         domain key (l, m, f, t)
-	 * @param leaseId        lease ID (resolved to its unit for the UNIT-scope check)
-	 * @param orgId          organization context
-	 * @return true if access is granted
-	 */
-	@SuppressWarnings("unused")
+	/** Resolves the lease's unit, then checks UNIT-level access. Returns false if lease not found. */
 	public boolean hasLeaseAccess(int requiredAction, String domain, UUID leaseId, UUID orgId) {
-		return leaseRepository.findById(leaseId)
-				.map(Lease::getUnit)
-				.map(unit -> {
+		return leaseRepository.findUnitIdById(leaseId)
+				.map(unitId -> {
 					List<AccessEntry> access = getAccessFromRequest();
 					return authorizationService.allow(
-							access, requiredAction, domain, ResourceType.UNIT, unit.getId(), orgId);
+							access, requiredAction, domain, ResourceType.UNIT, unitId, orgId);
 				})
 				.orElse(false);
 	}

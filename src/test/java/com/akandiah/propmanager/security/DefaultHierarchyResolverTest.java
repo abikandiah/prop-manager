@@ -46,7 +46,7 @@ class DefaultHierarchyResolverTest {
 		List<ScopeLevel> result = resolver.resolve(ResourceType.ORG, ORG_ID, ORG_ID);
 
 		assertThat(result).hasSize(1);
-		assertThat(result.get(0).scopeType()).isEqualTo("ORG");
+		assertThat(result.get(0).scopeType()).isEqualTo(ResourceType.ORG);
 		assertThat(result.get(0).scopeId()).isEqualTo(ORG_ID);
 	}
 
@@ -57,9 +57,9 @@ class DefaultHierarchyResolverTest {
 		List<ScopeLevel> result = resolver.resolve(ResourceType.PROPERTY, PROP_ID, ORG_ID);
 
 		assertThat(result).hasSize(2);
-		assertThat(result.get(0).scopeType()).isEqualTo("PROPERTY");
+		assertThat(result.get(0).scopeType()).isEqualTo(ResourceType.PROPERTY);
 		assertThat(result.get(0).scopeId()).isEqualTo(PROP_ID);
-		assertThat(result.get(1).scopeType()).isEqualTo("ORG");
+		assertThat(result.get(1).scopeType()).isEqualTo(ResourceType.ORG);
 		assertThat(result.get(1).scopeId()).isEqualTo(ORG_ID);
 	}
 
@@ -87,11 +87,11 @@ class DefaultHierarchyResolverTest {
 		List<ScopeLevel> result = resolver.resolve(ResourceType.UNIT, UNIT_ID, ORG_ID);
 
 		assertThat(result).hasSize(3);
-		assertThat(result.get(0).scopeType()).isEqualTo("UNIT");
+		assertThat(result.get(0).scopeType()).isEqualTo(ResourceType.UNIT);
 		assertThat(result.get(0).scopeId()).isEqualTo(UNIT_ID);
-		assertThat(result.get(1).scopeType()).isEqualTo("PROPERTY");
+		assertThat(result.get(1).scopeType()).isEqualTo(ResourceType.PROPERTY);
 		assertThat(result.get(1).scopeId()).isEqualTo(PROP_ID);
-		assertThat(result.get(2).scopeType()).isEqualTo("ORG");
+		assertThat(result.get(2).scopeType()).isEqualTo(ResourceType.ORG);
 		assertThat(result.get(2).scopeId()).isEqualTo(ORG_ID);
 	}
 

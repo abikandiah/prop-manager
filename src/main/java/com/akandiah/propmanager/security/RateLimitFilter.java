@@ -1,12 +1,16 @@
 package com.akandiah.propmanager.security;
 
 import java.io.IOException;
+import java.net.URI;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.akandiah.propmanager.config.RateLimitProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 
 import io.github.resilience4j.ratelimiter.RateLimiter;
@@ -18,10 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Rate limiter per client IP using Resilience4j (Spring ecosystem standard).
- * Returns 429 Too Many Requests when limit exceeded.
- */
+/** Per-IP rate limiter using Resilience4j. Returns 429 when limit exceeded. */
 @Component
 @Slf4j
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -29,14 +30,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
 	private final RateLimiterRegistry registry;
 	private final Cache<String, RateLimiter> cache;
 	private final RateLimitProperties props;
+	private final ObjectMapper objectMapper;
 
 	public RateLimitFilter(
 			RateLimiterRegistry registry,
 			Cache<String, RateLimiter> cache,
-			RateLimitProperties props) {
+			RateLimitProperties props,
+			ObjectMapper objectMapper) {
 		this.registry = registry;
 		this.cache = cache;
 		this.props = props;
+		this.objectMapper = objectMapper;
 	}
 
 	@Override
@@ -45,7 +49,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
 			HttpServletResponse response,
 			FilterChain filterChain) throws ServletException, IOException {
 
-		// Use the properties object for a cleaner check
 		if (!props.enabled() || isStaticResource(request)) {
 			filterChain.doFilter(request, response);
 			return;
@@ -53,39 +56,36 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
 		String clientKey = resolveClientKey(request);
 
-		// The cache handles the "memoization" of the RateLimiter
 		RateLimiter rateLimiter = cache.get(clientKey, this::createRateLimiter);
 
 		if (rateLimiter.acquirePermission()) {
 			filterChain.doFilter(request, response);
 		} else {
-			handleLimitExceeded(response, clientKey, rateLimiter);
+			handleLimitExceeded(response, rateLimiter);
 		}
 	}
 
 	private RateLimiter createRateLimiter(String clientKey) {
-		// Look for the "default" config defined in application.yml
 		RateLimiterConfig config = registry.getConfiguration("default")
 				.orElse(RateLimiterConfig.ofDefaults());
 
 		return registry.rateLimiter("api-" + clientKey, config);
 	}
 
-	private void handleLimitExceeded(HttpServletResponse response, String key, RateLimiter rateLimiter)
+	private void handleLimitExceeded(HttpServletResponse response, RateLimiter rateLimiter)
 			throws IOException {
 		long retryAfter = rateLimiter.getRateLimiterConfig().getLimitRefreshPeriod().toSeconds();
 
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+				HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded");
+		problem.setTitle("Too Many Requests");
+		problem.setType(URI.create("about:blank"));
+		problem.setProperty("retryAfterSeconds", retryAfter);
+
 		response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
 		response.setHeader("Retry-After", String.valueOf(retryAfter));
-		response.setContentType("application/json");
-
-		response.getWriter().write(String.format("""
-				{
-				    "error": "Too Many Requests",
-				    "message": "Quota exceeded for IP %s",
-				    "retry_after_seconds": %d
-				}
-				""", key, retryAfter));
+		response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+		objectMapper.writeValue(response.getOutputStream(), problem);
 	}
 
 	private String resolveClientKey(HttpServletRequest request) {

@@ -28,7 +28,7 @@ import com.akandiah.propmanager.features.organization.domain.MemberScopeReposito
 import com.akandiah.propmanager.features.organization.domain.Membership;
 import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
-import com.akandiah.propmanager.features.organization.domain.ScopeType;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.prop.domain.PropertyType;
@@ -95,7 +95,7 @@ class JwtHydrationServiceTest {
 			UUID membershipId = UUID.randomUUID();
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
-			MemberScope scope = memberScope(m, ScopeType.ORG, orgId, Map.of("l", "cr", "m", "r"));
+			MemberScope scope = memberScope(m, ResourceType.ORG, orgId, Map.of("l", "cr", "m", "r"));
 			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of(m));
 			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of(scope));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
@@ -106,7 +106,7 @@ class JwtHydrationServiceTest {
 			assertThat(result).hasSize(1);
 			AccessEntry entry = result.get(0);
 			assertThat(entry.orgId()).isEqualTo(orgId);
-			assertThat(entry.scopeType()).isEqualTo("ORG");
+			assertThat(entry.scopeType()).isEqualTo(ResourceType.ORG);
 			assertThat(entry.scopeId()).isEqualTo(orgId);
 			assertThat(entry.permissions()).containsEntry("l", 3); // c=2, r=1
 			assertThat(entry.permissions()).containsEntry("m", 1); // r=1
@@ -120,7 +120,7 @@ class JwtHydrationServiceTest {
 			UUID propId = UUID.randomUUID();
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
-			MemberScope scope = memberScope(m, ScopeType.PROPERTY, propId, Map.of("l", "rcud"));
+			MemberScope scope = memberScope(m, ResourceType.PROPERTY, propId, Map.of("l", "rcud"));
 			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of(m));
 			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of(scope));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
@@ -130,7 +130,7 @@ class JwtHydrationServiceTest {
 
 			assertThat(result).hasSize(1);
 			AccessEntry entry = result.get(0);
-			assertThat(entry.scopeType()).isEqualTo("PROPERTY");
+			assertThat(entry.scopeType()).isEqualTo(ResourceType.PROPERTY);
 			assertThat(entry.scopeId()).isEqualTo(propId);
 			assertThat(entry.permissions()).containsEntry("l", 15);
 		}
@@ -144,8 +144,8 @@ class JwtHydrationServiceTest {
 			UUID propId2 = UUID.randomUUID();
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
-			MemberScope scope1 = memberScope(m, ScopeType.PROPERTY, propId1, Map.of("l", "r"));
-			MemberScope scope2 = memberScope(m, ScopeType.PROPERTY, propId2, Map.of("m", "cru"));
+			MemberScope scope1 = memberScope(m, ResourceType.PROPERTY, propId1, Map.of("l", "r"));
+			MemberScope scope2 = memberScope(m, ResourceType.PROPERTY, propId2, Map.of("m", "cru"));
 			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of(m));
 			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId)))
 					.thenReturn(List.of(scope1, scope2));
@@ -177,7 +177,7 @@ class JwtHydrationServiceTest {
 			assertThat(result).hasSize(1);
 			AccessEntry entry = result.get(0);
 			assertThat(entry.orgId()).isEqualTo(orgId);
-			assertThat(entry.scopeType()).isEqualTo("PROPERTY");
+			assertThat(entry.scopeType()).isEqualTo(ResourceType.PROPERTY);
 			assertThat(entry.scopeId()).isEqualTo(propId);
 			int fullCrud = Actions.READ | Actions.CREATE | Actions.UPDATE | Actions.DELETE;
 			assertThat(entry.permissions()).containsEntry(PermissionDomains.LEASES, fullCrud);
@@ -227,7 +227,7 @@ class JwtHydrationServiceTest {
 			assertThat(result).hasSize(1);
 			AccessEntry entry = result.get(0);
 			assertThat(entry.orgId()).isEqualTo(orgId);
-			assertThat(entry.scopeType()).isEqualTo("UNIT");
+			assertThat(entry.scopeType()).isEqualTo(ResourceType.UNIT);
 			assertThat(entry.scopeId()).isEqualTo(unitId);
 			assertThat(entry.permissions()).containsEntry(PermissionDomains.LEASES, Actions.READ);
 			assertThat(entry.permissions()).doesNotContainKey(PermissionDomains.MAINTENANCE);
@@ -251,7 +251,7 @@ class JwtHydrationServiceTest {
 			List<AccessEntry> result = service.hydrate(userId);
 
 			assertThat(result).hasSize(1);
-			assertThat(result.get(0).scopeType()).isEqualTo("UNIT");
+			assertThat(result.get(0).scopeType()).isEqualTo(ResourceType.UNIT);
 		}
 	}
 
@@ -259,11 +259,11 @@ class JwtHydrationServiceTest {
 	class Deduplication {
 
 		@Test
-		void mergesSameOrgScopeTypeScopeIdByOringBitmasks() {
+		void mergesSameOrgResourceTypeScopeIdByOringBitmasks() {
 			AccessEntry a = new AccessEntry(
-					UUID.randomUUID(), "PROPERTY", UUID.randomUUID(), Map.of("l", 1));
+					UUID.randomUUID(), ResourceType.PROPERTY, UUID.randomUUID(), Map.of("l", 1));
 			AccessEntry b = new AccessEntry(
-					a.orgId(), "PROPERTY", a.scopeId(), Map.of("l", 6, "m", 3));
+					a.orgId(), ResourceType.PROPERTY, a.scopeId(), Map.of("l", 6, "m", 3));
 
 			List<AccessEntry> result = JwtHydrationService.deduplicateAccess(List.of(a, b));
 
@@ -276,8 +276,8 @@ class JwtHydrationServiceTest {
 		@Test
 		void differentScopeIdsRemainSeparate() {
 			UUID orgId = UUID.randomUUID();
-			AccessEntry a = new AccessEntry(orgId, "PROPERTY", UUID.randomUUID(), Map.of("l", 1));
-			AccessEntry b = new AccessEntry(orgId, "PROPERTY", UUID.randomUUID(), Map.of("l", 2));
+			AccessEntry a = new AccessEntry(orgId, ResourceType.PROPERTY, UUID.randomUUID(), Map.of("l", 1));
+			AccessEntry b = new AccessEntry(orgId, ResourceType.PROPERTY, UUID.randomUUID(), Map.of("l", 2));
 
 			List<AccessEntry> result = JwtHydrationService.deduplicateAccess(List.of(a, b));
 
@@ -292,7 +292,7 @@ class JwtHydrationServiceTest {
 			UUID membershipId = UUID.randomUUID();
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
-			MemberScope scope = memberScope(m, ScopeType.PROPERTY, propId, Map.of("l", "r"));
+			MemberScope scope = memberScope(m, ResourceType.PROPERTY, propId, Map.of("l", "r"));
 			Prop prop = prop(propId, org, userId);
 			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of(m));
 			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of(scope));
@@ -313,7 +313,7 @@ class JwtHydrationServiceTest {
 	void toClaimMapRoundTrip() {
 		UUID orgId = UUID.randomUUID();
 		UUID scopeId = UUID.randomUUID();
-		AccessEntry entry = new AccessEntry(orgId, "PROPERTY", scopeId, Map.of("l", 7, "m", 3));
+		AccessEntry entry = new AccessEntry(orgId, ResourceType.PROPERTY, scopeId, Map.of("l", 7, "m", 3));
 
 		Map<String, Object> map = entry.toClaimMap();
 		AccessEntry back = AccessEntry.fromClaimMap(map);
@@ -349,7 +349,7 @@ class JwtHydrationServiceTest {
 				.build();
 	}
 
-	private static MemberScope memberScope(Membership membership, ScopeType scopeType, UUID scopeId,
+	private static MemberScope memberScope(Membership membership, ResourceType scopeType, UUID scopeId,
 			Map<String, String> permissions) {
 		return MemberScope.builder()
 				.id(UUID.randomUUID())

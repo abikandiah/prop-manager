@@ -8,13 +8,10 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * One entry in the JWT "access" claim: effective permissions for a scope (org or property/unit).
- * JSON-serializable for JWT and request attributes.
- */
+/** One entry in the JWT "access" claim: effective permissions for a scope. */
 public record AccessEntry(
 		UUID orgId,
-		String scopeType,
+		ResourceType scopeType,
 		UUID scopeId,
 		Map<String, Integer> permissions) {
 
@@ -22,24 +19,18 @@ public record AccessEntry(
 		permissions = permissions != null ? Map.copyOf(permissions) : Map.of();
 	}
 
-	/**
-	 * Converts this entry to a map suitable for JWT claim (string keys, UUIDs as strings).
-	 */
 	public Map<String, Object> toClaimMap() {
 		Map<String, Object> map = new LinkedHashMap<>();
 		map.put("orgId", orgId.toString());
-		map.put("scopeType", scopeType);
+		map.put("scopeType", scopeType.name());
 		map.put("scopeId", scopeId.toString());
 		map.put("permissions", new LinkedHashMap<>(permissions));
 		return map;
 	}
 
-	/**
-	 * Builds an AccessEntry from a JWT claim map (e.g. from Jwt.getClaim("access")).
-	 */
 	public static AccessEntry fromClaimMap(Map<String, ?> map) {
 		UUID orgId = UUID.fromString(Objects.requireNonNull((String) map.get("orgId")));
-		String scopeType = (String) map.get("scopeType");
+		ResourceType scopeType = ResourceType.valueOf((String) map.get("scopeType"));
 		UUID scopeId = UUID.fromString(Objects.requireNonNull((String) map.get("scopeId")));
 		Map<String, Integer> perms = new LinkedHashMap<>();
 		Object p = map.get("permissions");
@@ -49,9 +40,6 @@ public record AccessEntry(
 		return new AccessEntry(orgId, scopeType, scopeId, Collections.unmodifiableMap(perms));
 	}
 
-	/**
-	 * Builds a list of AccessEntry from a JWT "access" claim (list of maps).
-	 */
 	@SuppressWarnings("unchecked")
 	public static List<AccessEntry> fromClaimList(List<?> list) {
 		if (list == null || list.isEmpty()) {

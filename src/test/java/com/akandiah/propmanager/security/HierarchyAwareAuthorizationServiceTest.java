@@ -56,9 +56,9 @@ class HierarchyAwareAuthorizationServiceTest {
 	@Test
 	void allow_returnsTrueWhenOrgEntryGrantsAction() {
 		when(hierarchyResolver.resolve(ResourceType.ORG, ORG_ID, ORG_ID))
-				.thenReturn(List.of(new ScopeLevel("ORG", ORG_ID)));
+				.thenReturn(List.of(new ScopeLevel(ResourceType.ORG, ORG_ID)));
 		List<AccessEntry> access = List.of(
-				new AccessEntry(ORG_ID, "ORG", ORG_ID, Map.of(PermissionDomains.LEASES, 1))); // READ
+				new AccessEntry(ORG_ID, ResourceType.ORG, ORG_ID, Map.of(PermissionDomains.LEASES, 1))); // READ
 
 		boolean result = service.allow(access, Actions.READ, PermissionDomains.LEASES,
 				ResourceType.ORG, ORG_ID, ORG_ID);
@@ -69,9 +69,9 @@ class HierarchyAwareAuthorizationServiceTest {
 	@Test
 	void allow_returnsFalseWhenOrgEntryDoesNotGrantAction() {
 		when(hierarchyResolver.resolve(ResourceType.ORG, ORG_ID, ORG_ID))
-				.thenReturn(List.of(new ScopeLevel("ORG", ORG_ID)));
+				.thenReturn(List.of(new ScopeLevel(ResourceType.ORG, ORG_ID)));
 		List<AccessEntry> access = List.of(
-				new AccessEntry(ORG_ID, "ORG", ORG_ID, Map.of(PermissionDomains.LEASES, 1))); // READ only
+				new AccessEntry(ORG_ID, ResourceType.ORG, ORG_ID, Map.of(PermissionDomains.LEASES, 1))); // READ only
 
 		boolean result = service.allow(access, Actions.UPDATE, PermissionDomains.LEASES,
 				ResourceType.ORG, ORG_ID, ORG_ID);
@@ -83,13 +83,13 @@ class HierarchyAwareAuthorizationServiceTest {
 	void allow_returnsTrueWhenScopeInChainGrantsAction() {
 		when(hierarchyResolver.resolve(ResourceType.UNIT, UNIT_ID, ORG_ID))
 				.thenReturn(List.of(
-						new ScopeLevel("UNIT", UNIT_ID),
-						new ScopeLevel("PROPERTY", PROP_ID),
-						new ScopeLevel("ORG", ORG_ID)));
+						new ScopeLevel(ResourceType.UNIT, UNIT_ID),
+						new ScopeLevel(ResourceType.PROPERTY, PROP_ID),
+						new ScopeLevel(ResourceType.ORG, ORG_ID)));
 		// No UNIT entry; PROPERTY grants READ
 		List<AccessEntry> access = List.of(
-				new AccessEntry(ORG_ID, "ORG", ORG_ID, Map.of(PermissionDomains.LEASES, 1)),
-				new AccessEntry(ORG_ID, "PROPERTY", PROP_ID, Map.of(PermissionDomains.LEASES, 7))); // r+c+u
+				new AccessEntry(ORG_ID, ResourceType.ORG, ORG_ID, Map.of(PermissionDomains.LEASES, 1)),
+				new AccessEntry(ORG_ID, ResourceType.PROPERTY, PROP_ID, Map.of(PermissionDomains.LEASES, 7))); // r+c+u
 
 		boolean result = service.allow(access, Actions.READ, PermissionDomains.LEASES,
 				ResourceType.UNIT, UNIT_ID, ORG_ID);
@@ -102,7 +102,7 @@ class HierarchyAwareAuthorizationServiceTest {
 		when(hierarchyResolver.resolve(ResourceType.PROPERTY, PROP_ID, ORG_ID))
 				.thenReturn(List.of());
 		List<AccessEntry> access = List.of(
-				new AccessEntry(ORG_ID, "PROPERTY", PROP_ID, Map.of(PermissionDomains.LEASES, 15)));
+				new AccessEntry(ORG_ID, ResourceType.PROPERTY, PROP_ID, Map.of(PermissionDomains.LEASES, 15)));
 
 		boolean result = service.allow(access, Actions.READ, PermissionDomains.LEASES,
 				ResourceType.PROPERTY, PROP_ID, ORG_ID);

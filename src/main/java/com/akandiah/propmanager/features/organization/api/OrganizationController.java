@@ -22,7 +22,6 @@ import com.akandiah.propmanager.features.organization.api.dto.CreateMembershipRe
 import com.akandiah.propmanager.features.organization.api.dto.CreateOrganizationRequest;
 import com.akandiah.propmanager.features.organization.api.dto.MembershipResponse;
 import com.akandiah.propmanager.features.organization.api.dto.OrganizationResponse;
-import com.akandiah.propmanager.features.organization.api.dto.UpdateMembershipRequest;
 import com.akandiah.propmanager.features.organization.api.dto.UpdateOrganizationRequest;
 import com.akandiah.propmanager.features.organization.service.MembershipService;
 import com.akandiah.propmanager.features.organization.service.OrganizationService;
@@ -104,16 +103,6 @@ public class OrganizationController {
 			@PathVariable UUID id,
 			@Valid @RequestBody CreateMembershipRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(membershipService.create(id, request));
-	}
-
-	@PatchMapping("/{id}/members/{membershipId}")
-	@Operation(summary = "Update a member's membership")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#id, authentication)")
-	public ResponseEntity<MembershipResponse> updateMember(
-			@PathVariable UUID id,
-			@PathVariable UUID membershipId,
-			@Valid @RequestBody UpdateMembershipRequest request) {
-		return ResponseEntity.ok(membershipService.update(id, membershipId, request));
 	}
 
 	@DeleteMapping("/{id}/members/{membershipId}")

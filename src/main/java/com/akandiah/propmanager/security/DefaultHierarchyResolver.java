@@ -16,9 +16,7 @@ import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Resolves org → property → unit hierarchy using Unit and Prop repositories.
- */
+/** Resolves org → property → unit hierarchy using Unit and Prop repositories. */
 @Component
 @RequiredArgsConstructor
 public class DefaultHierarchyResolver implements HierarchyResolver {
@@ -30,7 +28,7 @@ public class DefaultHierarchyResolver implements HierarchyResolver {
 	@Transactional(readOnly = true)
 	public List<ScopeLevel> resolve(ResourceType resourceType, UUID resourceId, UUID orgId) {
 		return switch (resourceType) {
-			case ORG -> List.of(new ScopeLevel("ORG", orgId));
+			case ORG -> List.of(new ScopeLevel(ResourceType.ORG, orgId));
 			case PROPERTY -> resolveProperty(resourceId, orgId);
 			case UNIT -> resolveUnit(resourceId, orgId);
 		};
@@ -41,8 +39,8 @@ public class DefaultHierarchyResolver implements HierarchyResolver {
 			return List.of();
 		}
 		List<ScopeLevel> chain = new ArrayList<>();
-		chain.add(new ScopeLevel("PROPERTY", propId));
-		chain.add(new ScopeLevel("ORG", orgId));
+		chain.add(new ScopeLevel(ResourceType.PROPERTY, propId));
+		chain.add(new ScopeLevel(ResourceType.ORG, orgId));
 		return chain;
 	}
 
@@ -55,9 +53,9 @@ public class DefaultHierarchyResolver implements HierarchyResolver {
 					UUID propId = prop.getId();
 					UUID resolvedOrgId = prop.getOrganization().getId();
 					List<ScopeLevel> chain = new ArrayList<>();
-					chain.add(new ScopeLevel("UNIT", unitId));
-					chain.add(new ScopeLevel("PROPERTY", propId));
-					chain.add(new ScopeLevel("ORG", resolvedOrgId));
+					chain.add(new ScopeLevel(ResourceType.UNIT, unitId));
+					chain.add(new ScopeLevel(ResourceType.PROPERTY, propId));
+					chain.add(new ScopeLevel(ResourceType.ORG, resolvedOrgId));
 					return chain;
 				})
 				.orElse(List.of());

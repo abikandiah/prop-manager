@@ -19,7 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMembershipRequest;
-import com.akandiah.propmanager.features.organization.api.dto.UpdateMembershipRequest;
 import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.organization.domain.Membership;
 import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
@@ -104,33 +103,6 @@ class MembershipServiceTest {
 				.hasMessageContaining("User");
 	}
 
-	@Test
-	void update_checksVersionAndSaves() {
-		UUID id = UUID.randomUUID();
-		Membership m = membership(id, 1);
-		UpdateMembershipRequest req = new UpdateMembershipRequest(1);
-
-		when(membershipRepository.findById(id)).thenReturn(Optional.of(m));
-		when(membershipRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-		var result = service.update(id, req);
-
-		verify(membershipRepository).save(m);
-		assertThat(result.id()).isEqualTo(id);
-	}
-
-	@Test
-	void update_throwsOnVersionMismatch() {
-		UUID id = UUID.randomUUID();
-		Membership m = membership(id, 2);
-		UpdateMembershipRequest req = new UpdateMembershipRequest(1); // stale
-
-		when(membershipRepository.findById(id)).thenReturn(Optional.of(m));
-
-		assertThatThrownBy(() -> service.update(id, req))
-				.isInstanceOf(jakarta.persistence.OptimisticLockException.class);
-	}
-
 	private static Organization org(UUID id) {
 		return Organization.builder()
 				.id(id)
@@ -150,14 +122,4 @@ class MembershipServiceTest {
 				.build();
 	}
 
-	private static Membership membership(UUID id, int version) {
-		return Membership.builder()
-				.id(id)
-				.user(user(UUID.randomUUID()))
-				.organization(org(UUID.randomUUID()))
-				.version(version)
-				.createdAt(Instant.now())
-				.updatedAt(Instant.now())
-				.build();
-	}
 }

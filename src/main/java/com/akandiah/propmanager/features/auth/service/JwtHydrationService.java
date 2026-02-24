@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.common.permission.Actions;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.permission.PermissionDomains;
 import com.akandiah.propmanager.common.permission.PermissionMaskUtil;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
@@ -20,7 +21,6 @@ import com.akandiah.propmanager.features.organization.domain.MemberScope;
 import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.organization.domain.Membership;
 import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
-import com.akandiah.propmanager.features.organization.domain.ScopeType;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
@@ -100,10 +100,10 @@ public class JwtHydrationService {
 			List<MemberScope> scopes = scopesByMembership.getOrDefault(m.getId(), List.of());
 			for (MemberScope scope : scopes) {
 				Map<String, Integer> masks = permissionsToMasks(scope.getPermissions());
-				UUID scopeId = scope.getScopeType() == ScopeType.ORG
+				UUID scopeId = scope.getScopeType() == ResourceType.ORG
 						? orgId
 						: scope.getScopeId();
-				access.add(new AccessEntry(orgId, scope.getScopeType().toResourceType().name(), scopeId, masks));
+				access.add(new AccessEntry(orgId, scope.getScopeType(), scopeId, masks));
 			}
 		}
 	}
@@ -112,7 +112,7 @@ public class JwtHydrationService {
 		List<Prop> ownedProps = propRepository.findByOwnerIdWithOrganization(userId);
 		for (Prop prop : ownedProps) {
 			access.add(new AccessEntry(
-					prop.getOrganization().getId(), "PROPERTY", prop.getId(), OWNER_MASKS));
+					prop.getOrganization().getId(), ResourceType.PROPERTY, prop.getId(), OWNER_MASKS));
 		}
 	}
 
@@ -121,7 +121,7 @@ public class JwtHydrationService {
 		for (LeaseTenant lt : tenancies) {
 			Unit unit = lt.getLease().getUnit();
 			UUID orgId = unit.getProp().getOrganization().getId();
-			access.add(new AccessEntry(orgId, "UNIT", unit.getId(), TENANT_MASKS));
+			access.add(new AccessEntry(orgId, ResourceType.UNIT, unit.getId(), TENANT_MASKS));
 		}
 	}
 
@@ -131,7 +131,7 @@ public class JwtHydrationService {
 		}
 		Map<String, AccessEntry> merged = new LinkedHashMap<>();
 		for (AccessEntry e : rawAccess) {
-			String key = e.orgId() + ":" + e.scopeType() + ":" + e.scopeId();
+			String key = e.orgId() + ":" + e.scopeType().name() + ":" + e.scopeId();
 			merged.merge(key, e, JwtHydrationService::mergeEntries);
 		}
 		return List.copyOf(merged.values());

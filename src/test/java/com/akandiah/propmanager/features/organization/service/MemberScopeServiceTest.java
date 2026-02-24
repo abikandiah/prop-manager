@@ -25,7 +25,7 @@ import com.akandiah.propmanager.features.organization.domain.MemberScopeReposito
 import com.akandiah.propmanager.features.organization.domain.Membership;
 import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
-import com.akandiah.propmanager.features.organization.domain.ScopeType;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRepository;
@@ -64,7 +64,7 @@ class MemberScopeServiceTest {
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membership(membershipId);
 		Map<String, String> perms = Map.of("l", "crud");
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ScopeType.PROPERTY, scopeId, perms, null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, perms, null);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -89,7 +89,7 @@ class MemberScopeServiceTest {
 		Map<String, String> templatePerms = Map.of("m", "ru", "f", "r");
 		PermissionTemplate template = template(null, templatePerms);
 		template.setId(templateId);
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ScopeType.PROPERTY, scopeId, null, templateId);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, null, templateId);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(permissionTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
@@ -109,7 +109,7 @@ class MemberScopeServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membership(membershipId);
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ScopeType.PROPERTY, scopeId, null, null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, null, null);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -130,7 +130,7 @@ class MemberScopeServiceTest {
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membership(membershipId);
 		Map<String, String> invalidPerms = Map.of("l", "x"); // invalid letter
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ScopeType.PROPERTY, scopeId, invalidPerms, null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, invalidPerms, null);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))

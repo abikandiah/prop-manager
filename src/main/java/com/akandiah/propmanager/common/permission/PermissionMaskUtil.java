@@ -1,21 +1,13 @@
 package com.akandiah.propmanager.common.permission;
 
-/**
- * Converts permission strings (e.g. "cru") to/from bitmasks for JWT and authorization checks.
- */
+/** Converts permission strings (e.g. "cru") to/from bitmasks for JWT and authorization checks. */
 public final class PermissionMaskUtil {
 
 	private PermissionMaskUtil() {
 		throw new UnsupportedOperationException("Utility class");
 	}
 
-	/**
-	 * Parses a string of action letters into a single bitmask. Order-independent; invalid
-	 * characters are ignored.
-	 *
-	 * @param letters e.g. "cru" or "ruc" → create + read + update
-	 * @return combined mask (0 if null or empty)
-	 */
+	/** Parses action letters into a single bitmask. Order-independent; invalid characters ignored. */
 	public static int parseToMask(String letters) {
 		if (letters == null || letters.isEmpty()) {
 			return 0;
@@ -30,13 +22,7 @@ public final class PermissionMaskUtil {
 		return mask;
 	}
 
-	/**
-	 * Converts a bitmask back to a string of letters (r, c, u, d) for display or audit.
-	 * Order is fixed: r, c, u, d.
-	 *
-	 * @param mask combined permission mask
-	 * @return e.g. "cru" or "" if no bits set
-	 */
+	/** Converts a bitmask back to letters (fixed order: r, c, u, d). */
 	public static String maskToLetters(int mask) {
 		if (mask == 0) {
 			return "";
@@ -57,13 +43,7 @@ public final class PermissionMaskUtil {
 		return sb.toString();
 	}
 
-	/**
-	 * Checks whether the user's mask includes the required action (and possibly more).
-	 *
-	 * @param userMask       the permission mask from the JWT or DB
-	 * @param requiredAction one or more actions (e.g. Actions.UPDATE or Actions.READ | Actions.UPDATE)
-	 * @return true if all bits in requiredAction are set in userMask
-	 */
+	/** Returns true if all bits in requiredAction are set in userMask. */
 	public static boolean hasAccess(int userMask, int requiredAction) {
 		return (userMask & requiredAction) == requiredAction;
 	}

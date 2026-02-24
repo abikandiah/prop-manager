@@ -19,11 +19,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Runs after JWT authentication. If the token already has an "access" claim (e.g. dev),
- * sets it as a request attribute. Otherwise resolves the user and hydrates permissions
- * from DB (prod) and sets the attribute. Piece 8 (authorization) reads from this attribute.
- */
+/** Hydrates the access list from JWT claim (dev) or DB (prod) and sets it as a request attribute. */
 @Component
 @Slf4j
 @RequiredArgsConstructor

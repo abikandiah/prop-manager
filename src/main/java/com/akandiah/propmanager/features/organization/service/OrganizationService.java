@@ -16,10 +16,10 @@ import com.akandiah.propmanager.features.organization.api.dto.CreateOrganization
 import com.akandiah.propmanager.features.organization.api.dto.MembershipResponse;
 import com.akandiah.propmanager.features.organization.api.dto.OrganizationResponse;
 import com.akandiah.propmanager.features.organization.api.dto.UpdateOrganizationRequest;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
-import com.akandiah.propmanager.features.organization.domain.ScopeType;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -74,7 +74,7 @@ public class OrganizationService {
 		MembershipResponse membership = membershipService.create(org.getId(),
 				new CreateMembershipRequest(creatorUserId));
 		memberScopeService.create(membership.id(), new CreateMemberScopeRequest(
-				ScopeType.ORG,
+				ResourceType.ORG,
 				org.getId(),
 				Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud"),
 				null));

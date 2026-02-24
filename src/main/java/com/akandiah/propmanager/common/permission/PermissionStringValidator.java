@@ -7,23 +7,13 @@ import java.util.Map;
 import com.akandiah.propmanager.common.exception.InvalidPermissionStringException;
 import com.akandiah.propmanager.common.exception.InvalidPermissionStringException.PermissionValidationError;
 
-/**
- * Validates a permissions map (domain key → action letters) for use in templates,
- * membership, and member_scope. Uses Piece 1 constants: allowed domain keys
- * ({@link PermissionDomains#VALID_KEYS}) and action letters ({@link Actions#VALID_LETTERS}).
- */
+/** Validates a permissions map (domain key → action letters) against allowed keys and letters. */
 public final class PermissionStringValidator {
 
 	private PermissionStringValidator() {
 		throw new UnsupportedOperationException("Utility class");
 	}
 
-	/**
-	 * Checks whether the permissions map is valid (all keys and action letters allowed).
-	 *
-	 * @param permissions map from domain key (e.g. "l", "m", "f") to action string (e.g. "cru")
-	 * @return true if null, empty, or all entries valid
-	 */
 	public static boolean isValid(Map<String, String> permissions) {
 		if (permissions == null || permissions.isEmpty()) {
 			return true;
@@ -44,14 +34,7 @@ public final class PermissionStringValidator {
 		return true;
 	}
 
-	/**
-	 * Validates the permissions map and throws {@link InvalidPermissionStringException}
-	 * with field-level errors if invalid. Use in services so GlobalExceptionHandler
-	 * returns 400 with an {@code errors} array.
-	 *
-	 * @param permissions map from domain key to action letters (e.g. "l" → "cru")
-	 * @throws InvalidPermissionStringException if any key or action letter is invalid
-	 */
+	/** Validates and throws {@link InvalidPermissionStringException} with field-level errors if invalid. */
 	public static void validate(Map<String, String> permissions) {
 		if (permissions == null || permissions.isEmpty()) {
 			return;
@@ -61,7 +44,7 @@ public final class PermissionStringValidator {
 			String key = e.getKey();
 			if (!PermissionDomains.VALID_KEYS.contains(key)) {
 				errors.add(new PermissionValidationError("permissions." + key,
-						"Unknown domain key: '" + key + "'. Allowed: l, m, f"));
+						"Unknown domain key: '" + key + "'. Allowed: l, m, f, t"));
 				continue;
 			}
 			String letters = e.getValue();

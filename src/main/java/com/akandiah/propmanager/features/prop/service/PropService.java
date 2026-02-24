@@ -7,11 +7,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilter;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
-import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilter;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
+import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
@@ -33,17 +35,19 @@ public class PropService {
 	private final UnitRepository unitRepository;
 	private final AssetRepository assetRepository;
 	private final LeaseRepository leaseRepository;
+	private final MemberScopeRepository memberScopeRepository;
 
 	public PropService(PropRepository repository, AddressRepository addressRepository,
 			OrganizationRepository organizationRepository,
 			UnitRepository unitRepository, AssetRepository assetRepository,
-			LeaseRepository leaseRepository) {
+			LeaseRepository leaseRepository, MemberScopeRepository memberScopeRepository) {
 		this.repository = repository;
 		this.addressRepository = addressRepository;
 		this.organizationRepository = organizationRepository;
 		this.unitRepository = unitRepository;
 		this.assetRepository = assetRepository;
 		this.leaseRepository = leaseRepository;
+		this.memberScopeRepository = memberScopeRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -155,6 +159,7 @@ public class PropService {
 		DeleteGuardUtil.requireNoChildren("Prop", id, assetRepository.countByProp_Id(id), "asset(s)", "Delete those first.");
 		DeleteGuardUtil.requireNoChildren("Prop", id, leaseRepository.countByProperty_Id(id), "lease(s)", "Delete those first.");
 
+		memberScopeRepository.deleteByScopeTypeAndScopeId(ResourceType.PROPERTY, id);
 		Address address = prop.getAddress();
 		repository.deleteById(id);
 		addressRepository.delete(address);

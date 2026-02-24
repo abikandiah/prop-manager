@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.akandiah.propmanager.common.permission.AccessListUtil;
-import com.akandiah.propmanager.common.permission.AccessListUtil.LeaseAccessFilter;
+import com.akandiah.propmanager.common.permission.AccessListUtil.ScopedAccessFilter;
 import com.akandiah.propmanager.common.permission.Actions;
 import com.akandiah.propmanager.common.permission.PermissionDomains;
 import com.akandiah.propmanager.features.lease.api.dto.CreateLeaseRequest;
@@ -51,16 +51,15 @@ public class LeaseController {
 			@RequestParam(required = false) UUID unitId,
 			@RequestParam(required = false) UUID propertyId,
 			HttpServletRequest request) {
-		LeaseAccessFilter baseFilter = AccessListUtil.forLeases(
+		ScopedAccessFilter baseFilter = AccessListUtil.forScopedResources(
 				AccessListUtil.fromRequest(request), PermissionDomains.LEASES, Actions.READ);
 		if (unitId != null) {
-			// Intersect base filter with the requested unitId
-			LeaseAccessFilter unitFilter = new LeaseAccessFilter(
+			ScopedAccessFilter unitFilter = new ScopedAccessFilter(
 					baseFilter.orgIds(), baseFilter.propIds(), Set.of(unitId));
 			return ResponseEntity.ok(service.findAll(unitFilter));
 		}
 		if (propertyId != null) {
-			LeaseAccessFilter propFilter = new LeaseAccessFilter(
+			ScopedAccessFilter propFilter = new ScopedAccessFilter(
 					baseFilter.orgIds(), Set.of(propertyId), baseFilter.unitIds());
 			return ResponseEntity.ok(service.findAll(propFilter));
 		}

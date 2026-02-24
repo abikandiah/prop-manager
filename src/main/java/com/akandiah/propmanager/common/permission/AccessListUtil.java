@@ -7,10 +7,9 @@ import java.util.UUID;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-/**
- * Utilities for building per-resource-type access filters from a hydrated access list.
- * Used by list endpoints to return only rows the caller is authorized to see.
- */
+import com.akandiah.propmanager.security.JwtAccessHydrationFilter;
+
+/** Builds per-resource-type access filters from a hydrated access list for list endpoints. */
 public final class AccessListUtil {
 
 	private AccessListUtil() {}
@@ -23,13 +22,8 @@ public final class AccessListUtil {
 		}
 	}
 
-	public record UnitAccessFilter(Set<UUID> orgIds, Set<UUID> propIds, Set<UUID> unitIds) {
-		public boolean isEmpty() {
-			return orgIds.isEmpty() && propIds.isEmpty() && unitIds.isEmpty();
-		}
-	}
-
-	public record LeaseAccessFilter(Set<UUID> orgIds, Set<UUID> propIds, Set<UUID> unitIds) {
+	/** Filter for resources scoped at org, property, or unit level (units, leases, etc.). */
+	public record ScopedAccessFilter(Set<UUID> orgIds, Set<UUID> propIds, Set<UUID> unitIds) {
 		public boolean isEmpty() {
 			return orgIds.isEmpty() && propIds.isEmpty() && unitIds.isEmpty();
 		}
@@ -37,12 +31,6 @@ public final class AccessListUtil {
 
 	// ──────────────────────── Builder helpers ────────────────────────
 
-	/**
-	 * Builds a filter for the property list endpoint.
-	 * ORG entries grant access to all properties in the org.
-	 * PROPERTY entries grant access to that specific property.
-	 * UNIT entries do not grant property-list access.
-	 */
 	public static PropAccessFilter forProps(List<AccessEntry> access, String domain, int action) {
 		Set<UUID> orgIds = new HashSet<>();
 		Set<UUID> propIds = new HashSet<>();
@@ -50,21 +38,16 @@ public final class AccessListUtil {
 			int mask = e.permissions().getOrDefault(domain, 0);
 			if (!PermissionMaskUtil.hasAccess(mask, action)) continue;
 			switch (e.scopeType()) {
-				case "ORG" -> orgIds.add(e.orgId());
-				case "PROPERTY" -> propIds.add(e.scopeId());
-				// UNIT entries do not grant property-list access
+				case ORG -> orgIds.add(e.orgId());
+				case PROPERTY -> propIds.add(e.scopeId());
+				case UNIT -> {}
 			}
 		}
 		return new PropAccessFilter(orgIds, propIds);
 	}
 
-	/**
-	 * Builds a filter for the unit list endpoint.
-	 * ORG entries grant access to all units in the org (via their property).
-	 * PROPERTY entries grant access to all units in that property.
-	 * UNIT entries grant access to that specific unit.
-	 */
-	public static UnitAccessFilter forUnits(List<AccessEntry> access, String domain, int action) {
+	/** Builds a filter collecting org/property/unit IDs from the access list. */
+	public static ScopedAccessFilter forScopedResources(List<AccessEntry> access, String domain, int action) {
 		Set<UUID> orgIds = new HashSet<>();
 		Set<UUID> propIds = new HashSet<>();
 		Set<UUID> unitIds = new HashSet<>();
@@ -72,45 +55,19 @@ public final class AccessListUtil {
 			int mask = e.permissions().getOrDefault(domain, 0);
 			if (!PermissionMaskUtil.hasAccess(mask, action)) continue;
 			switch (e.scopeType()) {
-				case "ORG" -> orgIds.add(e.orgId());
-				case "PROPERTY" -> propIds.add(e.scopeId());
-				case "UNIT" -> unitIds.add(e.scopeId());
+				case ORG -> orgIds.add(e.orgId());
+				case PROPERTY -> propIds.add(e.scopeId());
+				case UNIT -> unitIds.add(e.scopeId());
 			}
 		}
-		return new UnitAccessFilter(orgIds, propIds, unitIds);
-	}
-
-	/**
-	 * Builds a filter for the lease list endpoint.
-	 * ORG entries grant access to all leases in the org.
-	 * PROPERTY entries grant access to all leases for units in that property.
-	 * UNIT entries grant access to all leases for that specific unit.
-	 */
-	public static LeaseAccessFilter forLeases(List<AccessEntry> access, String domain, int action) {
-		Set<UUID> orgIds = new HashSet<>();
-		Set<UUID> propIds = new HashSet<>();
-		Set<UUID> unitIds = new HashSet<>();
-		for (AccessEntry e : access) {
-			int mask = e.permissions().getOrDefault(domain, 0);
-			if (!PermissionMaskUtil.hasAccess(mask, action)) continue;
-			switch (e.scopeType()) {
-				case "ORG" -> orgIds.add(e.orgId());
-				case "PROPERTY" -> propIds.add(e.scopeId());
-				case "UNIT" -> unitIds.add(e.scopeId());
-			}
-		}
-		return new LeaseAccessFilter(orgIds, propIds, unitIds);
+		return new ScopedAccessFilter(orgIds, propIds, unitIds);
 	}
 
 	// ──────────────────────── Request helper ────────────────────────
 
-	/**
-	 * Extracts the hydrated access list from the current request attribute.
-	 * Returns an empty list if the attribute is absent (e.g. in tests without the filter).
-	 */
 	@SuppressWarnings("unchecked")
 	public static List<AccessEntry> fromRequest(HttpServletRequest request) {
-		Object attr = request.getAttribute("com.akandiah.propmanager.jwt.access");
+		Object attr = request.getAttribute(JwtAccessHydrationFilter.REQUEST_ATTRIBUTE_ACCESS);
 		return attr instanceof List<?> list ? (List<AccessEntry>) list : List.of();
 	}
 }

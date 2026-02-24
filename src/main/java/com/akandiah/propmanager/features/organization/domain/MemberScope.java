@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
+import com.akandiah.propmanager.common.permission.ResourceType;
+
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
@@ -31,10 +33,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Granular scope for a membership. When present, the membership's role applies only
- * to these (scopeType, scopeId) resources within the org. No rows = org-wide access.
- */
+/** Granular scope for a membership: (scopeType, scopeId) → permissions within the org. */
 @Entity
 @Table(name = "member_scopes", uniqueConstraints = {
 		@UniqueConstraint(name = "uk_member_scopes_membership_scope", columnNames = { "membership_id", "scope_type", "scope_id" })
@@ -60,7 +59,7 @@ public class MemberScope {
 
 	@Column(name = "scope_type", nullable = false, length = 32)
 	@Enumerated(EnumType.STRING)
-	private ScopeType scopeType;
+	private ResourceType scopeType;
 
 	@Column(name = "scope_id", nullable = false)
 	private UUID scopeId;

@@ -7,11 +7,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
-import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.organization.api.dto.CreateMembershipRequest;
 import com.akandiah.propmanager.features.organization.api.dto.MembershipResponse;
-import com.akandiah.propmanager.features.organization.api.dto.UpdateMembershipRequest;
 import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.organization.domain.Membership;
 import com.akandiah.propmanager.features.organization.domain.MembershipRepository;
@@ -82,27 +80,6 @@ public class MembershipService {
 			memberScopeService.create(membership.id(), initialScope);
 		}
 		return membership;
-	}
-
-	@Transactional
-	public MembershipResponse update(UUID id, UpdateMembershipRequest request) {
-		Membership m = membershipRepository.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException("Membership", id));
-		OptimisticLockingUtil.requireVersionMatch("Membership", id, m.getVersion(), request.version());
-		m = membershipRepository.save(m);
-		return MembershipResponse.from(m);
-	}
-
-	/**
-	 * Updates a membership, verifying it belongs to the given organization.
-	 */
-	@Transactional
-	public MembershipResponse update(UUID organizationId, UUID membershipId, UpdateMembershipRequest request) {
-		Membership m = membershipRepository.findByIdAndOrganizationId(membershipId, organizationId)
-				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
-		OptimisticLockingUtil.requireVersionMatch("Membership", membershipId, m.getVersion(), request.version());
-		m = membershipRepository.save(m);
-		return MembershipResponse.from(m);
 	}
 
 	@Transactional

@@ -7,10 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
+import com.akandiah.propmanager.features.organization.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.api.dto.CreateUnitRequest;
@@ -26,13 +28,16 @@ public class UnitService {
 	private final PropRepository propRepository;
 	private final AssetRepository assetRepository;
 	private final LeaseRepository leaseRepository;
+	private final MemberScopeRepository memberScopeRepository;
 
 	public UnitService(UnitRepository unitRepository, PropRepository propRepository,
-			AssetRepository assetRepository, LeaseRepository leaseRepository) {
+			AssetRepository assetRepository, LeaseRepository leaseRepository,
+			MemberScopeRepository memberScopeRepository) {
 		this.unitRepository = unitRepository;
 		this.propRepository = propRepository;
 		this.assetRepository = assetRepository;
 		this.leaseRepository = leaseRepository;
+		this.memberScopeRepository = memberScopeRepository;
 	}
 
 	@Transactional(readOnly = true)
@@ -139,6 +144,7 @@ public class UnitService {
 		DeleteGuardUtil.requireNoChildren("Unit", id, assetRepository.countByUnit_Id(id), "asset(s)", "Delete those first.");
 		DeleteGuardUtil.requireNoChildren("Unit", id, leaseRepository.countByUnit_Id(id), "lease(s)", "Delete those first.");
 
+		memberScopeRepository.deleteByScopeTypeAndScopeId(ResourceType.UNIT, id);
 		unitRepository.deleteById(id);
 	}
 }
