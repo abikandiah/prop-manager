@@ -1,7 +1,6 @@
 package com.akandiah.propmanager.features.invite.api;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -63,7 +62,7 @@ public class InviteController {
 		User inviter = jwtUserResolver.resolve(jwt);
 
 		InviteResponse response = inviteService.createAndSendInvite(request.email(), request.targetType(),
-				request.targetId(), request.role(), inviter, request.metadata());
+				request.targetId(), request.attributes(), inviter);
 
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
@@ -81,10 +80,8 @@ public class InviteController {
 	@PostMapping("/api/invites/{id}/resend")
 	@PreAuthorize("@inviteAuthService.canManageInvite(#id)")
 	@Operation(summary = "Resend an invitation email")
-	public ResponseEntity<InviteResponse> resendInvite(@PathVariable UUID id,
-			@RequestBody(required = false) Map<String, Object> metadata) {
-
-		return ResponseEntity.ok(inviteService.resendInvite(id, metadata));
+	public ResponseEntity<InviteResponse> resendInvite(@PathVariable UUID id) {
+		return ResponseEntity.ok(inviteService.resendInvite(id));
 	}
 
 	@DeleteMapping("/api/invites/{id}")

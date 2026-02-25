@@ -19,7 +19,5 @@ public record CreateInviteRequest(
 
 		@NotNull(message = "Target ID is required") UUID targetId,
 
-		@NotBlank(message = "Role is required") String role,
-
-		Map<String, Object> metadata) {
+		Map<String, Object> attributes) {
 }

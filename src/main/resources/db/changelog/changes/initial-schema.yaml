@@ -1419,3 +1419,26 @@ databaseChangeLog:
         - dropColumn:
             tableName: memberships
             columnName: permissions
+
+  # Invite: replace role column with flexible JSON attributes map
+  - changeSet:
+      id: "add-invite-attributes-column"
+      author: "dev"
+      changes:
+        - addColumn:
+            tableName: invite
+            columns:
+              - column:
+                  name: attributes
+                  type: jsonb
+                  defaultValue: '{}'
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              UPDATE invite
+              SET attributes = jsonb_build_object('role', role)
+              WHERE role IS NOT NULL
+        - dropColumn:
+            tableName: invite
+            columnName: role

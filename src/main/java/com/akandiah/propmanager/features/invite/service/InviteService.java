@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
-import com.akandiah.propmanager.config.AppProperties;
 import com.akandiah.propmanager.config.InviteProperties;
 import com.akandiah.propmanager.features.invite.api.dto.InvitePreviewResponse;
 import com.akandiah.propmanager.features.invite.api.dto.InvitePreviewResponse.LeasePreview;
@@ -55,7 +54,6 @@ public class InviteService {
 	private final LeaseRepository leaseRepository;
 	private final ApplicationEventPublisher eventPublisher;
 	private final InviteProperties inviteProperties;
-	private final AppProperties appProperties;
 
 	private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -65,14 +63,13 @@ public class InviteService {
 	 * @param email      Recipient email address
 	 * @param targetType Type of resource being invited to
 	 * @param targetId   ID of the resource
-	 * @param role       Role/permission level
+	 * @param attributes Domain-specific context persisted on the invite and used for email templates
 	 * @param invitedBy  User sending the invite
-	 * @param metadata   Additional context data for the email template
 	 * @return Created invite
 	 */
 	@Transactional
-	public InviteResponse createAndSendInvite(String email, TargetType targetType, UUID targetId, String role,
-			User invitedBy, Map<String, Object> metadata) {
+	public InviteResponse createAndSendInvite(String email, TargetType targetType, UUID targetId,
+			Map<String, Object> attributes, User invitedBy) {
 
 		if (inviteRepository.existsByEmailAndTargetTypeAndTargetIdAndStatus(email, targetType, targetId,
 				InviteStatus.PENDING)) {
@@ -85,7 +82,7 @@ public class InviteService {
 				.token(generateSecureToken())
 				.targetType(targetType)
 				.targetId(targetId)
-				.role(role)
+				.attributes(attributes != null ? attributes : new HashMap<>())
 				.invitedBy(invitedBy)
 				.status(InviteStatus.PENDING)
 				.expiresAt(now.plus(Duration.ofHours(inviteProperties.expiryHours())))
@@ -95,7 +92,7 @@ public class InviteService {
 		invite = inviteRepository.save(invite);
 
 		// Email is sent after this transaction commits — see NotificationDispatcher
-		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), false, withInviteLink(invite, metadata)));
+		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), false));
 
 		log.info("Invite created: id={}, email={}, targetType={}, targetId={}", invite.getId(), email, targetType,
 				targetId);
@@ -105,13 +102,13 @@ public class InviteService {
 
 	/**
 	 * Resend an existing invitation.
+	 * Template context is loaded from the persisted invite attributes by the dispatcher.
 	 *
 	 * @param inviteId Invite to resend
-	 * @param metadata Additional context data for the email template
 	 * @return Updated invite
 	 */
 	@Transactional
-	public InviteResponse resendInvite(UUID inviteId, Map<String, Object> metadata) {
+	public InviteResponse resendInvite(UUID inviteId) {
 		Invite invite = inviteRepository.findById(inviteId)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite", inviteId));
 
@@ -137,7 +134,7 @@ public class InviteService {
 		invite = inviteRepository.save(invite);
 
 		// Email is sent after this transaction commits — see NotificationDispatcher
-		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), true, withInviteLink(invite, metadata)));
+		eventPublisher.publishEvent(new InviteEmailRequestedEvent(invite.getId(), true));
 
 		log.info("Invite resend requested: id={}, email={}", inviteId, invite.getEmail());
 
@@ -290,12 +287,6 @@ public class InviteService {
 
 		log.info("Expired {} old invites", expiredInvites.size());
 		return expiredInvites.size();
-	}
-
-	private Map<String, Object> withInviteLink(Invite invite, Map<String, Object> metadata) {
-		Map<String, Object> enriched = new HashMap<>(metadata != null ? metadata : Map.of());
-		enriched.put("inviteLink", appProperties.baseUrl() + "/invite/" + invite.getToken());
-		return enriched;
 	}
 
 	private String generateSecureToken() {

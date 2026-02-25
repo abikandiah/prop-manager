@@ -1,9 +1,13 @@
 package com.akandiah.propmanager.features.invite.domain;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import com.akandiah.propmanager.features.user.domain.User;
 
@@ -62,8 +66,10 @@ public class Invite {
 	@Column(name = "target_id", nullable = false)
 	private UUID targetId;
 
-	@Column(nullable = false, length = 64)
-	private String role;
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "attributes", columnDefinition = "jsonb")
+	@Builder.Default
+	private Map<String, Object> attributes = new HashMap<>();
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "invited_by_id", nullable = false)

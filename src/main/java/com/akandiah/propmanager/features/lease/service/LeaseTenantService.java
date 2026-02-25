@@ -2,6 +2,7 @@ package com.akandiah.propmanager.features.lease.service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +29,7 @@ import com.akandiah.propmanager.features.lease.api.dto.LeaseTenantResponse;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantRole;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.common.notification.NotificationReferenceType;
@@ -45,6 +47,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class LeaseTenantService {
+
+	// Key constants for invite attributes owned by this domain
+	private static final String ATTR_ROLE = "role";
 
 	private final LeaseTenantRepository leaseTenantRepository;
 	private final LeaseRepository leaseRepository;
@@ -93,13 +98,16 @@ public class LeaseTenantService {
 		List<LeaseTenant> created = new ArrayList<>();
 
 		for (InviteLeaseTenantRequest.TenantInviteEntry entry : request.invites()) {
+			Map<String, Object> attributes = new HashMap<>();
+			attributes.put(ATTR_ROLE, entry.role().name());
+			attributes.put("leaseId", leaseId.toString());
+
 			InviteResponse inviteResponse = inviteService.createAndSendInvite(
 					entry.email(),
 					TargetType.LEASE,
 					leaseId,
-					entry.role().name(),
-					invitedBy,
-					Map.of("leaseId", leaseId.toString()));
+					attributes,
+					invitedBy);
 
 			// Fetch the entity so we can set the FK on LeaseTenant
 			Invite invite = inviteRepository.findById(inviteResponse.id())
@@ -138,7 +146,7 @@ public class LeaseTenantService {
 			throw new IllegalStateException("This tenant has already accepted their invitation");
 		}
 
-		inviteService.resendInvite(leaseTenant.getInvite().getId(), Map.of("leaseId", leaseId.toString()));
+		inviteService.resendInvite(leaseTenant.getInvite().getId());
 
 		// Reload to pick up the updated lastResentAt from the invite
 		LeaseTenant refreshed = leaseTenantRepository.findById(leaseTenantId)
@@ -217,6 +225,11 @@ public class LeaseTenantService {
 						return tenantRepository.save(Tenant.builder().user(claimedUser).build());
 					});
 
+			// Resolve role from persisted attributes; fall back to TENANT for legacy invites
+			String roleValue = (String) invite.getAttributes().getOrDefault(ATTR_ROLE,
+					LeaseTenantRole.PRIMARY.name());
+			LeaseTenantRole role = LeaseTenantRole.valueOf(roleValue);
+			leaseTenant.setRole(role);
 			leaseTenant.setTenant(tenant);
 			leaseTenantRepository.save(leaseTenant);
 

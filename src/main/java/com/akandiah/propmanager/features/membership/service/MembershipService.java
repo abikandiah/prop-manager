@@ -1,5 +1,6 @@
 package com.akandiah.propmanager.features.membership.service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +34,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MembershipService {
+
+	// Key constants for invite attributes owned by this domain
+	private static final String ATTR_ORG_NAME = "organizationName";
 
 	private final MembershipRepository membershipRepository;
 	private final MemberScopeRepository memberScopeRepository;
@@ -117,14 +121,17 @@ public class MembershipService {
 
 		// 3. Create and Send Invite
 		// We use TargetType.MEMBERSHIP and the targetId is the membership UUID
+		Organization org = organizationRepository.findById(organizationId)
+				.orElseThrow(() -> new ResourceNotFoundException("Organization", organizationId));
+		Map<String, Object> attributes = new HashMap<>();
+		attributes.put(ATTR_ORG_NAME, org.getName());
+
 		var inviteRes = inviteService.createAndSendInvite(
-				email, 
-				TargetType.MEMBERSHIP, 
-				membershipRes.id(), 
-				null, // role field on invite is now redundant as scopes are attached to membership
-				invitedBy, 
-				Map.of("organizationName", organizationRepository.findById(organizationId).map(Organization::getName).orElse("the organization"))
-		);
+				email,
+				TargetType.MEMBERSHIP,
+				membershipRes.id(),
+				attributes,
+				invitedBy);
 
 		// 4. Link Invite back to Membership
 		Membership m = membershipRepository.findById(membershipRes.id()).orElseThrow();
