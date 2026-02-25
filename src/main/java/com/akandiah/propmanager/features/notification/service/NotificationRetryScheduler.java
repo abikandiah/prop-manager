@@ -17,16 +17,22 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Polls for notification deliveries that need recovery and re-attempts them.
  *
- * <p>Two cases are handled:
+ * <p>
+ * Two cases are handled:
  * <ol>
- *   <li>FAILED deliveries that are eligible for retry (under max retries, cooled off).</li>
- *   <li>Stuck PENDING deliveries — rows written by the outbox step whose async send was
- *       never executed (JVM crash or queue overflow). These are recovered by treating
- *       them the same as a retry.</li>
+ * <li>FAILED deliveries that are eligible for retry (under max retries, cooled
+ * off).</li>
+ * <li>Stuck PENDING deliveries — rows written by the outbox step whose async
+ * send was
+ * never executed (JVM crash or queue overflow). These are recovered by treating
+ * them the same as a retry.</li>
  * </ol>
  *
- * <p>Interval and retry cap are controlled by {@code app.invite.email-retry-interval-minutes}
- * and {@code app.invite.max-email-retries}. Failures in one delivery do not abort the rest.
+ * <p>
+ * Interval and retry cap are controlled by
+ * {@code app.invite.email-retry-interval-minutes}
+ * and {@code app.invite.max-email-retries}. Failures in one delivery do not
+ * abort the rest.
  */
 @Component
 @Slf4j

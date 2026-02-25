@@ -25,7 +25,8 @@ public class UserNotificationPreferenceService {
 	private final UserNotificationPreferenceRepository preferenceRepository;
 
 	/**
-	 * Returns preferences for all notification types, synthesising defaults for any type
+	 * Returns preferences for all notification types, synthesising defaults for any
+	 * type
 	 * that has no persisted row yet.
 	 */
 	public List<NotificationPreferenceResponse> findByUserId(UUID userId) {
@@ -42,7 +43,8 @@ public class UserNotificationPreferenceService {
 
 	/**
 	 * Upsert a preference row.
-	 * Throws {@link IllegalArgumentException} if the caller tries to disable a non-opt-out type.
+	 * Throws {@link IllegalArgumentException} if the caller tries to disable a
+	 * non-opt-out type.
 	 */
 	@Transactional
 	public NotificationPreferenceResponse updatePreference(

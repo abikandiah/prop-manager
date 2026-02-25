@@ -27,7 +27,7 @@ import com.akandiah.propmanager.features.lease.domain.LeaseTemplateRepository;
 public class DefaultLeaseTemplatesInitializer implements ApplicationRunner {
 
 	private static final Logger log = LoggerFactory.getLogger(DefaultLeaseTemplatesInitializer.class);
-	private static final String TEMPLATE_BASE_PATH = "classpath:lease-templates/";
+	private static final String TEMPLATE_BASE_PATH = "classpath:templates/lease/";
 
 	private final LeaseTemplateRepository repository;
 	private final ResourceLoader resourceLoader;

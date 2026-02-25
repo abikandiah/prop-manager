@@ -28,10 +28,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LegalController {
 
-	@Value("classpath:legal/terms.md")
+	@Value("classpath:templates/legal/terms.md")
 	private Resource termsResource;
 
-	@Value("classpath:legal/privacy.md")
+	@Value("classpath:templates/legal/privacy.md")
 	private Resource privacyResource;
 
 	private LegalResponse cachedTerms;

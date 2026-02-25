@@ -85,7 +85,7 @@ To add a new lease template to the default set:
 Create a new `.md` file in this directory:
 
 ```bash
-touch src/main/resources/lease-templates/my-new-template.md
+touch src/main/resources/templates/lease/my-new-template.md
 ```
 
 ### 2. Write the Template Content
