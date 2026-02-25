@@ -3,12 +3,18 @@ package com.akandiah.propmanager.features.permission.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.Actions;
 import com.akandiah.propmanager.common.permission.PermissionStringValidator;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
+import com.akandiah.propmanager.common.util.SecurityUtils;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.permission.api.dto.CreatePermissionTemplateRequest;
@@ -16,6 +22,8 @@ import com.akandiah.propmanager.features.permission.api.dto.PermissionTemplateRe
 import com.akandiah.propmanager.features.permission.api.dto.UpdatePermissionTemplateRequest;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRepository;
+import com.akandiah.propmanager.security.OrgAuthorizationComponent;
+import com.akandiah.propmanager.security.PermissionAuth;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +34,8 @@ public class PermissionTemplateService {
 
 	private final PermissionTemplateRepository repository;
 	private final OrganizationRepository organizationRepository;
+	private final OrgAuthorizationComponent orgAuthz;
+	private final PermissionAuth permissionAuth;
 
 	public List<PermissionTemplateResponse> listByOrg(UUID orgId) {
 		return repository.findByOrgIsNullOrOrg_IdOrderByNameAsc(orgId).stream()
@@ -36,11 +46,23 @@ public class PermissionTemplateService {
 	public PermissionTemplateResponse findById(UUID id) {
 		PermissionTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("PermissionTemplate", id));
+
+		if (template.getOrg() != null) {
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+			if (!orgAuthz.isMember(template.getOrg().getId(), auth)) {
+				throw new AccessDeniedException("Access denied to this organization's templates");
+			}
+		}
+
 		return PermissionTemplateResponse.from(template);
 	}
 
 	@Transactional
 	public PermissionTemplateResponse create(CreatePermissionTemplateRequest request) {
+		if (request.orgId() == null && !SecurityUtils.isGlobalAdmin()) {
+			throw new AccessDeniedException("Only system administrators can create system templates");
+		}
+
 		PermissionStringValidator.validate(request.defaultPermissions());
 
 		Organization org = null;
@@ -63,6 +85,18 @@ public class PermissionTemplateService {
 		PermissionTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("PermissionTemplate", id));
 
+		if (template.getOrg() == null) {
+			if (!SecurityUtils.isGlobalAdmin()) {
+				throw new AccessDeniedException("Only system administrators can modify system templates");
+			}
+		} else {
+			UUID orgId = template.getOrg().getId();
+			if (!SecurityUtils.isGlobalAdmin() &&
+					!permissionAuth.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)) {
+				throw new AccessDeniedException("Insufficient permissions to modify this organization's templates");
+			}
+		}
+
 		OptimisticLockingUtil.requireVersionMatch("PermissionTemplate", id, template.getVersion(), request.version());
 
 		if (request.defaultPermissions() != null) {
@@ -81,6 +115,19 @@ public class PermissionTemplateService {
 	public void deleteById(UUID id) {
 		PermissionTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("PermissionTemplate", id));
+
+		if (template.getOrg() == null) {
+			if (!SecurityUtils.isGlobalAdmin()) {
+				throw new AccessDeniedException("Only system administrators can delete system templates");
+			}
+		} else {
+			UUID orgId = template.getOrg().getId();
+			if (!SecurityUtils.isGlobalAdmin() &&
+					!permissionAuth.hasAccess(Actions.DELETE, "o", ResourceType.ORG, orgId, orgId)) {
+				throw new AccessDeniedException("Insufficient permissions to delete this organization's templates");
+			}
+		}
+
 		repository.delete(template);
 	}
 }

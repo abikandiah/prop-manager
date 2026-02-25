@@ -13,22 +13,31 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.akandiah.propmanager.common.exception.InvalidPermissionStringException;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.Actions;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.permission.api.dto.CreatePermissionTemplateRequest;
 import com.akandiah.propmanager.features.permission.api.dto.PermissionTemplateResponse;
 import com.akandiah.propmanager.features.permission.api.dto.UpdatePermissionTemplateRequest;
-import com.akandiah.propmanager.common.exception.InvalidPermissionStringException;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRepository;
+import com.akandiah.propmanager.security.OrgAuthorizationComponent;
+import com.akandiah.propmanager.security.PermissionAuth;
 
 import jakarta.persistence.OptimisticLockException;
 
@@ -41,11 +50,32 @@ class PermissionTemplateServiceTest {
 	@Mock
 	private OrganizationRepository organizationRepository;
 
+	@Mock
+	private OrgAuthorizationComponent orgAuthz;
+
+	@Mock
+	private PermissionAuth permissionAuth;
+
 	private PermissionTemplateService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new PermissionTemplateService(repository, organizationRepository);
+		// Default context: global admin so existing behaviour tests pass unchanged
+		SecurityContextHolder.getContext().setAuthentication(
+				new UsernamePasswordAuthenticationToken("admin", null,
+						List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+		service = new PermissionTemplateService(repository, organizationRepository, orgAuthz, permissionAuth);
+	}
+
+	@AfterEach
+	void tearDown() {
+		SecurityContextHolder.clearContext();
+	}
+
+	private void setUserContext() {
+		SecurityContextHolder.getContext().setAuthentication(
+				new UsernamePasswordAuthenticationToken("user", null,
+						List.of(new SimpleGrantedAuthority("ROLE_USER"))));
 	}
 
 	@Test
@@ -252,6 +282,141 @@ class PermissionTemplateServiceTest {
 		assertThatThrownBy(() -> service.deleteById(id))
 				.isInstanceOf(ResourceNotFoundException.class)
 				.hasMessageContaining("PermissionTemplate");
+
+		verify(repository, never()).delete(any());
+	}
+
+	// --- Auth tests ---
+
+	@Test
+	void findById_systemTemplate_allowsAnyAuthenticatedUser() {
+		setUserContext();
+		UUID id = UUID.randomUUID();
+		PermissionTemplate t = template(null, "System", Map.of("l", "r"));
+		t.setId(id);
+		when(repository.findById(id)).thenReturn(Optional.of(t));
+
+		PermissionTemplateResponse response = service.findById(id);
+
+		assertThat(response.id()).isEqualTo(id);
+	}
+
+	@Test
+	void findById_orgTemplate_deniesNonMember() {
+		setUserContext();
+		UUID orgId = UUID.randomUUID();
+		UUID id = UUID.randomUUID();
+		PermissionTemplate t = template(orgId, "Org", Map.of("l", "r"));
+		t.setId(id);
+		when(repository.findById(id)).thenReturn(Optional.of(t));
+		when(orgAuthz.isMember(any(), any())).thenReturn(false);
+
+		assertThatThrownBy(() -> service.findById(id))
+				.isInstanceOf(AccessDeniedException.class);
+	}
+
+	@Test
+	void findById_orgTemplate_allowsOrgMember() {
+		setUserContext();
+		UUID orgId = UUID.randomUUID();
+		UUID id = UUID.randomUUID();
+		PermissionTemplate t = template(orgId, "Org", Map.of("l", "r"));
+		t.setId(id);
+		when(repository.findById(id)).thenReturn(Optional.of(t));
+		when(orgAuthz.isMember(any(), any())).thenReturn(true);
+
+		PermissionTemplateResponse response = service.findById(id);
+
+		assertThat(response.orgId()).isEqualTo(orgId);
+	}
+
+	@Test
+	void create_systemTemplate_deniesNonAdmin() {
+		setUserContext();
+		CreatePermissionTemplateRequest req = new CreatePermissionTemplateRequest(
+				"System", null, Map.of("l", "r"));
+
+		assertThatThrownBy(() -> service.create(req))
+				.isInstanceOf(AccessDeniedException.class);
+
+		verify(repository, never()).save(any());
+	}
+
+	@Test
+	void update_systemTemplate_deniesNonAdmin() {
+		setUserContext();
+		UUID id = UUID.randomUUID();
+		PermissionTemplate existing = template(null, "T", Map.of("l", "r"));
+		existing.setId(id);
+		existing.setVersion(0);
+		when(repository.findById(id)).thenReturn(Optional.of(existing));
+
+		assertThatThrownBy(() -> service.update(id, new UpdatePermissionTemplateRequest("T", null, 0)))
+				.isInstanceOf(AccessDeniedException.class);
+
+		verify(repository, never()).save(any());
+	}
+
+	@Test
+	void update_orgTemplate_allowsOrgAdmin() {
+		setUserContext();
+		UUID orgId = UUID.randomUUID();
+		UUID id = UUID.randomUUID();
+		PermissionTemplate existing = template(orgId, "T", Map.of("l", "r"));
+		existing.setId(id);
+		existing.setVersion(0);
+		when(repository.findById(id)).thenReturn(Optional.of(existing));
+		when(permissionAuth.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(true);
+		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+		PermissionTemplateResponse response = service.update(id, new UpdatePermissionTemplateRequest("New", null, 0));
+
+		assertThat(response.name()).isEqualTo("New");
+	}
+
+	@Test
+	void update_orgTemplate_deniesRegularMember() {
+		setUserContext();
+		UUID orgId = UUID.randomUUID();
+		UUID id = UUID.randomUUID();
+		PermissionTemplate existing = template(orgId, "T", Map.of("l", "r"));
+		existing.setId(id);
+		existing.setVersion(0);
+		when(repository.findById(id)).thenReturn(Optional.of(existing));
+		when(permissionAuth.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(false);
+
+		assertThatThrownBy(() -> service.update(id, new UpdatePermissionTemplateRequest("T", null, 0)))
+				.isInstanceOf(AccessDeniedException.class);
+
+		verify(repository, never()).save(any());
+	}
+
+	@Test
+	void delete_systemTemplate_deniesNonAdmin() {
+		setUserContext();
+		UUID id = UUID.randomUUID();
+		PermissionTemplate t = template(null, "T", Map.of("l", "r"));
+		t.setId(id);
+		when(repository.findById(id)).thenReturn(Optional.of(t));
+
+		assertThatThrownBy(() -> service.deleteById(id))
+				.isInstanceOf(AccessDeniedException.class);
+
+		verify(repository, never()).delete(any());
+	}
+
+	@Test
+	void delete_orgTemplate_deniesRegularMember() {
+		setUserContext();
+		UUID orgId = UUID.randomUUID();
+		UUID id = UUID.randomUUID();
+		PermissionTemplate t = template(orgId, "T", Map.of("l", "r"));
+		t.setId(id);
+		when(repository.findById(id)).thenReturn(Optional.of(t));
+		when(permissionAuth.hasAccess(Actions.DELETE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(false);
+
+		assertThatThrownBy(() -> service.deleteById(id))
+				.isInstanceOf(AccessDeniedException.class);
 
 		verify(repository, never()).delete(any());
 	}
