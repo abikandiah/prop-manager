@@ -29,7 +29,6 @@ import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +57,7 @@ public class InviteController {
 
 	@PostMapping("/api/invites")
 	@PreAuthorize("@inviteAuthService.canCreateInviteForTarget(#request.targetType(), #request.targetId())")
-	@Operation(summary = "Create and send an invitation", security = @SecurityRequirement(name = "bearer-jwt"), description = "Create an invitation. Caller must have CREATE access on the leases domain for the target resource.")
+	@Operation(summary = "Create and send an invitation", description = "Create an invitation. Caller must have CREATE access on the leases domain for the target resource.")
 	public ResponseEntity<InviteResponse> createInvite(@Valid @RequestBody CreateInviteRequest request,
 			@AuthenticationPrincipal Jwt jwt) {
 
@@ -72,7 +71,7 @@ public class InviteController {
 
 	@PostMapping("/api/invites/{token}/accept")
 	@PreAuthorize("isAuthenticated()")
-	@Operation(summary = "Accept an invitation", security = @SecurityRequirement(name = "bearer-jwt"), description = "Accept an invitation. The authenticated user's email must match the invited email.")
+	@Operation(summary = "Accept an invitation", description = "Accept an invitation. The authenticated user's email must match the invited email.")
 	public ResponseEntity<InviteResponse> acceptInvite(@PathVariable String token,
 			@AuthenticationPrincipal Jwt jwt) {
 
@@ -82,7 +81,7 @@ public class InviteController {
 
 	@PostMapping("/api/invites/{id}/resend")
 	@PreAuthorize("@inviteAuthService.canManageInvite(#id)")
-	@Operation(summary = "Resend an invitation email", security = @SecurityRequirement(name = "bearer-jwt"))
+	@Operation(summary = "Resend an invitation email")
 	public ResponseEntity<InviteResponse> resendInvite(@PathVariable UUID id,
 			@RequestBody(required = false) Map<String, Object> metadata) {
 
@@ -91,7 +90,7 @@ public class InviteController {
 
 	@DeleteMapping("/api/invites/{id}")
 	@PreAuthorize("@inviteAuthService.canManageInvite(#id)")
-	@Operation(summary = "Revoke an invitation", security = @SecurityRequirement(name = "bearer-jwt"))
+	@Operation(summary = "Revoke an invitation")
 	public ResponseEntity<Void> revokeInvite(@PathVariable UUID id) {
 		inviteService.revokeInvite(id);
 		return ResponseEntity.noContent().build();
@@ -101,14 +100,14 @@ public class InviteController {
 
 	@GetMapping("/api/invites/{id}")
 	@PreAuthorize("@inviteAuthService.canViewInvite(#id)")
-	@Operation(summary = "Get invite by ID", security = @SecurityRequirement(name = "bearer-jwt"))
+	@Operation(summary = "Get invite by ID")
 	public ResponseEntity<InviteResponse> getById(@PathVariable UUID id) {
 		return ResponseEntity.ok(inviteService.findById(id));
 	}
 
 	@GetMapping("/api/invites")
 	@PreAuthorize("isAuthenticated()")
-	@Operation(summary = "List invitations", description = "Filter by email (own email only, unless ADMIN) or targetType+targetId (requires READ access on the target). Admins may query any email.", security = @SecurityRequirement(name = "bearer-jwt"))
+	@Operation(summary = "List invitations", description = "Filter by email (own email only, unless ADMIN) or targetType+targetId (requires READ access on the target). Admins may query any email.")
 	public ResponseEntity<List<InviteResponse>> listInvites(@RequestParam(required = false) String email,
 			@RequestParam(required = false) TargetType targetType, @RequestParam(required = false) UUID targetId,
 			@AuthenticationPrincipal Jwt jwt) {

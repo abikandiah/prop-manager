@@ -17,27 +17,22 @@ import com.akandiah.propmanager.features.permission.api.dto.UpdatePermissionTemp
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class PermissionTemplateService {
 
 	private final PermissionTemplateRepository repository;
 	private final OrganizationRepository organizationRepository;
 
-	public PermissionTemplateService(
-			PermissionTemplateRepository repository,
-			OrganizationRepository organizationRepository) {
-		this.repository = repository;
-		this.organizationRepository = organizationRepository;
-	}
-
-	@Transactional(readOnly = true)
 	public List<PermissionTemplateResponse> listByOrg(UUID orgId) {
 		return repository.findByOrgIsNullOrOrg_IdOrderByNameAsc(orgId).stream()
 				.map(PermissionTemplateResponse::from)
 				.toList();
 	}
 
-	@Transactional(readOnly = true)
 	public PermissionTemplateResponse findById(UUID id) {
 		PermissionTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("PermissionTemplate", id));

@@ -18,7 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Handles the post-acceptance side effects for tenant invites.
  *
- * <p>On accept: finds or creates the user's Tenant profile, then links it to
+ * <p>
+ * On accept: finds or creates the user's Tenant profile, then links it to
  * the LeaseTenant slot that was created when the invite was sent.
  */
 @Component

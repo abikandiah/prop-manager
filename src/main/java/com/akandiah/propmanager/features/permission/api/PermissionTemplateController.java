@@ -24,18 +24,16 @@ import com.akandiah.propmanager.features.permission.service.PermissionTemplateSe
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/permission-templates")
 @Tag(name = "Permission Templates", description = "CRUD for permission templates (system and org-scoped)")
 @PreAuthorize("hasRole('ADMIN')")
 public class PermissionTemplateController {
 
 	private final PermissionTemplateService service;
-
-	public PermissionTemplateController(PermissionTemplateService service) {
-		this.service = service;
-	}
 
 	@GetMapping
 	@Operation(summary = "List permission templates by org", description = "Returns system templates (org_id null) plus the given org's templates")

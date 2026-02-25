@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest;
 import com.akandiah.propmanager.features.organization.api.dto.CreateOrganizationRequest;
 import com.akandiah.propmanager.features.membership.api.dto.InviteMemberRequest;
 import com.akandiah.propmanager.features.membership.api.dto.MembershipResponse;

@@ -19,7 +19,6 @@ import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,8 +34,7 @@ public class UserNotificationPreferenceController {
 
 	@GetMapping
 	@PreAuthorize("isAuthenticated()")
-	@Operation(summary = "List notification preferences for the current user",
-			security = @SecurityRequirement(name = "bearer-jwt"))
+	@Operation(summary = "List notification preferences for the current user")
 	public ResponseEntity<List<NotificationPreferenceResponse>> list(@AuthenticationPrincipal Jwt jwt) {
 		User user = getCurrentUser(jwt);
 		return ResponseEntity.ok(preferenceService.findByUserId(user.getId()));
@@ -44,8 +42,7 @@ public class UserNotificationPreferenceController {
 
 	@PatchMapping
 	@PreAuthorize("isAuthenticated()")
-	@Operation(summary = "Update a notification preference for the current user",
-			security = @SecurityRequirement(name = "bearer-jwt"))
+	@Operation(summary = "Update a notification preference for the current user")
 	public ResponseEntity<NotificationPreferenceResponse> update(
 			@Valid @RequestBody UpdateNotificationPreferenceRequest request,
 			@AuthenticationPrincipal Jwt jwt) {

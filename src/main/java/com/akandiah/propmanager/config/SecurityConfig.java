@@ -15,6 +15,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import com.akandiah.propmanager.security.JwtAccessHydrationFilter;
 import com.akandiah.propmanager.security.RateLimitFilter;
 
+import lombok.RequiredArgsConstructor;
+
 /**
  * Stateless JWT-based security using Spring Security OAuth2 Resource Server
  * (built-in).
@@ -23,6 +25,7 @@ import com.akandiah.propmanager.security.RateLimitFilter;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
+@RequiredArgsConstructor
 public class SecurityConfig {
 
 	private final RateLimitFilter rateLimitFilter;
@@ -31,16 +34,6 @@ public class SecurityConfig {
 
 	private final CorsConfigurationSource corsConfigurationSource;
 	private final Environment environment;
-
-	public SecurityConfig(RateLimitFilter rateLimitFilter, JwtAccessHydrationFilter jwtAccessHydrationFilter,
-			JwtAuthenticationConverter jwtAuthenticationConverter,
-			CorsConfigurationSource corsConfigurationSource, Environment environment) {
-		this.rateLimitFilter = rateLimitFilter;
-		this.jwtAccessHydrationFilter = jwtAccessHydrationFilter;
-		this.jwtAuthenticationConverter = jwtAuthenticationConverter;
-		this.corsConfigurationSource = corsConfigurationSource;
-		this.environment = environment;
-	}
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

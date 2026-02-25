@@ -3,6 +3,7 @@ package com.akandiah.propmanager.security;
 import java.io.IOException;
 import java.net.URI;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -20,28 +21,20 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /** Per-IP rate limiter using Resilience4j. Returns 429 when limit exceeded. */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class RateLimitFilter extends OncePerRequestFilter {
 
 	private final RateLimiterRegistry registry;
+	@Qualifier("rateLimitCache")
 	private final Cache<String, RateLimiter> cache;
 	private final RateLimitProperties props;
 	private final ObjectMapper objectMapper;
-
-	public RateLimitFilter(
-			RateLimiterRegistry registry,
-			Cache<String, RateLimiter> cache,
-			RateLimitProperties props,
-			ObjectMapper objectMapper) {
-		this.registry = registry;
-		this.cache = cache;
-		this.props = props;
-		this.objectMapper = objectMapper;
-	}
 
 	@Override
 	protected void doFilterInternal(

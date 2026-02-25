@@ -19,7 +19,6 @@ import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -34,8 +33,7 @@ public class NotificationDeliveryController {
 
 	@GetMapping
 	@PreAuthorize("isAuthenticated()")
-	@Operation(summary = "List notifications for the current user",
-			security = @SecurityRequirement(name = "bearer-jwt"))
+	@Operation(summary = "List notifications for the current user")
 	public ResponseEntity<List<NotificationDeliveryResponse>> list(@AuthenticationPrincipal Jwt jwt) {
 		User user = getCurrentUser(jwt);
 		return ResponseEntity.ok(deliveryService.findByUserId(user.getId()));
@@ -43,8 +41,7 @@ public class NotificationDeliveryController {
 
 	@PatchMapping("/{id}/viewed")
 	@PreAuthorize("isAuthenticated()")
-	@Operation(summary = "Mark a notification as viewed",
-			security = @SecurityRequirement(name = "bearer-jwt"))
+	@Operation(summary = "Mark a notification as viewed")
 	public ResponseEntity<Void> markViewed(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
 		deliveryService.markViewed(id);
 		return ResponseEntity.noContent().build();

@@ -14,7 +14,7 @@ import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 @Configuration
 public class RateLimitConfig {
 
-	@Bean
+	@Bean("rateLimitCache")
 	Cache<String, RateLimiter> rateLimiterCache(RateLimitProperties props, RateLimiterRegistry registry) {
 		return Caffeine.newBuilder()
 				.expireAfterAccess(props.cacheExpireMinutes(), TimeUnit.MINUTES)
