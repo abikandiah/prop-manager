@@ -13,6 +13,7 @@ public final class PermissionDomains {
 	public static final String MAINTENANCE = "m";
 	public static final String FINANCES = "f";
 	public static final String TENANTS = "t";
+	public static final String ORGANIZATION = "o";
 
-	public static final Set<String> VALID_KEYS = Set.of(LEASES, MAINTENANCE, FINANCES, TENANTS);
+	public static final Set<String> VALID_KEYS = Set.of(LEASES, MAINTENANCE, FINANCES, TENANTS, ORGANIZATION);
 }

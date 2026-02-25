@@ -44,7 +44,7 @@ public final class PermissionStringValidator {
 			String key = e.getKey();
 			if (!PermissionDomains.VALID_KEYS.contains(key)) {
 				errors.add(new PermissionValidationError("permissions." + key,
-						"Unknown domain key: '" + key + "'. Allowed: l, m, f, t"));
+						"Unknown domain key: '" + key + "'. Allowed: l, m, f, t, o"));
 				continue;
 			}
 			String letters = e.getValue();

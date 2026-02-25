@@ -271,7 +271,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 		memberScopeService.create(membership.id(), new com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest(
 				com.akandiah.propmanager.common.permission.ResourceType.ORG,
 				org.getId(),
-				java.util.Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud"),
+				java.util.Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud", "o", "rcud"),
 				null));
 	}
 
