@@ -1,14 +1,19 @@
 package com.akandiah.propmanager.features.invite.api.dto;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
+import java.util.Map;
 
 import com.akandiah.propmanager.features.invite.domain.InviteStatus;
+import com.akandiah.propmanager.features.invite.domain.TargetType;
 
 /**
  * Public-safe invite preview returned by the unauthenticated token-lookup endpoint.
  * Email is masked; no internal IDs or sensitive fields are exposed.
+ *
+ * <p>The {@code preview} map contains domain-specific snapshot data stored in
+ * {@code invite.attributes["preview"]} at creation time. Each domain owns the
+ * keys it writes (e.g. LEASE writes {@code property}, {@code unit}, {@code lease};
+ * MEMBERSHIP writes {@code organizationName}).
  */
 public record InvitePreviewResponse(
 		String maskedEmail,
@@ -17,27 +22,6 @@ public record InvitePreviewResponse(
 		boolean isExpired,
 		Instant expiresAt,
 		String invitedByName,
-		PropertyPreview property,
-		UnitPreview unit,
-		LeasePreview lease) {
-
-	public record PropertyPreview(
-			String legalName,
-			String addressLine1,
-			String addressLine2,
-			String city,
-			String stateProvinceRegion,
-			String postalCode) {
-	}
-
-	public record UnitPreview(
-			String unitNumber,
-			String unitType) {
-	}
-
-	public record LeasePreview(
-			LocalDate startDate,
-			LocalDate endDate,
-			BigDecimal rentAmount) {
-	}
+		TargetType targetType,
+		Map<String, Object> preview) {
 }

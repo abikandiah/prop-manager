@@ -37,6 +37,7 @@ public class MembershipService {
 
 	// Key constants for invite attributes owned by this domain
 	private static final String ATTR_ORG_NAME = "organizationName";
+	private static final String ATTR_PREVIEW = "preview";
 
 	private final MembershipRepository membershipRepository;
 	private final MemberScopeRepository memberScopeRepository;
@@ -123,8 +124,13 @@ public class MembershipService {
 		// We use TargetType.MEMBERSHIP and the targetId is the membership UUID
 		Organization org = organizationRepository.findById(organizationId)
 				.orElseThrow(() -> new ResourceNotFoundException("Organization", organizationId));
+
+		Map<String, Object> preview = new HashMap<>();
+		preview.put("organizationName", org.getName());
+
 		Map<String, Object> attributes = new HashMap<>();
 		attributes.put(ATTR_ORG_NAME, org.getName());
+		attributes.put(ATTR_PREVIEW, preview);
 
 		var inviteRes = inviteService.createAndSendInvite(
 				email,

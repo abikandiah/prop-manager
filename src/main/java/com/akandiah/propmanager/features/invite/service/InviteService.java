@@ -16,9 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.config.InviteProperties;
 import com.akandiah.propmanager.features.invite.api.dto.InvitePreviewResponse;
-import com.akandiah.propmanager.features.invite.api.dto.InvitePreviewResponse.LeasePreview;
-import com.akandiah.propmanager.features.invite.api.dto.InvitePreviewResponse.PropertyPreview;
-import com.akandiah.propmanager.features.invite.api.dto.InvitePreviewResponse.UnitPreview;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteAcceptedEvent;
@@ -26,11 +23,6 @@ import com.akandiah.propmanager.features.invite.domain.InviteEmailRequestedEvent
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.invite.domain.InviteStatus;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
-import com.akandiah.propmanager.features.lease.domain.Lease;
-import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
-import com.akandiah.propmanager.features.prop.domain.Address;
-import com.akandiah.propmanager.features.prop.domain.Prop;
-import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.user.domain.User;
 
 import lombok.RequiredArgsConstructor;
@@ -51,7 +43,6 @@ import lombok.extern.slf4j.Slf4j;
 public class InviteService {
 
 	private final InviteRepository inviteRepository;
-	private final LeaseRepository leaseRepository;
 	private final ApplicationEventPublisher eventPublisher;
 	private final InviteProperties inviteProperties;
 
@@ -143,7 +134,9 @@ public class InviteService {
 
 	/**
 	 * Resolve public preview data for an invite token without requiring authentication.
-	 * Email is masked. Only call this for valid, non-sensitive display on the accept page.
+	 * Email is masked. Preview context is loaded from the snapshot stored in
+	 * {@code invite.attributes["preview"]} at invite-creation time — no domain
+	 * repository joins are performed here.
 	 *
 	 * @param token Invitation token
 	 * @return Public preview of the invite context
@@ -152,12 +145,8 @@ public class InviteService {
 		Invite invite = inviteRepository.findByToken(token)
 				.orElseThrow(() -> new ResourceNotFoundException("Invite not found or invalid token"));
 
-		Lease lease = leaseRepository.findByIdWithUnitPropertyAndAddress(invite.getTargetId())
-				.orElseThrow(() -> new ResourceNotFoundException("Lease", invite.getTargetId()));
-
-		Prop property = lease.getProperty();
-		Address address = property.getAddress();
-		Unit unit = lease.getUnit();
+		@SuppressWarnings("unchecked")
+		Map<String, Object> preview = (Map<String, Object>) invite.getAttributes().get("preview");
 
 		return new InvitePreviewResponse(
 				maskEmail(invite.getEmail()),
@@ -166,20 +155,8 @@ public class InviteService {
 				invite.isExpired(),
 				invite.getExpiresAt(),
 				invite.getInvitedBy().getName(),
-				new PropertyPreview(
-						property.getLegalName(),
-						address.getAddressLine1(),
-						address.getAddressLine2(),
-						address.getCity(),
-						address.getStateProvinceRegion(),
-						address.getPostalCode()),
-				new UnitPreview(
-						unit.getUnitNumber(),
-						unit.getUnitType() != null ? unit.getUnitType().name() : null),
-				new LeasePreview(
-						lease.getStartDate(),
-						lease.getEndDate(),
-						lease.getRentAmount()));
+				invite.getTargetType(),
+				preview != null ? preview : Map.of());
 	}
 
 	/**

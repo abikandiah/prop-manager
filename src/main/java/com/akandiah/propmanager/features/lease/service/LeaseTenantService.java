@@ -3,6 +3,7 @@ package com.akandiah.propmanager.features.lease.service;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +33,9 @@ import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRole;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
+import com.akandiah.propmanager.features.prop.domain.Address;
+import com.akandiah.propmanager.features.prop.domain.Prop;
+import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.common.notification.NotificationReferenceType;
 import com.akandiah.propmanager.features.notification.domain.NotificationDelivery;
 import com.akandiah.propmanager.features.notification.domain.NotificationDeliveryRepository;
@@ -50,6 +54,7 @@ public class LeaseTenantService {
 
 	// Key constants for invite attributes owned by this domain
 	private static final String ATTR_ROLE = "role";
+	private static final String ATTR_PREVIEW = "preview";
 
 	private final LeaseTenantRepository leaseTenantRepository;
 	private final LeaseRepository leaseRepository;
@@ -88,12 +93,15 @@ public class LeaseTenantService {
 	 */
 	@Transactional
 	public List<LeaseTenantResponse> inviteTenants(UUID leaseId, InviteLeaseTenantRequest request, User invitedBy) {
-		Lease lease = leaseRepository.findById(leaseId)
+		Lease lease = leaseRepository.findByIdWithUnitPropertyAndAddress(leaseId)
 				.orElseThrow(() -> new ResourceNotFoundException("Lease", leaseId));
 
 		if (lease.getStatus() != LeaseStatus.DRAFT) {
 			throw new IllegalStateException("Tenants can only be invited to DRAFT leases");
 		}
+
+		// Build the preview snapshot once — shared by all invitees on this lease
+		Map<String, Object> leasePreviewSnapshot = buildPreviewSnapshot(lease);
 
 		List<LeaseTenant> created = new ArrayList<>();
 
@@ -101,6 +109,7 @@ public class LeaseTenantService {
 			Map<String, Object> attributes = new HashMap<>();
 			attributes.put(ATTR_ROLE, entry.role().name());
 			attributes.put("leaseId", leaseId.toString());
+			attributes.put(ATTR_PREVIEW, leasePreviewSnapshot);
 
 			InviteResponse inviteResponse = inviteService.createAndSendInvite(
 					entry.email(),
@@ -236,5 +245,40 @@ public class LeaseTenantService {
 			log.info("Linked tenant {} to LeaseTenant {} via invite {}", tenant.getId(), leaseTenant.getId(),
 					invite.getId());
 		});
+	}
+
+	/**
+	 * Builds the preview snapshot stored in {@code invite.attributes["preview"]}.
+	 * Data is captured at invite-creation time so the accept page can render
+	 * without additional repository joins, and so the context is stable even if
+	 * the lease or property is later modified.
+	 */
+	private Map<String, Object> buildPreviewSnapshot(Lease lease) {
+		Prop property = lease.getProperty();
+		Address address = property.getAddress();
+		Unit unit = lease.getUnit();
+
+		Map<String, Object> propertyMap = new LinkedHashMap<>();
+		propertyMap.put("legalName", property.getLegalName());
+		propertyMap.put("addressLine1", address.getAddressLine1());
+		propertyMap.put("addressLine2", address.getAddressLine2());
+		propertyMap.put("city", address.getCity());
+		propertyMap.put("stateProvinceRegion", address.getStateProvinceRegion());
+		propertyMap.put("postalCode", address.getPostalCode());
+
+		Map<String, Object> unitMap = new LinkedHashMap<>();
+		unitMap.put("unitNumber", unit.getUnitNumber());
+		unitMap.put("unitType", unit.getUnitType() != null ? unit.getUnitType().name() : null);
+
+		Map<String, Object> leaseMap = new LinkedHashMap<>();
+		leaseMap.put("startDate", lease.getStartDate() != null ? lease.getStartDate().toString() : null);
+		leaseMap.put("endDate", lease.getEndDate() != null ? lease.getEndDate().toString() : null);
+		leaseMap.put("rentAmount", lease.getRentAmount());
+
+		Map<String, Object> snapshot = new LinkedHashMap<>();
+		snapshot.put("property", propertyMap);
+		snapshot.put("unit", unitMap);
+		snapshot.put("lease", leaseMap);
+		return snapshot;
 	}
 }
