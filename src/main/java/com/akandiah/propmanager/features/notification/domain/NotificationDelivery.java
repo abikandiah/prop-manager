@@ -16,7 +16,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -38,7 +37,6 @@ import lombok.Setter;
 public class NotificationDelivery {
 
 	@Id
-	@GeneratedValue
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 

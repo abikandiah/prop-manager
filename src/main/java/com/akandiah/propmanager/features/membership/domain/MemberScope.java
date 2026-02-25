@@ -16,7 +16,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
@@ -53,7 +52,6 @@ import lombok.Setter;
 public class MemberScope {
 
 	@Id
-	@GeneratedValue
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
 
