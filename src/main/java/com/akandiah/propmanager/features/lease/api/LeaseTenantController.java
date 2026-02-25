@@ -37,13 +37,14 @@ public class LeaseTenantController {
 	private final JwtUserResolver jwtUserResolver;
 
 	@GetMapping
+	@PreAuthorize("@inviteAuthService.canViewInvitesForTarget(T(com.akandiah.propmanager.features.invite.domain.TargetType).LEASE, #leaseId)")
 	@Operation(summary = "List tenants for a lease")
 	public ResponseEntity<List<LeaseTenantResponse>> list(@PathVariable UUID leaseId) {
 		return ResponseEntity.ok(leaseTenantService.findByLeaseId(leaseId));
 	}
 
 	@PostMapping("/invite")
-	@PreAuthorize("isAuthenticated()")
+	@PreAuthorize("@inviteAuthService.canCreateInviteForTarget(T(com.akandiah.propmanager.features.invite.domain.TargetType).LEASE, #leaseId)")
 	@Operation(summary = "Invite tenants to a lease by email")
 	public ResponseEntity<List<LeaseTenantResponse>> invite(
 			@PathVariable UUID leaseId,
@@ -54,17 +55,8 @@ public class LeaseTenantController {
 				.body(leaseTenantService.inviteTenants(leaseId, request, invitedBy));
 	}
 
-	@PostMapping("/{leaseTenantId}/resend")
-	@PreAuthorize("isAuthenticated()")
-	@Operation(summary = "Resend the invite for a tenant who hasn't accepted yet")
-	public ResponseEntity<LeaseTenantResponse> resendInvite(
-			@PathVariable UUID leaseId,
-			@PathVariable UUID leaseTenantId) {
-		return ResponseEntity.ok(leaseTenantService.resendTenantInvite(leaseId, leaseTenantId));
-	}
-
 	@DeleteMapping("/{leaseTenantId}")
-	@PreAuthorize("isAuthenticated()")
+	@PreAuthorize("@inviteAuthService.canCreateInviteForTarget(T(com.akandiah.propmanager.features.invite.domain.TargetType).LEASE, #leaseId)")
 	@Operation(summary = "Remove a tenant from a DRAFT lease")
 	public ResponseEntity<Void> remove(
 			@PathVariable UUID leaseId,

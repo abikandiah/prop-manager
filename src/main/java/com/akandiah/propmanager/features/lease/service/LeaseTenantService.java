@@ -11,10 +11,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionalEventListener;
-import org.springframework.transaction.event.TransactionPhase;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
@@ -120,7 +119,8 @@ public class LeaseTenantService {
 
 			// Fetch the entity so we can set the FK on LeaseTenant
 			Invite invite = inviteRepository.findById(inviteResponse.id())
-					.orElseThrow(() -> new IllegalStateException("Invite not found after creation: " + inviteResponse.id()));
+					.orElseThrow(
+							() -> new IllegalStateException("Invite not found after creation: " + inviteResponse.id()));
 
 			LeaseTenant leaseTenant = LeaseTenant.builder()
 					.lease(lease)
@@ -134,35 +134,6 @@ public class LeaseTenantService {
 
 		log.info("Invited {} tenant(s) to lease {}", created.size(), leaseId);
 		return created.stream().map(LeaseTenantResponse::from).toList();
-	}
-
-	// ───────────────────────── Resend ─────────────────────────
-
-	/**
-	 * Resends the invite for a lease tenant slot that is still in INVITED status.
-	 * Delegates cooldown and expiry renewal logic to {@link InviteService#resendInvite}.
-	 */
-	@Transactional
-	public LeaseTenantResponse resendTenantInvite(UUID leaseId, UUID leaseTenantId) {
-		LeaseTenant leaseTenant = leaseTenantRepository.findById(leaseTenantId)
-				.orElseThrow(() -> new ResourceNotFoundException("LeaseTenant", leaseTenantId));
-
-		if (!leaseTenant.getLease().getId().equals(leaseId)) {
-			throw new ResourceNotFoundException("LeaseTenant", leaseTenantId);
-		}
-
-		if (leaseTenant.getTenant() != null) {
-			throw new IllegalStateException("This tenant has already accepted their invitation");
-		}
-
-		inviteService.resendInvite(leaseTenant.getInvite().getId());
-
-		// Reload to pick up the updated lastResentAt from the invite
-		LeaseTenant refreshed = leaseTenantRepository.findById(leaseTenantId)
-				.orElseThrow(() -> new ResourceNotFoundException("LeaseTenant", leaseTenantId));
-
-		log.info("Resent invite for LeaseTenant {} on lease {}", leaseTenantId, leaseId);
-		return LeaseTenantResponse.from(refreshed);
 	}
 
 	// ───────────────────────── Remove ─────────────────────────
@@ -197,7 +168,8 @@ public class LeaseTenantService {
 			inviteService.revokeInvite(leaseTenant.getInvite().getId());
 		}
 
-		// Capture userId before deleting (tenant may be null if invite not yet accepted)
+		// Capture userId before deleting (tenant may be null if invite not yet
+		// accepted)
 		UUID tenantUserId = leaseTenant.getTenant() != null
 				? leaseTenant.getTenant().getUser().getId()
 				: null;
@@ -216,35 +188,41 @@ public class LeaseTenantService {
 	 * Reacts to a redeemed invite. If the invite targets a LEASE,
 	 * finds the corresponding {@link LeaseTenant} slot, creates a {@link Tenant}
 	 * profile for the user if they don't have one yet, and links it.
-	 * Runs within the same transaction as {@link InviteService#redeemInvite} (BEFORE_COMMIT).
 	 */
-	@TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+	@EventListener
+	@Transactional
 	public void onInviteAccepted(InviteAcceptedEvent event) {
 		Invite invite = event.invite();
 		if (invite.getTargetType() != TargetType.LEASE) {
 			return;
 		}
 
-		leaseTenantRepository.findByInvite_Id(invite.getId()).ifPresent(leaseTenant -> {
-			User claimedUser = event.claimedUser();
+		User claimedUser = event.claimedUser();
 
-			Tenant tenant = tenantRepository.findByUser_Id(claimedUser.getId())
-					.orElseGet(() -> {
-						log.info("Creating tenant profile for user {} on invite acceptance", claimedUser.getId());
-						return tenantRepository.save(Tenant.builder().user(claimedUser).build());
-					});
+		// Get or create tenant profile
+		Tenant tenant = tenantRepository.findByUser_Id(claimedUser.getId())
+				.orElseGet(() -> {
+					log.info("Creating tenant profile for user {} on invite acceptance", claimedUser.getId());
+					return tenantRepository.save(Tenant.builder()
+							.user(claimedUser)
+							.build());
+				});
 
-			// Resolve role from persisted attributes; fall back to TENANT for legacy invites
-			String roleValue = (String) invite.getAttributes().getOrDefault(ATTR_ROLE,
-					LeaseTenantRole.PRIMARY.name());
-			LeaseTenantRole role = LeaseTenantRole.valueOf(roleValue);
-			leaseTenant.setRole(role);
-			leaseTenant.setTenant(tenant);
-			leaseTenantRepository.save(leaseTenant);
+		// Locate slot reserved for this invite
+		LeaseTenant leaseTenant = leaseTenantRepository.findByInvite_Id(invite.getId())
+				.orElseThrow(
+						() -> new IllegalStateException("LeaseTenant slot not found for invite " + invite.getId()));
 
-			log.info("Linked tenant {} to LeaseTenant {} via invite {}", tenant.getId(), leaseTenant.getId(),
-					invite.getId());
-		});
+		// Resolve the role from attributes (with a safe default)
+		String roleValue = (String) invite.getAttributes().getOrDefault(ATTR_ROLE, LeaseTenantRole.PRIMARY.name());
+
+		// Link and Persist
+		leaseTenant.setTenant(tenant);
+		leaseTenant.setRole(LeaseTenantRole.valueOf(roleValue));
+		leaseTenantRepository.save(leaseTenant);
+
+		log.info("Linked tenant {} to LeaseTenant {} via invite {}", tenant.getId(), leaseTenant.getId(),
+				invite.getId());
 	}
 
 	/**

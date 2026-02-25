@@ -31,8 +31,10 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Service for managing invitations.
  *
- * <p>Email sending is deliberately outside this service's scope.
- * After each DB write commits, an {@link InviteEmailRequestedEvent} is published
+ * <p>
+ * Email sending is deliberately outside this service's scope.
+ * After each DB write commits, an {@link InviteEmailRequestedEvent} is
+ * published
  * and handled asynchronously by {@link NotificationDispatcher}, which writes
  * the SENT/FAILED status to notification_deliveries in its own transaction.
  */
@@ -54,7 +56,8 @@ public class InviteService {
 	 * @param email      Recipient email address
 	 * @param targetType Type of resource being invited to
 	 * @param targetId   ID of the resource
-	 * @param attributes Domain-specific context persisted on the invite and used for email templates
+	 * @param attributes Domain-specific context persisted on the invite and used
+	 *                   for email templates
 	 * @param invitedBy  User sending the invite
 	 * @return Created invite
 	 */
@@ -93,7 +96,8 @@ public class InviteService {
 
 	/**
 	 * Resend an existing invitation.
-	 * Template context is loaded from the persisted invite attributes by the dispatcher.
+	 * Template context is loaded from the persisted invite attributes by the
+	 * dispatcher.
 	 *
 	 * @param inviteId Invite to resend
 	 * @return Updated invite
@@ -133,7 +137,8 @@ public class InviteService {
 	}
 
 	/**
-	 * Resolve public preview data for an invite token without requiring authentication.
+	 * Resolve public preview data for an invite token without requiring
+	 * authentication.
 	 * Email is masked. Preview context is loaded from the snapshot stored in
 	 * {@code invite.attributes["preview"]} at invite-creation time — no domain
 	 * repository joins are performed here.
@@ -160,7 +165,8 @@ public class InviteService {
 	}
 
 	/**
-	 * Accept an invitation. Requires the authenticated user's email to match the invited email.
+	 * Accept an invitation. Requires the authenticated user's email to match the
+	 * invited email.
 	 *
 	 * @param token     Invitation token
 	 * @param claimedBy Authenticated user accepting the invite

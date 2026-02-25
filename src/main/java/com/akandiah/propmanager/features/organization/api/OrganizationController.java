@@ -95,7 +95,7 @@ public class OrganizationController {
 
 	@PostMapping("/{id}/members/invites")
 	@Operation(summary = "Invite a member to the organization")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#id, authentication)")
+	@PreAuthorize("@inviteAuthService.canCreateInviteForTarget(T(com.akandiah.propmanager.features.invite.domain.TargetType).MEMBERSHIP, #id)")
 	public ResponseEntity<MembershipResponse> inviteMember(
 			@PathVariable UUID id,
 			@Valid @RequestBody InviteMemberRequest request) {
