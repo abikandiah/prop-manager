@@ -10,7 +10,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.features.auth.service.JwtHydrationService;
-import com.akandiah.propmanager.features.user.service.UserService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,7 +27,7 @@ public class JwtAccessHydrationFilter extends OncePerRequestFilter {
 	/** Request attribute for the hydrated access list. Use this in authorization checks. */
 	public static final String REQUEST_ATTRIBUTE_ACCESS = "com.akandiah.propmanager.jwt.access";
 
-	private final UserService userService;
+	private final JwtUserResolver jwtUserResolver;
 	private final JwtHydrationService jwtHydrationService;
 
 	@Override
@@ -64,7 +63,7 @@ public class JwtAccessHydrationFilter extends OncePerRequestFilter {
 	}
 
 	private List<AccessEntry> hydrateFromDb(JwtAuthenticationToken jwtAuth) {
-		return userService.findUserFromJwt(jwtAuth.getToken())
+		return jwtUserResolver.resolveOptional(jwtAuth.getToken())
 				.map(user -> jwtHydrationService.hydrate(user.getId()))
 				.orElse(List.of());
 	}

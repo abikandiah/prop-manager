@@ -5,10 +5,8 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -26,7 +24,7 @@ import com.akandiah.propmanager.features.organization.api.dto.UpdateOrganization
 import com.akandiah.propmanager.features.membership.service.MembershipService;
 import com.akandiah.propmanager.features.organization.service.OrganizationService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.service.UserService;
+import com.akandiah.propmanager.security.JwtUserResolver;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,7 +39,7 @@ public class OrganizationController {
 
 	private final OrganizationService organizationService;
 	private final MembershipService membershipService;
-	private final UserService userService;
+	private final JwtUserResolver jwtUserResolver;
 
 	/** Lists organizations visible to the caller: all orgs for ADMIN, own memberships for everyone else. */
 	@GetMapping
@@ -52,7 +50,7 @@ public class OrganizationController {
 		if (isAdmin) {
 			return ResponseEntity.ok(organizationService.findAllForAdmin());
 		}
-		UUID userId = extractCurrentUserId(authentication);
+		UUID userId = jwtUserResolver.resolve().getId();
 		return ResponseEntity.ok(organizationService.findAll(userId));
 	}
 
@@ -66,10 +64,8 @@ public class OrganizationController {
 	/** Any authenticated user may create an organization. The creator is auto-enrolled as org admin. */
 	@PostMapping
 	@Operation(summary = "Create an organization")
-	public ResponseEntity<OrganizationResponse> create(
-			@Valid @RequestBody CreateOrganizationRequest request,
-			Authentication authentication) {
-		UUID creatorId = extractCurrentUserId(authentication);
+	public ResponseEntity<OrganizationResponse> create(@Valid @RequestBody CreateOrganizationRequest request) {
+		UUID creatorId = jwtUserResolver.resolve().getId();
 		return ResponseEntity.status(HttpStatus.CREATED).body(organizationService.create(request, creatorId));
 	}
 
@@ -102,9 +98,8 @@ public class OrganizationController {
 	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#id, authentication)")
 	public ResponseEntity<MembershipResponse> inviteMember(
 			@PathVariable UUID id,
-			@Valid @RequestBody InviteMemberRequest request,
-			Authentication authentication) {
-		User invitedBy = extractCurrentUserEntity(authentication);
+			@Valid @RequestBody InviteMemberRequest request) {
+		User invitedBy = jwtUserResolver.resolve();
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(membershipService.inviteMember(id, request.email(), request.initialScopes(), invitedBy));
 	}
@@ -119,15 +114,4 @@ public class OrganizationController {
 		return ResponseEntity.noContent().build();
 	}
 
-	private UUID extractCurrentUserId(Authentication authentication) {
-		return extractCurrentUserEntity(authentication).getId();
-	}
-
-	private User extractCurrentUserEntity(Authentication authentication) {
-		if (authentication instanceof JwtAuthenticationToken jwtAuth) {
-			return userService.findUserFromJwt(jwtAuth.getToken())
-					.orElseThrow(() -> new AccessDeniedException("Authenticated user not found in system"));
-		}
-		throw new AccessDeniedException("Not authenticated");
-	}
 }

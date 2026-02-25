@@ -18,7 +18,7 @@ import com.akandiah.propmanager.features.tenant.api.dto.TenantResponse;
 import com.akandiah.propmanager.features.tenant.api.dto.UpdateTenantRequest;
 import com.akandiah.propmanager.features.tenant.service.TenantService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.service.UserService;
+import com.akandiah.propmanager.security.JwtUserResolver;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 public class TenantController {
 
 	private final TenantService tenantService;
-	private final UserService userService;
+	private final JwtUserResolver jwtUserResolver;
 
 	// ───────────────────────── Admin queries ─────────────────────────
 
@@ -57,7 +57,7 @@ public class TenantController {
 	@Operation(summary = "Get the current user's tenant profile",
 			description = "Returns 404 if the user has not yet accepted a lease invite.")
 	public ResponseEntity<TenantResponse> getMe(@AuthenticationPrincipal Jwt jwt) {
-		User user = getCurrentUser(jwt);
+		User user = jwtUserResolver.resolve(jwt);
 		return tenantService.findByUser(user)
 				.map(ResponseEntity::ok)
 				.orElse(ResponseEntity.notFound().build());
@@ -70,14 +70,7 @@ public class TenantController {
 	public ResponseEntity<TenantResponse> updateMe(
 			@Valid @RequestBody UpdateTenantRequest req,
 			@AuthenticationPrincipal Jwt jwt) {
-		User user = getCurrentUser(jwt);
+		User user = jwtUserResolver.resolve(jwt);
 		return ResponseEntity.ok(tenantService.updateByUser(user, req));
-	}
-
-	// ───────────────────────── Helpers ─────────────────────────
-
-	private User getCurrentUser(Jwt jwt) {
-		return userService.findUserFromJwt(jwt)
-				.orElseThrow(() -> new IllegalStateException("User not found for authenticated subject"));
 	}
 }

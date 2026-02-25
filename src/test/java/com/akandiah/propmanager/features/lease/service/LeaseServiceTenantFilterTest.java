@@ -27,7 +27,7 @@ import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.service.UserService;
+import com.akandiah.propmanager.security.JwtUserResolver;
 
 /**
  * Tests the tenant isolation filter in {@link LeaseService#findById(UUID)}.
@@ -59,7 +59,7 @@ class LeaseServiceTenantFilterTest {
 	@Mock
 	ApplicationEventPublisher eventPublisher;
 	@Mock
-	UserService userService;
+	JwtUserResolver jwtUserResolver;
 
 	LeaseService service;
 
@@ -72,7 +72,7 @@ class LeaseServiceTenantFilterTest {
 	void setUp() {
 		service = new LeaseService(leaseRepository, templateService,
 				unitRepository, propRepository, leaseTenantRepository,
-				stateMachine, renderer, eventPublisher, userService);
+				stateMachine, renderer, eventPublisher, jwtUserResolver);
 		// Clear security context so tests start clean
 		SecurityContextHolder.clearContext();
 	}
@@ -149,6 +149,6 @@ class LeaseServiceTenantFilterTest {
 				.build();
 		var auth = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(jwt);
 		SecurityContextHolder.getContext().setAuthentication(auth);
-		when(userService.findUserFromJwt(jwt)).thenReturn(Optional.of(user));
+		when(jwtUserResolver.resolveOptionalId()).thenReturn(Optional.of(user.getId()));
 	}
 }

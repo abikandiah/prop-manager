@@ -7,7 +7,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
-import com.akandiah.propmanager.features.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -17,13 +16,13 @@ import lombok.RequiredArgsConstructor;
 public class OrgAuthorizationComponent {
 
 	private final MembershipRepository membershipRepository;
-	private final UserService userService;
+	private final JwtUserResolver jwtUserResolver;
 
 	public boolean isMember(UUID orgId, Authentication auth) {
 		if (!(auth instanceof JwtAuthenticationToken jwtAuth)) {
 			return false;
 		}
-		return userService.findUserFromJwt(jwtAuth.getToken())
+		return jwtUserResolver.resolveOptional(jwtAuth.getToken())
 				.map(user -> membershipRepository.existsByUserIdAndOrganizationId(user.getId(), orgId))
 				.orElse(false);
 	}

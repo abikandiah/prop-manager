@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.akandiah.propmanager.features.invite.api.dto.CreateInviteRequest;
 import com.akandiah.propmanager.features.invite.api.dto.InvitePreviewResponse;
@@ -26,7 +25,7 @@ import com.akandiah.propmanager.features.invite.domain.TargetType;
 import com.akandiah.propmanager.features.invite.service.InviteAuthorizationService;
 import com.akandiah.propmanager.features.invite.service.InviteService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.service.UserService;
+import com.akandiah.propmanager.security.JwtUserResolver;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,7 +42,7 @@ public class InviteController {
 
 	private final InviteService inviteService;
 	private final InviteAuthorizationService inviteAuthService;
-	private final UserService userService;
+	private final JwtUserResolver jwtUserResolver;
 
 	// ───────────────────────── Public (no auth) ─────────────────────────
 
@@ -61,7 +60,7 @@ public class InviteController {
 	public ResponseEntity<InviteResponse> createInvite(@Valid @RequestBody CreateInviteRequest request,
 			@AuthenticationPrincipal Jwt jwt) {
 
-		User inviter = getCurrentUser(jwt);
+		User inviter = jwtUserResolver.resolve(jwt);
 
 		InviteResponse response = inviteService.createAndSendInvite(request.email(), request.targetType(),
 				request.targetId(), request.role(), inviter, request.metadata());
@@ -75,7 +74,7 @@ public class InviteController {
 	public ResponseEntity<InviteResponse> acceptInvite(@PathVariable String token,
 			@AuthenticationPrincipal Jwt jwt) {
 
-		User claimedBy = getCurrentUser(jwt);
+		User claimedBy = jwtUserResolver.resolve(jwt);
 		return ResponseEntity.ok(inviteService.acceptInvite(token, claimedBy));
 	}
 
@@ -115,7 +114,7 @@ public class InviteController {
 		List<InviteResponse> invites;
 
 		if (email != null) {
-			User currentUser = getCurrentUser(jwt);
+			User currentUser = jwtUserResolver.resolve(jwt);
 			boolean isAdmin = jwt.getClaimAsStringList("groups") != null
 					&& jwt.getClaimAsStringList("groups").contains("ADMIN");
 			if (!isAdmin && !currentUser.getEmail().equalsIgnoreCase(email)) {
@@ -134,11 +133,4 @@ public class InviteController {
 		return ResponseEntity.ok(invites);
 	}
 
-	// ───────────────────────── Helpers ─────────────────────────
-
-	private User getCurrentUser(Jwt jwt) {
-		return userService.findUserFromJwt(jwt)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
-						"User not registered. Please complete registration before accepting invites."));
-	}
 }

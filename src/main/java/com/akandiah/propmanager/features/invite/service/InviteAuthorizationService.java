@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -23,9 +22,9 @@ import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.service.UserService;
 import com.akandiah.propmanager.security.HierarchyAwareAuthorizationService;
 import com.akandiah.propmanager.security.JwtAccessHydrationFilter;
+import com.akandiah.propmanager.security.JwtUserResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +42,7 @@ public class InviteAuthorizationService {
 	private final InviteRepository inviteRepository;
 	private final LeaseRepository leaseRepository;
 	private final MembershipRepository membershipRepository;
-	private final UserService userService;
+	private final JwtUserResolver jwtUserResolver;
 	private final HierarchyAwareAuthorizationService authorizationService;
 
 	/**
@@ -96,7 +95,7 @@ public class InviteAuthorizationService {
 	 */
 	public boolean canManageInvite(UUID inviteId) {
 		try {
-			User currentUser = getCurrentUser();
+			User currentUser = jwtUserResolver.resolve();
 			Invite invite = inviteRepository.findById(inviteId)
 					.orElseThrow(() -> new ResourceNotFoundException("Invite", inviteId));
 
@@ -136,7 +135,7 @@ public class InviteAuthorizationService {
 	 */
 	public boolean canViewInvite(UUID inviteId) {
 		try {
-			User currentUser = getCurrentUser();
+			User currentUser = jwtUserResolver.resolve();
 			Invite invite = inviteRepository.findById(inviteId)
 					.orElseThrow(() -> new ResourceNotFoundException("Invite", inviteId));
 
@@ -190,20 +189,6 @@ public class InviteAuthorizationService {
 	 */
 	private boolean canViewTarget(TargetType targetType, UUID targetId) {
 		return checkTargetAccess(targetType, targetId, Actions.READ);
-	}
-
-	/**
-	 * Get the currently authenticated user.
-	 */
-	private User getCurrentUser() {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
-			throw new IllegalStateException("No authenticated user found");
-		}
-
-		Jwt jwt = (Jwt) authentication.getPrincipal();
-		return userService.findUserFromJwt(jwt)
-				.orElseThrow(() -> new IllegalStateException("User not found for authenticated subject"));
 	}
 
 	/**

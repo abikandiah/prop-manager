@@ -16,7 +16,7 @@ import com.akandiah.propmanager.features.notification.api.dto.NotificationPrefer
 import com.akandiah.propmanager.features.notification.api.dto.UpdateNotificationPreferenceRequest;
 import com.akandiah.propmanager.features.notification.service.UserNotificationPreferenceService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.service.UserService;
+import com.akandiah.propmanager.security.JwtUserResolver;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,13 +30,13 @@ import lombok.RequiredArgsConstructor;
 public class UserNotificationPreferenceController {
 
 	private final UserNotificationPreferenceService preferenceService;
-	private final UserService userService;
+	private final JwtUserResolver jwtUserResolver;
 
 	@GetMapping
 	@PreAuthorize("isAuthenticated()")
 	@Operation(summary = "List notification preferences for the current user")
 	public ResponseEntity<List<NotificationPreferenceResponse>> list(@AuthenticationPrincipal Jwt jwt) {
-		User user = getCurrentUser(jwt);
+		User user = jwtUserResolver.resolve(jwt);
 		return ResponseEntity.ok(preferenceService.findByUserId(user.getId()));
 	}
 
@@ -46,14 +46,9 @@ public class UserNotificationPreferenceController {
 	public ResponseEntity<NotificationPreferenceResponse> update(
 			@Valid @RequestBody UpdateNotificationPreferenceRequest request,
 			@AuthenticationPrincipal Jwt jwt) {
-		User user = getCurrentUser(jwt);
+		User user = jwtUserResolver.resolve(jwt);
 		NotificationPreferenceResponse response = preferenceService.updatePreference(
 				user.getId(), request.notificationType(), request.channel(), request.enabled());
 		return ResponseEntity.ok(response);
-	}
-
-	private User getCurrentUser(Jwt jwt) {
-		return userService.findUserFromJwt(jwt)
-				.orElseThrow(() -> new IllegalStateException("User not found for authenticated subject"));
 	}
 }

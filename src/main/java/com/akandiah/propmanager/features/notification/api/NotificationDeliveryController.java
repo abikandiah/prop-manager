@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.akandiah.propmanager.features.notification.api.dto.NotificationDeliveryResponse;
 import com.akandiah.propmanager.features.notification.service.NotificationDeliveryService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.service.UserService;
+import com.akandiah.propmanager.security.JwtUserResolver;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,13 +29,13 @@ import lombok.RequiredArgsConstructor;
 public class NotificationDeliveryController {
 
 	private final NotificationDeliveryService deliveryService;
-	private final UserService userService;
+	private final JwtUserResolver jwtUserResolver;
 
 	@GetMapping
 	@PreAuthorize("isAuthenticated()")
 	@Operation(summary = "List notifications for the current user")
 	public ResponseEntity<List<NotificationDeliveryResponse>> list(@AuthenticationPrincipal Jwt jwt) {
-		User user = getCurrentUser(jwt);
+		User user = jwtUserResolver.resolve(jwt);
 		return ResponseEntity.ok(deliveryService.findByUserId(user.getId()));
 	}
 
@@ -45,10 +45,5 @@ public class NotificationDeliveryController {
 	public ResponseEntity<Void> markViewed(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
 		deliveryService.markViewed(id);
 		return ResponseEntity.noContent().build();
-	}
-
-	private User getCurrentUser(Jwt jwt) {
-		return userService.findUserFromJwt(jwt)
-				.orElseThrow(() -> new IllegalStateException("User not found for authenticated subject"));
 	}
 }

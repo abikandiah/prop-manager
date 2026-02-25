@@ -20,7 +20,7 @@ import com.akandiah.propmanager.features.lease.api.dto.InviteLeaseTenantRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseTenantResponse;
 import com.akandiah.propmanager.features.lease.service.LeaseTenantService;
 import com.akandiah.propmanager.features.user.domain.User;
-import com.akandiah.propmanager.features.user.service.UserService;
+import com.akandiah.propmanager.security.JwtUserResolver;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,7 +34,7 @@ import lombok.RequiredArgsConstructor;
 public class LeaseTenantController {
 
 	private final LeaseTenantService leaseTenantService;
-	private final UserService userService;
+	private final JwtUserResolver jwtUserResolver;
 
 	@GetMapping
 	@Operation(summary = "List tenants for a lease")
@@ -49,7 +49,7 @@ public class LeaseTenantController {
 			@PathVariable UUID leaseId,
 			@Valid @RequestBody InviteLeaseTenantRequest request,
 			@AuthenticationPrincipal Jwt jwt) {
-		User invitedBy = getCurrentUser(jwt);
+		User invitedBy = jwtUserResolver.resolve(jwt);
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(leaseTenantService.inviteTenants(leaseId, request, invitedBy));
 	}
@@ -73,8 +73,4 @@ public class LeaseTenantController {
 		return ResponseEntity.noContent().build();
 	}
 
-	private User getCurrentUser(Jwt jwt) {
-		return userService.findUserFromJwt(jwt)
-				.orElseThrow(() -> new IllegalStateException("User not found for authenticated subject"));
-	}
 }
