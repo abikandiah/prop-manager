@@ -33,8 +33,6 @@ import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
-import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
-import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRepository;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 import com.akandiah.propmanager.features.user.domain.User;
@@ -44,18 +42,11 @@ import org.springframework.context.ApplicationEventPublisher;
 @ExtendWith(MockitoExtension.class)
 class MemberScopeServiceTest {
 
-	@Mock
-	private MemberScopeRepository memberScopeRepository;
-	@Mock
-	private MembershipRepository membershipRepository;
-	@Mock
-	private PermissionTemplateRepository permissionTemplateRepository;
-	@Mock
-	private PropRepository propRepository;
-	@Mock
-	private UnitRepository unitRepository;
-	@Mock
-	private ApplicationEventPublisher eventPublisher;
+	@Mock private MemberScopeRepository memberScopeRepository;
+	@Mock private MembershipRepository membershipRepository;
+	@Mock private PropRepository propRepository;
+	@Mock private UnitRepository unitRepository;
+	@Mock private ApplicationEventPublisher eventPublisher;
 
 	@InjectMocks
 	private MemberScopeService service;
@@ -67,8 +58,8 @@ class MemberScopeServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
-		Map<String, String> perms = Map.of("l", "crud");
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, perms, null);
+		Map<String, String> perms = Map.of("l", "rcud");
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, perms);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -84,37 +75,11 @@ class MemberScopeServiceTest {
 	}
 
 	@Test
-	void create_copiesPermissionsFromTemplateWhenTemplateIdProvided() {
-		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
-		UUID templateId = UUID.randomUUID();
-		Membership membership = membershipWithUser(membershipId);
-		UUID orgId = membership.getOrganization().getId();
-		Map<String, String> templatePerms = Map.of("m", "ru", "f", "r");
-		PermissionTemplate template = PermissionTemplate.builder()
-				.id(templateId).org(null).name("Template")
-				.defaultPermissions(templatePerms).version(0).build();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, null, templateId);
-
-		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
-		when(permissionTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
-		when(propRepository.existsByIdAndOrganization_Id(scopeId, orgId)).thenReturn(true);
-		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-		var result = service.create(membershipId, req);
-
-		ArgumentCaptor<MemberScope> captor = ArgumentCaptor.forClass(MemberScope.class);
-		verify(memberScopeRepository).save(captor.capture());
-		assertThat(captor.getValue().getPermissions()).isEqualTo(templatePerms);
-		assertThat(result.permissions()).isEqualTo(templatePerms);
-	}
-
-	@Test
-	void create_usesEmptyPermissionsWhenNoPermissionsOrTemplate() {
+	void create_usesEmptyPermissionsWhenNullProvided() {
 		UUID membershipId = UUID.randomUUID();
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, null, null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, null);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -134,8 +99,8 @@ class MemberScopeServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
-		Map<String, String> invalidPerms = Map.of("l", "x");
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, invalidPerms, null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(
+				ResourceType.PROPERTY, scopeId, Map.of("l", "x")); // invalid letter
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -152,7 +117,7 @@ class MemberScopeServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID orgId = membership.getOrganization().getId();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.ORG, orgId, Map.of(), null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.ORG, orgId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -167,7 +132,7 @@ class MemberScopeServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID wrongOrgId = UUID.randomUUID();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.ORG, wrongOrgId, Map.of(), null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.ORG, wrongOrgId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 
@@ -181,7 +146,7 @@ class MemberScopeServiceTest {
 		UUID unitId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID orgId = membership.getOrganization().getId();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.UNIT, unitId, Map.of(), null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.UNIT, unitId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(unitRepository.existsByIdAndProp_Organization_Id(unitId, orgId)).thenReturn(true);
@@ -198,7 +163,7 @@ class MemberScopeServiceTest {
 		UUID unitId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID orgId = membership.getOrganization().getId();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.UNIT, unitId, Map.of(), null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.UNIT, unitId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(unitRepository.existsByIdAndProp_Organization_Id(unitId, orgId)).thenReturn(false);
@@ -207,14 +172,14 @@ class MemberScopeServiceTest {
 				.isInstanceOf(ResourceNotFoundException.class);
 	}
 
-	// ─── create() — null user (pending invite) ──────────────────────────
+	// ─── create() — null user (pending invite / binding row) ────────────
 
 	@Test
 	void create_succeedsWithNullUserAndSkipsEvent() {
 		UUID membershipId = UUID.randomUUID();
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membershipWithoutUser(membershipId);
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, Map.of(), null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -241,8 +206,8 @@ class MemberScopeServiceTest {
 				.id(scopeId).membership(membership)
 				.scopeType(ResourceType.PROPERTY).scopeId(UUID.randomUUID())
 				.permissions(Map.of("l", "r")).version(0).build();
-		Map<String, String> newPerms = Map.of("l", "crud");
-		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(newPerms, null, 0);
+		Map<String, String> newPerms = Map.of("l", "rcud");
+		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(newPerms, 0);
 
 		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
 				.thenReturn(Optional.of(scope));
@@ -265,7 +230,7 @@ class MemberScopeServiceTest {
 				.id(scopeId).membership(membership)
 				.scopeType(ResourceType.ORG).scopeId(org.getId())
 				.permissions(Map.of()).version(2).build();
-		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of(), null, 0);
+		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of(), 0);
 
 		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
 				.thenReturn(Optional.of(scope));
@@ -285,7 +250,7 @@ class MemberScopeServiceTest {
 				.id(scopeId).membership(membership)
 				.scopeType(ResourceType.ORG).scopeId(org.getId())
 				.permissions(Map.of()).version(0).build();
-		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of("l", "r"), null, 0);
+		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of("l", "r"), 0);
 
 		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
 				.thenReturn(Optional.of(scope));
@@ -301,7 +266,7 @@ class MemberScopeServiceTest {
 	void update_throwsWhenScopeNotFound() {
 		UUID membershipId = UUID.randomUUID();
 		UUID scopeId = UUID.randomUUID();
-		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of(), null, 0);
+		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of(), 0);
 
 		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
 				.thenReturn(Optional.empty());
@@ -331,7 +296,6 @@ class MemberScopeServiceTest {
 		service.deleteById(membershipId, scopeId);
 
 		verify(memberScopeRepository).deleteById(scopeId);
-
 		ArgumentCaptor<PermissionsChangedEvent> captor = ArgumentCaptor.forClass(PermissionsChangedEvent.class);
 		verify(eventPublisher).publishEvent(captor.capture());
 		assertThat(captor.getValue().affectedUserIds()).isEqualTo(Set.of(user.getId()));

@@ -72,6 +72,15 @@ server:
       enabled: true
       pattern: '%h %t "%r" %s %b %D ms'
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
 resilience4j:
   ratelimiter:
     configs:

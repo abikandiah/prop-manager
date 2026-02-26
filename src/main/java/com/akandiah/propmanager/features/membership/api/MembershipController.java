@@ -8,12 +8,17 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.akandiah.propmanager.features.membership.api.dto.ApplyTemplateRequest;
 import com.akandiah.propmanager.features.membership.api.dto.MembershipResponse;
 import com.akandiah.propmanager.features.membership.service.MembershipService;
+
+import jakarta.validation.Valid;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,6 +44,16 @@ public class MembershipController {
 	@PreAuthorize("@membershipAuth.canView(#id)")
 	public ResponseEntity<MembershipResponse> getById(@PathVariable UUID id) {
 		return ResponseEntity.ok(membershipService.findById(id));
+	}
+
+	@PostMapping("/{id}/apply-template")
+	@Operation(summary = "Apply a template to an existing membership",
+		description = "Sets the membership's template and creates binding scope rows for supplied resource IDs. Existing scopes are preserved.")
+	@PreAuthorize("@membershipAuth.canManage(#id)")
+	public ResponseEntity<MembershipResponse> applyTemplate(
+			@PathVariable UUID id,
+			@Valid @RequestBody ApplyTemplateRequest request) {
+		return ResponseEntity.ok(membershipService.applyTemplate(id, request));
 	}
 
 	@DeleteMapping("/{id}")

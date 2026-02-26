@@ -18,13 +18,19 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/** Hydrates the access list from JWT claim (dev) or DB (prod) and sets it as a request attribute. */
+/**
+ * Hydrates the access list from JWT claim (dev) or DB (prod) and sets it as a
+ * request attribute.
+ */
 @Component
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAccessHydrationFilter extends OncePerRequestFilter {
 
-	/** Request attribute for the hydrated access list. Use this in authorization checks. */
+	/**
+	 * Request attribute for the hydrated access list. Use this in authorization
+	 * checks.
+	 */
 	public static final String REQUEST_ATTRIBUTE_ACCESS = "com.akandiah.propmanager.jwt.access";
 
 	private final JwtUserResolver jwtUserResolver;

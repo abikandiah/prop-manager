@@ -1340,13 +1340,15 @@ databaseChangeLog:
             columnName: organization_id
             columnDataType: uuid
 
-  # permission_templates — system (org_id NULL) or org-scoped templates; default_permissions = domain -> action letters
+  # membership_templates — system (org_id NULL) or org-scoped role blueprints
+  # Each template contains ordered items (membership_template_items) defining permissions per scope level.
+  # Permissions are resolved live at JWT hydration time — not materialised into member_scopes rows.
   - changeSet:
-      id: "add-permission-templates-table"
+      id: "add-membership-templates-table"
       author: "prop-manager"
       changes:
         - createTable:
-            tableName: permission_templates
+            tableName: membership_templates
             columns:
               - column:
                   name: id
@@ -1360,11 +1362,6 @@ databaseChangeLog:
               - column:
                   name: name
                   type: text
-                  constraints:
-                    nullable: false
-              - column:
-                  name: default_permissions
-                  type: jsonb
                   constraints:
                     nullable: false
               - column:
@@ -1385,22 +1382,82 @@ databaseChangeLog:
                     nullable: false
             constraints:
               - uniqueConstraint:
-                  tableName: permission_templates
+                  tableName: membership_templates
                   columnNames: org_id, name
-                  constraintName: uk_permission_templates_org_name
+                  constraintName: uk_membership_templates_org_name
         - addForeignKeyConstraint:
-            baseTableName: permission_templates
+            baseTableName: membership_templates
             baseColumnNames: org_id
-            constraintName: fk_permission_templates_org
+            constraintName: fk_membership_templates_org
             referencedTableName: organizations
             referencedColumnNames: id
             onDelete: SET NULL
         - createIndex:
-            indexName: idx_permission_templates_org_id
-            tableName: permission_templates
+            indexName: idx_membership_templates_org_id
+            tableName: membership_templates
             columns:
               - column:
                   name: org_id
+
+  # membership_template_items — one row per scope-level entry within a template
+  - changeSet:
+      id: "add-membership-template-items-table"
+      author: "prop-manager"
+      changes:
+        - createTable:
+            tableName: membership_template_items
+            columns:
+              - column:
+                  name: template_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: item_order
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scope_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: permissions
+                  type: jsonb
+                  defaultValue: '{}'
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: membership_template_items
+            columnNames: template_id, item_order
+            constraintName: pk_membership_template_items
+        - addForeignKeyConstraint:
+            baseTableName: membership_template_items
+            baseColumnNames: template_id
+            constraintName: fk_membership_template_items_template
+            referencedTableName: membership_templates
+            referencedColumnNames: id
+            onDelete: CASCADE
+
+  # memberships.membership_template_id — optional FK to the role blueprint applied to this membership
+  - changeSet:
+      id: "add-memberships-membership-template-id"
+      author: "prop-manager"
+      changes:
+        - addColumn:
+            tableName: memberships
+            columns:
+              - column:
+                  name: membership_template_id
+                  type: uuid
+        - addForeignKeyConstraint:
+            baseTableName: memberships
+            baseColumnNames: membership_template_id
+            constraintName: fk_memberships_membership_template
+            referencedTableName: membership_templates
+            referencedColumnNames: id
+            onDelete: SET NULL
 
   # Piece 11: drop memberships.role — replaced by member_scopes
   - changeSet:

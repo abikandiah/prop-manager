@@ -101,7 +101,7 @@ public class OrganizationController {
 			@Valid @RequestBody InviteMemberRequest request) {
 		User invitedBy = jwtUserResolver.resolve();
 		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(membershipService.inviteMember(id, request.email(), request.initialScopes(), invitedBy));
+				.body(membershipService.inviteMember(id, request.email(), request.templateId(), request.initialScopes(), invitedBy));
 	}
 
 	@DeleteMapping("/{id}/members/{membershipId}")

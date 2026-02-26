@@ -19,12 +19,15 @@ import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.invite.domain.InviteStatus;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
 import com.akandiah.propmanager.features.invite.service.InviteService;
+import com.akandiah.propmanager.features.membership.api.dto.ApplyTemplateRequest;
 import com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest;
 import com.akandiah.propmanager.features.membership.api.dto.MembershipResponse;
 import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
+import com.akandiah.propmanager.features.membership.domain.MembershipTemplate;
+import com.akandiah.propmanager.features.membership.domain.MembershipTemplateRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.user.domain.User;
@@ -42,10 +45,12 @@ public class MembershipService {
 	// Key constants for invite attributes owned by this domain
 	private static final String ATTR_ORG_NAME = "organizationName";
 	private static final String ATTR_PREVIEW = "preview";
+	private static final String ATTR_TEMPLATE_ID = "templateId";
 
 	private final MembershipRepository membershipRepository;
 	private final MemberScopeRepository memberScopeRepository;
 	private final MemberScopeService memberScopeService;
+	private final MembershipTemplateRepository membershipTemplateRepository;
 	private final OrganizationRepository organizationRepository;
 	private final UserRepository userRepository;
 	private final InviteService inviteService;
@@ -72,7 +77,7 @@ public class MembershipService {
 
 	@Transactional
 	public MembershipResponse create(UUID organizationId, CreateMembershipRequest request) {
-		MembershipResponse membership = doCreate(organizationId, request.userId());
+		MembershipResponse membership = doCreate(organizationId, request.userId(), null);
 		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(request.userId())));
 		return membership;
 	}
@@ -84,7 +89,7 @@ public class MembershipService {
 	@Transactional
 	public MembershipResponse createWithInitialScope(UUID organizationId, CreateMembershipRequest request,
 			CreateMemberScopeRequest initialScope) {
-		MembershipResponse membership = doCreate(organizationId, request.userId());
+		MembershipResponse membership = doCreate(organizationId, request.userId(), null);
 		if (initialScope != null) {
 			memberScopeService.createWithoutEvent(membership.id(), initialScope);
 		}
@@ -94,13 +99,20 @@ public class MembershipService {
 
 	/**
 	 * Orchestrates the invitation of a new member.
-	 * 1. Creates a pending Membership (user=null).
+	 * 1. Creates a pending Membership (user=null), optionally linked to a template.
 	 * 2. Adds initial scopes to the membership.
 	 * 3. Creates and sends an Invite pointing to the Membership.
+	 *
+	 * <p>If {@code templateId} is provided, the Membership is linked to the given
+	 * {@link MembershipTemplate} at creation time. Template permissions are then
+	 * resolved live at JWT hydration — no extra scope rows are needed for ORG-level
+	 * template items. For PROPERTY/UNIT-level items, callers should include the
+	 * corresponding binding rows in {@code initialScopes} (empty {@code permissions}
+	 * map is sufficient to activate the template at that resource).
 	 */
 	@Transactional
 	public MembershipResponse inviteMember(UUID organizationId, String email,
-			List<CreateMemberScopeRequest> initialScopes, User invitedBy) {
+			UUID templateId, List<CreateMemberScopeRequest> initialScopes, User invitedBy) {
 
 		// Check for existing active membership by email if user exists
 		userRepository.findByEmail(email).ifPresent(user -> {
@@ -114,10 +126,17 @@ public class MembershipService {
 			throw new IllegalStateException("A pending invitation already exists for this email in this organization");
 		}
 
-		// 1. Create Membership (user=null)
-		MembershipResponse membershipRes = doCreate(organizationId, null);
+		// Resolve template if provided
+		MembershipTemplate template = null;
+		if (templateId != null) {
+			template = membershipTemplateRepository.findById(templateId)
+					.orElseThrow(() -> new ResourceNotFoundException("MembershipTemplate", templateId));
+		}
 
-		// 2. Create Scopes
+		// 1. Create Membership (user=null), optionally linked to template
+		MembershipResponse membershipRes = doCreate(organizationId, null, template);
+
+		// 2. Create Scopes (binding rows + explicit custom permissions)
 		if (initialScopes != null) {
 			for (CreateMemberScopeRequest scopeReq : initialScopes) {
 				memberScopeService.createWithoutEvent(membershipRes.id(), scopeReq);
@@ -125,7 +144,6 @@ public class MembershipService {
 		}
 
 		// 3. Create and Send Invite
-		// We use TargetType.MEMBERSHIP and the targetId is the membership UUID
 		Organization org = organizationRepository.findById(organizationId)
 				.orElseThrow(() -> new ResourceNotFoundException("Organization", organizationId));
 
@@ -135,6 +153,9 @@ public class MembershipService {
 		Map<String, Object> attributes = new HashMap<>();
 		attributes.put(ATTR_ORG_NAME, org.getName());
 		attributes.put(ATTR_PREVIEW, preview);
+		if (templateId != null) {
+			attributes.put(ATTR_TEMPLATE_ID, templateId.toString());
+		}
 
 		var inviteRes = inviteService.createAndSendInvite(
 				email,
@@ -182,7 +203,7 @@ public class MembershipService {
 				membershipId, claimedBy.getId(), membership.getOrganization().getId());
 	}
 
-	private MembershipResponse doCreate(UUID organizationId, UUID userId) {
+	private MembershipResponse doCreate(UUID organizationId, UUID userId, MembershipTemplate template) {
 		Organization org = organizationRepository.findById(organizationId)
 				.orElseThrow(() -> new ResourceNotFoundException("Organization", organizationId));
 
@@ -195,9 +216,47 @@ public class MembershipService {
 		Membership m = Membership.builder()
 				.user(user)
 				.organization(org)
+				.membershipTemplate(template)
 				.build();
 		m = membershipRepository.save(m);
 		return MembershipResponse.from(m);
+	}
+
+	/**
+	 * Sets (or replaces) the template on an existing membership and creates
+	 * {@link com.akandiah.propmanager.features.membership.domain.MemberScope} binding
+	 * rows for any resource IDs supplied.  Existing scope rows are kept; new ones are
+	 * created only where none already exist for a given (scopeType, scopeId) pair.
+	 */
+	@Transactional
+	public MembershipResponse applyTemplate(UUID membershipId, ApplyTemplateRequest request) {
+		Membership membership = membershipRepository.findById(membershipId)
+				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
+
+		MembershipTemplate template = membershipTemplateRepository.findById(request.templateId())
+				.orElseThrow(() -> new ResourceNotFoundException("MembershipTemplate", request.templateId()));
+
+		membership.setMembershipTemplate(template);
+		membershipRepository.save(membership);
+
+		if (request.resourceIds() != null) {
+			request.resourceIds().forEach((scopeType, ids) -> {
+				for (UUID resourceId : ids) {
+					boolean exists = memberScopeRepository.existsByMembershipIdAndScopeTypeAndScopeId(
+							membershipId, scopeType, resourceId);
+					if (!exists) {
+						memberScopeService.createWithoutEvent(membershipId,
+								new CreateMemberScopeRequest(scopeType, resourceId, null));
+					}
+				}
+			});
+		}
+
+		if (membership.getUser() != null) {
+			eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(membership.getUser().getId())));
+		}
+
+		return MembershipResponse.from(membershipRepository.findById(membershipId).orElseThrow());
 	}
 
 	@Transactional

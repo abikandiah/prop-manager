@@ -1,4 +1,4 @@
-package com.akandiah.propmanager.features.permission.api;
+package com.akandiah.propmanager.features.membership.api;
 
 import java.util.List;
 import java.util.UUID;
@@ -16,10 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.akandiah.propmanager.features.permission.api.dto.CreatePermissionTemplateRequest;
-import com.akandiah.propmanager.features.permission.api.dto.PermissionTemplateResponse;
-import com.akandiah.propmanager.features.permission.api.dto.UpdatePermissionTemplateRequest;
-import com.akandiah.propmanager.features.permission.service.PermissionTemplateService;
+import com.akandiah.propmanager.features.membership.api.dto.CreateMembershipTemplateRequest;
+import com.akandiah.propmanager.features.membership.api.dto.MembershipTemplateResponse;
+import com.akandiah.propmanager.features.membership.api.dto.UpdateMembershipTemplateRequest;
+import com.akandiah.propmanager.features.membership.service.MembershipTemplateService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,49 +28,49 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/permission-templates")
-@Tag(name = "Permission Templates", description = "CRUD for permission templates — system templates readable by any authenticated user; org templates readable by org members; mutations restricted to admins")
-public class PermissionTemplateController {
+@RequestMapping("/api/membership-templates")
+@Tag(name = "Membership Templates", description = "CRUD for membership templates — system templates readable by any authenticated user; org templates readable by org members; mutations restricted to admins")
+public class MembershipTemplateController {
 
-	private final PermissionTemplateService service;
+	private final MembershipTemplateService service;
 
 	@GetMapping
-	@Operation(summary = "List permission templates by org", description = "Returns system templates (org_id null) plus the given org's templates")
+	@Operation(summary = "List membership templates by org", description = "Returns system templates plus the given org's own templates")
 	@PreAuthorize("hasRole('ADMIN') or @orgGuard.isMember(#orgId, authentication)")
-	public ResponseEntity<List<PermissionTemplateResponse>> list(@RequestParam UUID orgId) {
+	public ResponseEntity<List<MembershipTemplateResponse>> list(@RequestParam UUID orgId) {
 		return ResponseEntity.ok(service.listByOrg(orgId));
 	}
 
 	@GetMapping("/{id}")
-	@Operation(summary = "Get a permission template by ID")
+	@Operation(summary = "Get a membership template by ID")
 	@PreAuthorize("isAuthenticated()")
-	public ResponseEntity<PermissionTemplateResponse> getById(@PathVariable UUID id) {
+	public ResponseEntity<MembershipTemplateResponse> getById(@PathVariable UUID id) {
 		return ResponseEntity.ok(service.findById(id));
 	}
 
 	@PostMapping
-	@Operation(summary = "Create a permission template")
+	@Operation(summary = "Create a membership template")
 	@PreAuthorize("hasRole('ADMIN') or " +
 			"(#request.orgId() != null and @permissionGuard.hasAccess(" +
 			"T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'o', " +
 			"T(com.akandiah.propmanager.common.permission.ResourceType).ORG, " +
 			"#request.orgId(), #request.orgId()))")
-	public ResponseEntity<PermissionTemplateResponse> create(
-			@Valid @RequestBody CreatePermissionTemplateRequest request) {
+	public ResponseEntity<MembershipTemplateResponse> create(
+			@Valid @RequestBody CreateMembershipTemplateRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
 	}
 
 	@PatchMapping("/{id}")
-	@Operation(summary = "Update a permission template", description = "Requires 'version' for optimistic-lock verification")
+	@Operation(summary = "Update a membership template", description = "Requires 'version' for optimistic-lock verification. Providing 'items' fully replaces the existing items list.")
 	@PreAuthorize("isAuthenticated()")
-	public ResponseEntity<PermissionTemplateResponse> update(
+	public ResponseEntity<MembershipTemplateResponse> update(
 			@PathVariable UUID id,
-			@Valid @RequestBody UpdatePermissionTemplateRequest request) {
+			@Valid @RequestBody UpdateMembershipTemplateRequest request) {
 		return ResponseEntity.ok(service.update(id, request));
 	}
 
 	@DeleteMapping("/{id}")
-	@Operation(summary = "Delete a permission template")
+	@Operation(summary = "Delete a membership template")
 	@PreAuthorize("isAuthenticated()")
 	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		service.deleteById(id);

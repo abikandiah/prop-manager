@@ -40,7 +40,7 @@ public class InviteAuthorizationService {
 	/**
 	 * Check if the current user can create an invite for the given target resource.
 	 * For LEASE targets, requires CREATE on leases domain at UNIT scope.
-	 * For MEMBERSHIP targets, requires CREATE on tenants domain at ORG scope.
+	 * For MEMBERSHIP targets, requires CREATE on organization domain at ORG scope.
 	 * Admins are always allowed.
 	 */
 	public boolean canCreateInviteForTarget(TargetType targetType, UUID targetId) {
@@ -91,7 +91,7 @@ public class InviteAuthorizationService {
 	/**
 	 * Check if the current user can view invites for the given target resource.
 	 * For LEASE targets, requires READ on leases domain at UNIT scope.
-	 * For MEMBERSHIP targets, requires READ on tenants domain at ORG scope.
+	 * For MEMBERSHIP targets, requires READ on organization domain at ORG scope.
 	 * Admins are always allowed.
 	 */
 	public boolean canViewInvitesForTarget(TargetType targetType, UUID targetId) {
@@ -140,7 +140,7 @@ public class InviteAuthorizationService {
 	/**
 	 * Check if the current user has the required action on the given target.
 	 * For LEASE: resolves the unit and org, checks via hierarchy-aware auth.
-	 * For MEMBERSHIP: targetId is the org ID, checks org-level tenants domain.
+	 * For MEMBERSHIP: targetId is the org ID, checks org-level organization domain.
 	 */
 	private boolean checkTargetAccess(TargetType targetType, UUID targetId, int requiredAction) {
 		return switch (targetType) {

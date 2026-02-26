@@ -8,13 +8,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.akandiah.propmanager.config.CacheConfig;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Evicts entries from the "permissions" cache when user access may have changed.
+ * Evicts entries from the "permissions" cache when user access may have
+ * changed.
  * Listens for {@link PermissionsChangedEvent} (explicit permission mutations).
  */
 @Component
@@ -33,7 +35,7 @@ public class PermissionsCacheEvictionListener {
 		if (userIds.isEmpty()) {
 			return;
 		}
-		var cache = cacheManager.getCache("permissions");
+		var cache = cacheManager.getCache(CacheConfig.CACHE_PERMISSIONS);
 		if (cache == null) {
 			return;
 		}

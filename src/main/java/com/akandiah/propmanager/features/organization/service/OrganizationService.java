@@ -78,8 +78,7 @@ public class OrganizationService {
 		memberScopeService.create(membership.id(), new CreateMemberScopeRequest(
 				ResourceType.ORG,
 				org.getId(),
-				Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud", "o", "rcud"),
-				null));
+				Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud", "o", "rcud", "p", "rcud")));
 
 		return OrganizationResponse.from(org);
 	}

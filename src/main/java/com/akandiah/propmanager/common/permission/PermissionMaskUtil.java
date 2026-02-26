@@ -1,13 +1,19 @@
 package com.akandiah.propmanager.common.permission;
 
-/** Converts permission strings (e.g. "cru") to/from bitmasks for JWT and authorization checks. */
+/**
+ * Converts permission strings (e.g. "cru") to/from bitmasks for JWT and
+ * authorization checks.
+ */
 public final class PermissionMaskUtil {
 
 	private PermissionMaskUtil() {
 		throw new UnsupportedOperationException("Utility class");
 	}
 
-	/** Parses action letters into a single bitmask. Order-independent; invalid characters ignored. */
+	/**
+	 * Parses action letters into a single bitmask. Order-independent; invalid
+	 * characters ignored.
+	 */
 	public static int parseToMask(String letters) {
 		if (letters == null || letters.isEmpty()) {
 			return 0;

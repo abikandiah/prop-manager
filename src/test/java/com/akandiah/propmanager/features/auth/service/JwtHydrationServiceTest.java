@@ -63,7 +63,7 @@ class JwtHydrationServiceTest {
 		@Test
 		void returnsEmptyWhenNoMemberships() {
 			UUID userId = UUID.randomUUID();
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -78,7 +78,7 @@ class JwtHydrationServiceTest {
 			UUID orgId = UUID.randomUUID();
 			UUID membershipId = UUID.randomUUID();
 			Membership m = membership(membershipId, org(orgId));
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of(m));
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
 			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
@@ -96,7 +96,7 @@ class JwtHydrationServiceTest {
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
 			MemberScope scope = memberScope(m, ResourceType.ORG, orgId, Map.of("l", "cr", "m", "r"));
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of(m));
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
 			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of(scope));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
@@ -121,7 +121,7 @@ class JwtHydrationServiceTest {
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
 			MemberScope scope = memberScope(m, ResourceType.PROPERTY, propId, Map.of("l", "rcud"));
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of(m));
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
 			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of(scope));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
@@ -146,7 +146,7 @@ class JwtHydrationServiceTest {
 			Membership m = membership(membershipId, org);
 			MemberScope scope1 = memberScope(m, ResourceType.PROPERTY, propId1, Map.of("l", "r"));
 			MemberScope scope2 = memberScope(m, ResourceType.PROPERTY, propId2, Map.of("m", "cru"));
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of(m));
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
 			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId)))
 					.thenReturn(List.of(scope1, scope2));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
@@ -168,7 +168,7 @@ class JwtHydrationServiceTest {
 			UUID propId = UUID.randomUUID();
 			Organization org = org(orgId);
 			Prop prop = prop(propId, org, userId);
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of(prop));
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -193,7 +193,7 @@ class JwtHydrationServiceTest {
 			Organization org = org(orgId);
 			Prop prop1 = prop(UUID.randomUUID(), org, userId);
 			Prop prop2 = prop(UUID.randomUUID(), org, userId);
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of(prop1, prop2));
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -218,7 +218,7 @@ class JwtHydrationServiceTest {
 			Unit unit = unit(unitId, prop);
 			Lease lease = lease(unit, prop, LeaseStatus.ACTIVE);
 			LeaseTenant lt = leaseTenant(lease, userId);
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of(lt));
 
@@ -244,7 +244,7 @@ class JwtHydrationServiceTest {
 			Unit unit = unit(UUID.randomUUID(), prop);
 			Lease lease = lease(unit, prop, LeaseStatus.REVIEW);
 			LeaseTenant lt = leaseTenant(lease, userId);
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of(lt));
 
@@ -294,7 +294,7 @@ class JwtHydrationServiceTest {
 			Membership m = membership(membershipId, org);
 			MemberScope scope = memberScope(m, ResourceType.PROPERTY, propId, Map.of("l", "r"));
 			Prop prop = prop(propId, org, userId);
-			when(membershipRepository.findByUserIdWithUserAndOrg(userId)).thenReturn(List.of(m));
+			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
 			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of(scope));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of(prop));
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());

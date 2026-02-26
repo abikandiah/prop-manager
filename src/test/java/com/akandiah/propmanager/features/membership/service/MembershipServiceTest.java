@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +38,8 @@ import com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequ
 import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
+import com.akandiah.propmanager.features.membership.domain.MembershipTemplate;
+import com.akandiah.propmanager.features.membership.domain.MembershipTemplateRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.user.domain.User;
@@ -53,6 +56,8 @@ class MembershipServiceTest {
 	private MemberScopeRepository memberScopeRepository;
 	@Mock
 	private MemberScopeService memberScopeService;
+	@Mock
+	private MembershipTemplateRepository membershipTemplateRepository;
 	@Mock
 	private OrganizationRepository organizationRepository;
 	@Mock
@@ -163,7 +168,7 @@ class MembershipServiceTest {
 						.id(membershipId).organization(org).version(0).build()));
 		when(inviteRepository.findById(inviteId)).thenReturn(Optional.of(invite));
 
-		var result = service.inviteMember(orgId, email, null, inviter);
+		var result = service.inviteMember(orgId, email, null, null, inviter);
 
 		assertThat(result).isNotNull();
 		assertThat(result.userId()).isNull();
@@ -182,7 +187,7 @@ class MembershipServiceTest {
 		UUID inviteId = UUID.randomUUID();
 
 		CreateMemberScopeRequest scopeReq = new CreateMemberScopeRequest(
-				ResourceType.ORG, orgId, Map.of("l", "crud"), null);
+				ResourceType.ORG, orgId, Map.of("l", "rcud"));
 
 		when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 		when(membershipRepository.existsPendingInviteForEmailInOrg(email, orgId)).thenReturn(false);
@@ -211,9 +216,76 @@ class MembershipServiceTest {
 						.id(membershipId).organization(org).version(0).build()));
 		when(inviteRepository.findById(inviteId)).thenReturn(Optional.of(invite));
 
-		service.inviteMember(orgId, email, List.of(scopeReq), inviter);
+		service.inviteMember(orgId, email, null, List.of(scopeReq), inviter);
 
 		verify(memberScopeService).createWithoutEvent(membershipId, scopeReq);
+	}
+
+	@Test
+	void inviteMember_linksTemplateToMembership() {
+		UUID orgId = UUID.randomUUID();
+		UUID templateId = UUID.randomUUID();
+		UUID membershipId = UUID.randomUUID();
+		UUID inviteId = UUID.randomUUID();
+		Organization org = TestDataFactory.organization().id(orgId).build();
+		User inviter = TestDataFactory.user().build();
+		String email = "newbie@example.com";
+		MembershipTemplate template = MembershipTemplate.builder()
+				.id(templateId).name("Reader").version(0).build();
+
+		when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+		when(membershipRepository.existsPendingInviteForEmailInOrg(email, orgId)).thenReturn(false);
+		when(membershipTemplateRepository.findById(templateId)).thenReturn(Optional.of(template));
+		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+		when(membershipRepository.save(any())).thenAnswer(inv -> {
+			Membership m = inv.getArgument(0);
+			if (m.getId() == null) {
+				return Membership.builder()
+						.id(membershipId).user(null).organization(org)
+						.membershipTemplate(m.getMembershipTemplate()).version(0).build();
+			}
+			return m;
+		});
+
+		Invite invite = Invite.builder().id(inviteId).build();
+		InviteResponse inviteRes = new InviteResponse(
+				inviteId, email, TargetType.MEMBERSHIP, membershipId, null,
+				inviter.getId(), inviter.getName(), InviteStatus.PENDING,
+				null, null, null, null, null, null, true, false);
+
+		when(inviteService.createAndSendInvite(
+				eq(email), eq(TargetType.MEMBERSHIP), eq(membershipId),
+				anyMap(), eq(inviter)))
+				.thenReturn(inviteRes);
+		when(membershipRepository.findById(membershipId)).thenReturn(
+				Optional.of(Membership.builder()
+						.id(membershipId).organization(org)
+						.membershipTemplate(template).version(0).build()));
+		when(inviteRepository.findById(inviteId)).thenReturn(Optional.of(invite));
+
+		var result = service.inviteMember(orgId, email, templateId, null, inviter);
+
+		assertThat(result.membershipTemplateId()).isEqualTo(templateId);
+		ArgumentCaptor<Membership> captor = ArgumentCaptor.forClass(Membership.class);
+		verify(membershipRepository, times(2)).save(captor.capture());
+		// First save is the initial membership creation with the template
+		assertThat(captor.getAllValues().get(0).getMembershipTemplate()).isEqualTo(template);
+	}
+
+	@Test
+	void inviteMember_throwsWhenTemplateNotFound() {
+		UUID orgId = UUID.randomUUID();
+		UUID templateId = UUID.randomUUID();
+		String email = "newbie@example.com";
+		User inviter = TestDataFactory.user().build();
+
+		when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+		when(membershipRepository.existsPendingInviteForEmailInOrg(email, orgId)).thenReturn(false);
+		when(membershipTemplateRepository.findById(templateId)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.inviteMember(orgId, email, templateId, null, inviter))
+				.isInstanceOf(ResourceNotFoundException.class)
+				.hasMessageContaining("MembershipTemplate");
 	}
 
 	@Test
@@ -227,7 +299,7 @@ class MembershipServiceTest {
 		when(membershipRepository.existsByUserIdAndOrganizationId(existingUser.getId(), orgId))
 				.thenReturn(true);
 
-		assertThatThrownBy(() -> service.inviteMember(orgId, email, null, inviter))
+		assertThatThrownBy(() -> service.inviteMember(orgId, email, null, null, inviter))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("already a member");
 	}
@@ -241,7 +313,7 @@ class MembershipServiceTest {
 		when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 		when(membershipRepository.existsPendingInviteForEmailInOrg(email, orgId)).thenReturn(true);
 
-		assertThatThrownBy(() -> service.inviteMember(orgId, email, null, inviter))
+		assertThatThrownBy(() -> service.inviteMember(orgId, email, null, null, inviter))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("pending invitation");
 	}

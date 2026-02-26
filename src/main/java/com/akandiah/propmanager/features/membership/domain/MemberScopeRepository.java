@@ -28,5 +28,7 @@ public interface MemberScopeRepository extends JpaRepository<MemberScope, UUID> 
 
 	boolean existsByIdAndMembershipId(UUID id, UUID membershipId);
 
+	boolean existsByMembershipIdAndScopeTypeAndScopeId(UUID membershipId, ResourceType scopeType, UUID scopeId);
+
 	Optional<MemberScope> findByIdAndMembershipId(UUID id, UUID membershipId);
 }

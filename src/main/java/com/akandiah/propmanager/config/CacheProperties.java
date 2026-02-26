@@ -1,16 +1,10 @@
 package com.akandiah.propmanager.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "app.cache.permissions")
 public record CacheProperties(
-		long maxSize,
-		long ttlMinutes) {
-
-	public CacheProperties {
-		if (maxSize == 0)
-			maxSize = 10_000;
-		if (ttlMinutes == 0)
-			ttlMinutes = 60;
-	}
+		@DefaultValue("10000") long maxSize,
+		@DefaultValue("60") long ttlMinutes) {
 }

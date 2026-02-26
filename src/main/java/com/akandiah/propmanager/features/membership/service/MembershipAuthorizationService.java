@@ -114,6 +114,34 @@ public class MembershipAuthorizationService {
 	}
 
 	/**
+	 * Allows access for template-assignment write operations (apply-template) if the caller is:
+	 * <ul>
+	 *   <li>System Admin, OR</li>
+	 *   <li>An Org Admin — has UPDATE on the {@code 'o'} domain at ORG scope.</li>
+	 * </ul>
+	 * Used for: {@code POST /memberships/{id}/apply-template}.
+	 */
+	@Transactional(readOnly = true)
+	public boolean canManage(UUID membershipId) {
+		try {
+			if (SecurityUtils.isGlobalAdmin()) {
+				return true;
+			}
+			Membership m = membershipRepository.findByIdWithOrganizationAndUser(membershipId).orElse(null);
+			if (m == null) {
+				return false;
+			}
+			UUID orgId = m.getOrganization().getId();
+			List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
+			return authorizationService.allow(access, Actions.UPDATE, PermissionDomains.ORGANIZATION,
+					ResourceType.ORG, orgId, orgId);
+		} catch (Exception e) {
+			log.error("Error checking canManage for membership {}", membershipId, e);
+			return false;
+		}
+	}
+
+	/**
 	 * Allows access if the caller is:
 	 * <ul>
 	 *   <li>System Admin, OR</li>

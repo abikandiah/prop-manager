@@ -10,6 +10,6 @@ import jakarta.validation.constraints.NotNull;
 public record CreateMemberScopeRequest(
 		@NotNull(message = "Scope type is required") ResourceType scopeType,
 		@NotNull(message = "Scope ID is required") UUID scopeId,
-		Map<String, String> permissions,
-		UUID templateId) {
+		/** Optional custom permissions. If absent, the row acts as a pure binding row (empty permissions). */
+		Map<String, String> permissions) {
 }
