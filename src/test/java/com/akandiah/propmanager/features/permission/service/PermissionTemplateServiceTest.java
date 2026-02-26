@@ -36,8 +36,8 @@ import com.akandiah.propmanager.features.permission.api.dto.PermissionTemplateRe
 import com.akandiah.propmanager.features.permission.api.dto.UpdatePermissionTemplateRequest;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRepository;
-import com.akandiah.propmanager.security.OrgAuthorizationComponent;
-import com.akandiah.propmanager.security.PermissionAuth;
+import com.akandiah.propmanager.security.OrgGuard;
+import com.akandiah.propmanager.security.PermissionGuard;
 
 import jakarta.persistence.OptimisticLockException;
 
@@ -51,10 +51,10 @@ class PermissionTemplateServiceTest {
 	private OrganizationRepository organizationRepository;
 
 	@Mock
-	private OrgAuthorizationComponent orgAuthz;
+	private OrgGuard orgGuard;
 
 	@Mock
-	private PermissionAuth permissionAuth;
+	private PermissionGuard permissionGuard;
 
 	private PermissionTemplateService service;
 
@@ -64,7 +64,7 @@ class PermissionTemplateServiceTest {
 		SecurityContextHolder.getContext().setAuthentication(
 				new UsernamePasswordAuthenticationToken("admin", null,
 						List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
-		service = new PermissionTemplateService(repository, organizationRepository, orgAuthz, permissionAuth);
+		service = new PermissionTemplateService(repository, organizationRepository, orgGuard, permissionGuard);
 	}
 
 	@AfterEach
@@ -309,7 +309,7 @@ class PermissionTemplateServiceTest {
 		PermissionTemplate t = template(orgId, "Org", Map.of("l", "r"));
 		t.setId(id);
 		when(repository.findById(id)).thenReturn(Optional.of(t));
-		when(orgAuthz.isMember(any(), any())).thenReturn(false);
+		when(orgGuard.isMember(any(), any())).thenReturn(false);
 
 		assertThatThrownBy(() -> service.findById(id))
 				.isInstanceOf(AccessDeniedException.class);
@@ -323,7 +323,7 @@ class PermissionTemplateServiceTest {
 		PermissionTemplate t = template(orgId, "Org", Map.of("l", "r"));
 		t.setId(id);
 		when(repository.findById(id)).thenReturn(Optional.of(t));
-		when(orgAuthz.isMember(any(), any())).thenReturn(true);
+		when(orgGuard.isMember(any(), any())).thenReturn(true);
 
 		PermissionTemplateResponse response = service.findById(id);
 
@@ -366,7 +366,7 @@ class PermissionTemplateServiceTest {
 		existing.setId(id);
 		existing.setVersion(0);
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
-		when(permissionAuth.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(true);
+		when(permissionGuard.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(true);
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 		PermissionTemplateResponse response = service.update(id, new UpdatePermissionTemplateRequest("New", null, 0));
@@ -383,7 +383,7 @@ class PermissionTemplateServiceTest {
 		existing.setId(id);
 		existing.setVersion(0);
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
-		when(permissionAuth.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(false);
+		when(permissionGuard.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(false);
 
 		assertThatThrownBy(() -> service.update(id, new UpdatePermissionTemplateRequest("T", null, 0)))
 				.isInstanceOf(AccessDeniedException.class);
@@ -413,7 +413,7 @@ class PermissionTemplateServiceTest {
 		PermissionTemplate t = template(orgId, "T", Map.of("l", "r"));
 		t.setId(id);
 		when(repository.findById(id)).thenReturn(Optional.of(t));
-		when(permissionAuth.hasAccess(Actions.DELETE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(false);
+		when(permissionGuard.hasAccess(Actions.DELETE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(false);
 
 		assertThatThrownBy(() -> service.deleteById(id))
 				.isInstanceOf(AccessDeniedException.class);

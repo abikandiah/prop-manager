@@ -22,8 +22,8 @@ import com.akandiah.propmanager.features.permission.api.dto.PermissionTemplateRe
 import com.akandiah.propmanager.features.permission.api.dto.UpdatePermissionTemplateRequest;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplate;
 import com.akandiah.propmanager.features.permission.domain.PermissionTemplateRepository;
-import com.akandiah.propmanager.security.OrgAuthorizationComponent;
-import com.akandiah.propmanager.security.PermissionAuth;
+import com.akandiah.propmanager.security.OrgGuard;
+import com.akandiah.propmanager.security.PermissionGuard;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,8 +34,8 @@ public class PermissionTemplateService {
 
 	private final PermissionTemplateRepository repository;
 	private final OrganizationRepository organizationRepository;
-	private final OrgAuthorizationComponent orgAuthz;
-	private final PermissionAuth permissionAuth;
+	private final OrgGuard orgGuard;
+	private final PermissionGuard permissionGuard;
 
 	public List<PermissionTemplateResponse> listByOrg(UUID orgId) {
 		return repository.findByOrgIsNullOrOrg_IdOrderByNameAsc(orgId).stream()
@@ -49,7 +49,7 @@ public class PermissionTemplateService {
 
 		if (template.getOrg() != null) {
 			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-			if (!orgAuthz.isMember(template.getOrg().getId(), auth)) {
+			if (!orgGuard.isMember(template.getOrg().getId(), auth)) {
 				throw new AccessDeniedException("Access denied to this organization's templates");
 			}
 		}
@@ -92,7 +92,7 @@ public class PermissionTemplateService {
 		} else {
 			UUID orgId = template.getOrg().getId();
 			if (!SecurityUtils.isGlobalAdmin() &&
-					!permissionAuth.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)) {
+					!permissionGuard.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)) {
 				throw new AccessDeniedException("Insufficient permissions to modify this organization's templates");
 			}
 		}
@@ -123,7 +123,7 @@ public class PermissionTemplateService {
 		} else {
 			UUID orgId = template.getOrg().getId();
 			if (!SecurityUtils.isGlobalAdmin() &&
-					!permissionAuth.hasAccess(Actions.DELETE, "o", ResourceType.ORG, orgId, orgId)) {
+					!permissionGuard.hasAccess(Actions.DELETE, "o", ResourceType.ORG, orgId, orgId)) {
 				throw new AccessDeniedException("Insufficient permissions to delete this organization's templates");
 			}
 		}

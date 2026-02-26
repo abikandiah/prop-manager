@@ -11,7 +11,9 @@ import com.akandiah.propmanager.security.JwtAccessHydrationFilter;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-/** Static helpers for reading the current authentication and request context. */
+/**
+ * Static helpers for reading the current authentication and request context.
+ */
 public final class SecurityUtils {
 
 	private SecurityUtils() {
@@ -25,8 +27,10 @@ public final class SecurityUtils {
 	}
 
 	/**
-	 * Retrieves the {@link AccessEntry} list hydrated by {@link JwtAccessHydrationFilter}
-	 * from the current HTTP request attributes. Returns an empty list if there is no
+	 * Retrieves the {@link AccessEntry} list hydrated by
+	 * {@link JwtAccessHydrationFilter}
+	 * from the current HTTP request attributes. Returns an empty list if there is
+	 * no
 	 * active request or the attribute is absent.
 	 */
 	@SuppressWarnings("unchecked")

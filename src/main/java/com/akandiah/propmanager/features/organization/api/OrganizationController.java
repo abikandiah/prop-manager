@@ -56,7 +56,7 @@ public class OrganizationController {
 
 	@GetMapping("/{id}")
 	@Operation(summary = "Get organization by ID")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#id, authentication)")
+	@PreAuthorize("hasRole('ADMIN') or @orgGuard.isMember(#id, authentication)")
 	public ResponseEntity<OrganizationResponse> getById(@PathVariable UUID id) {
 		return ResponseEntity.ok(organizationService.findById(id));
 	}
@@ -71,7 +71,7 @@ public class OrganizationController {
 
 	@PatchMapping("/{id}")
 	@Operation(summary = "Update an organization")
-	@PreAuthorize("@permissionAuth.hasOrgAccess(4, 'o', #id)")
+	@PreAuthorize("@permissionGuard.hasOrgAccess(4, 'o', #id)")
 	public ResponseEntity<OrganizationResponse> update(
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateOrganizationRequest request) {
@@ -80,7 +80,7 @@ public class OrganizationController {
 
 	@DeleteMapping("/{id}")
 	@Operation(summary = "Delete an organization")
-	@PreAuthorize("@permissionAuth.hasOrgAccess(8, 'o', #id)")
+	@PreAuthorize("@permissionGuard.hasOrgAccess(8, 'o', #id)")
 	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		organizationService.deleteById(id);
 		return ResponseEntity.noContent().build();
@@ -88,7 +88,7 @@ public class OrganizationController {
 
 	@GetMapping("/{id}/members")
 	@Operation(summary = "List members of the organization")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#id, authentication)")
+	@PreAuthorize("hasRole('ADMIN') or @orgGuard.isMember(#id, authentication)")
 	public ResponseEntity<List<MembershipResponse>> listMembers(@PathVariable UUID id) {
 		return ResponseEntity.ok(membershipService.findByOrganizationId(id));
 	}
@@ -106,7 +106,7 @@ public class OrganizationController {
 
 	@DeleteMapping("/{id}/members/{membershipId}")
 	@Operation(summary = "Remove a member from the organization")
-	@PreAuthorize("@permissionAuth.hasOrgAccess(8, 'o', #id)")
+	@PreAuthorize("@permissionGuard.hasOrgAccess(8, 'o', #id)")
 	public ResponseEntity<Void> deleteMember(
 			@PathVariable UUID id,
 			@PathVariable UUID membershipId) {

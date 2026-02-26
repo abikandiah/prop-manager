@@ -37,21 +37,21 @@ public class UnitController {
 	}
 
 	@GetMapping
-	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #propId, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #propId, #orgId)")
 	@Operation(summary = "List units for a property")
 	public List<UnitResponse> list(@RequestParam UUID propId, @RequestParam UUID orgId) {
 		return unitService.findByPropId(propId);
 	}
 
 	@GetMapping("/{id}")
-	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
 	@Operation(summary = "Get unit by ID")
 	public UnitResponse getById(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return unitService.findById(id);
 	}
 
 	@PostMapping
-	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #request.propertyId, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #request.propertyId, #orgId)")
 	@Operation(summary = "Create a unit")
 	public ResponseEntity<UnitResponse> create(@Valid @RequestBody CreateUnitRequest request,
 			@RequestParam UUID orgId) {
@@ -60,7 +60,7 @@ public class UnitController {
 	}
 
 	@PatchMapping("/{id}")
-	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
 	@Operation(summary = "Update a unit")
 	public UnitResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUnitRequest request,
 			@RequestParam UUID orgId) {
@@ -68,7 +68,7 @@ public class UnitController {
 	}
 
 	@DeleteMapping("/{id}")
-	@PreAuthorize("@permissionAuth.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
 	@Operation(summary = "Delete a unit")
 	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID orgId) {
 		unitService.deleteById(id);

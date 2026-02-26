@@ -36,7 +36,7 @@ public class PermissionTemplateController {
 
 	@GetMapping
 	@Operation(summary = "List permission templates by org", description = "Returns system templates (org_id null) plus the given org's templates")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#orgId, authentication)")
+	@PreAuthorize("hasRole('ADMIN') or @orgGuard.isMember(#orgId, authentication)")
 	public ResponseEntity<List<PermissionTemplateResponse>> list(@RequestParam UUID orgId) {
 		return ResponseEntity.ok(service.listByOrg(orgId));
 	}
@@ -51,7 +51,7 @@ public class PermissionTemplateController {
 	@PostMapping
 	@Operation(summary = "Create a permission template")
 	@PreAuthorize("hasRole('ADMIN') or " +
-			"(#request.orgId() != null and @permissionAuth.hasAccess(" +
+			"(#request.orgId() != null and @permissionGuard.hasAccess(" +
 			"T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'o', " +
 			"T(com.akandiah.propmanager.common.permission.ResourceType).ORG, " +
 			"#request.orgId(), #request.orgId()))")

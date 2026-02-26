@@ -36,34 +36,34 @@ class MemberInviteAcceptedListenerTest {
 	private ApplicationEventPublisher eventPublisher;
 
 	@InjectMocks
-	private MemberInviteAcceptedListener listener;
+	private MembershipService service;
 
 	@Test
 	void onInviteAccepted_shouldThrowErrorIfMembershipAlreadyClaimed() {
 		// Given
 		User existingUser = TestDataFactory.user().build();
 		User claimedBy = TestDataFactory.user().build();
-		
+
 		Membership membership = Membership.builder()
 				.id(UUID.randomUUID())
 				.user(existingUser) // ALREADY CLAIMED
 				.build();
-		
+
 		Invite invite = Invite.builder()
 				.id(UUID.randomUUID())
 				.targetType(TargetType.MEMBERSHIP)
 				.targetId(membership.getId())
 				.build();
-		
+
 		InviteAcceptedEvent event = new InviteAcceptedEvent(invite, claimedBy);
 
 		when(membershipRepository.findById(membership.getId())).thenReturn(Optional.of(membership));
 
 		// When / Then
-		assertThatThrownBy(() -> listener.onInviteAccepted(event))
+		assertThatThrownBy(() -> service.onInviteAccepted(event))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("already claimed");
-		
+
 		verify(membershipRepository, never()).save(any());
 	}
 
@@ -75,30 +75,30 @@ class MemberInviteAcceptedListenerTest {
 		Organization org = Organization.builder()
 				.id(orgId)
 				.build();
-		
+
 		Membership membership = Membership.builder()
 				.id(UUID.randomUUID())
 				.organization(org)
 				.user(null) // NOT CLAIMED
 				.build();
-		
+
 		Invite invite = Invite.builder()
 				.id(UUID.randomUUID())
 				.targetType(TargetType.MEMBERSHIP)
 				.targetId(membership.getId())
 				.build();
-		
+
 		InviteAcceptedEvent event = new InviteAcceptedEvent(invite, claimedBy);
 
 		when(membershipRepository.findById(membership.getId())).thenReturn(Optional.of(membership));
 
 		// When
-		listener.onInviteAccepted(event);
+		service.onInviteAccepted(event);
 
 		// Then
 		verify(membershipRepository).save(membership);
 		assertThat(membership.getUser()).isEqualTo(claimedBy);
-		
+
 		verify(eventPublisher).publishEvent(any(PermissionsChangedEvent.class));
 	}
 }
