@@ -71,7 +71,7 @@ public class OrganizationController {
 
 	@PatchMapping("/{id}")
 	@Operation(summary = "Update an organization")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#id, authentication)")
+	@PreAuthorize("@permissionAuth.hasOrgAccess(4, 'o', #id)")
 	public ResponseEntity<OrganizationResponse> update(
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateOrganizationRequest request) {
@@ -80,7 +80,7 @@ public class OrganizationController {
 
 	@DeleteMapping("/{id}")
 	@Operation(summary = "Delete an organization")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#id, authentication)")
+	@PreAuthorize("@permissionAuth.hasOrgAccess(8, 'o', #id)")
 	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		organizationService.deleteById(id);
 		return ResponseEntity.noContent().build();
@@ -106,7 +106,7 @@ public class OrganizationController {
 
 	@DeleteMapping("/{id}/members/{membershipId}")
 	@Operation(summary = "Remove a member from the organization")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#id, authentication)")
+	@PreAuthorize("@permissionAuth.hasOrgAccess(8, 'o', #id)")
 	public ResponseEntity<Void> deleteMember(
 			@PathVariable UUID id,
 			@PathVariable UUID membershipId) {

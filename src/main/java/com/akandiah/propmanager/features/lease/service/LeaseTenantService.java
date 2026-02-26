@@ -221,6 +221,8 @@ public class LeaseTenantService {
 		leaseTenant.setRole(LeaseTenantRole.valueOf(roleValue));
 		leaseTenantRepository.save(leaseTenant);
 
+		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(claimedUser.getId())));
+
 		log.info("Linked tenant {} to LeaseTenant {} via invite {}", tenant.getId(), leaseTenant.getId(),
 				invite.getId());
 	}

@@ -15,11 +15,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.membership.api.dto.MemberScopeResponse;
 import com.akandiah.propmanager.features.membership.api.dto.UpdateMemberScopeRequest;
-import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.membership.service.MemberScopeService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,65 +36,54 @@ import lombok.RequiredArgsConstructor;
 public class MemberScopeController {
 
 	private final MemberScopeService memberScopeService;
-	private final MembershipRepository membershipRepository;
-
-	private void requireMembershipInOrg(UUID membershipId, UUID orgId) {
-		membershipRepository.findByIdAndOrganizationId(membershipId, orgId)
-				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
-	}
 
 	@GetMapping
 	@Operation(summary = "List scopes for a membership")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#orgId, authentication)")
+	@PreAuthorize("@membershipAuth.canView(#membershipId, #orgId)")
 	public ResponseEntity<List<MemberScopeResponse>> list(
 			@PathVariable UUID orgId,
 			@PathVariable UUID membershipId) {
-		requireMembershipInOrg(membershipId, orgId);
 		return ResponseEntity.ok(memberScopeService.findByMembershipId(membershipId));
 	}
 
 	@GetMapping("/{scopeId}")
 	@Operation(summary = "Get a scope by ID")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#orgId, authentication)")
+	@PreAuthorize("@membershipAuth.canView(#membershipId, #orgId)")
 	public ResponseEntity<MemberScopeResponse> getById(
 			@PathVariable UUID orgId,
 			@PathVariable UUID membershipId,
 			@PathVariable UUID scopeId) {
-		requireMembershipInOrg(membershipId, orgId);
 		return ResponseEntity.ok(memberScopeService.findById(membershipId, scopeId));
 	}
 
 	@PostMapping
 	@Operation(summary = "Add a scope to a membership")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#orgId, authentication)")
+	@PreAuthorize("@membershipAuth.canManageScopes(2, #orgId, #membershipId)")
 	public ResponseEntity<MemberScopeResponse> create(
 			@PathVariable UUID orgId,
 			@PathVariable UUID membershipId,
 			@Valid @RequestBody CreateMemberScopeRequest request) {
-		requireMembershipInOrg(membershipId, orgId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(memberScopeService.create(membershipId, request));
 	}
 
 	@PatchMapping("/{scopeId}")
 	@Operation(summary = "Update a scope's permissions")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#orgId, authentication)")
+	@PreAuthorize("@membershipAuth.canManageScopes(4, #orgId, #membershipId)")
 	public ResponseEntity<MemberScopeResponse> update(
 			@PathVariable UUID orgId,
 			@PathVariable UUID membershipId,
 			@PathVariable UUID scopeId,
 			@Valid @RequestBody UpdateMemberScopeRequest request) {
-		requireMembershipInOrg(membershipId, orgId);
 		return ResponseEntity.ok(memberScopeService.update(membershipId, scopeId, request));
 	}
 
 	@DeleteMapping("/{scopeId}")
 	@Operation(summary = "Remove a scope from a membership")
-	@PreAuthorize("hasRole('ADMIN') or @orgAuthz.isMember(#orgId, authentication)")
+	@PreAuthorize("@membershipAuth.canManageScopes(8, #orgId, #membershipId)")
 	public ResponseEntity<Void> delete(
 			@PathVariable UUID orgId,
 			@PathVariable UUID membershipId,
 			@PathVariable UUID scopeId) {
-		requireMembershipInOrg(membershipId, orgId);
 		memberScopeService.deleteById(membershipId, scopeId);
 		return ResponseEntity.noContent().build();
 	}

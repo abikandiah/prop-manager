@@ -63,10 +63,6 @@ public class Membership {
 	@JoinColumn(name = "org_id", nullable = false)
 	private Organization organization;
 
-	/**
-	 * The invite that originated this membership slot.
-	 * Null for direct additions (if supported) or after cleanup.
-	 */
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "invite_id")
 	private Invite invite;

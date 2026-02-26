@@ -39,4 +39,7 @@ public interface MembershipRepository extends JpaRepository<Membership, UUID> {
 			  AND i.status = com.akandiah.propmanager.features.invite.domain.InviteStatus.PENDING
 			""")
 	boolean existsPendingInviteForEmailInOrg(String email, UUID organizationId);
+
+	@Query("SELECT m FROM Membership m JOIN FETCH m.organization LEFT JOIN FETCH m.user WHERE m.id = :id")
+	Optional<Membership> findByIdWithOrganizationAndUser(UUID id);
 }

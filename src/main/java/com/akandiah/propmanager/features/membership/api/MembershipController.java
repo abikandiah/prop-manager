@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/memberships")
-@PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 @Tag(name = "Memberships", description = "User-organization membership management")
 public class MembershipController {
@@ -30,19 +29,21 @@ public class MembershipController {
 
 	@GetMapping
 	@Operation(summary = "List memberships by user ID")
+	@PreAuthorize("@membershipAuth.canListFor(#userId)")
 	public ResponseEntity<List<MembershipResponse>> list(@RequestParam UUID userId) {
 		return ResponseEntity.ok(membershipService.findByUserId(userId));
 	}
 
 	@GetMapping("/{id}")
 	@Operation(summary = "Get membership by ID")
+	@PreAuthorize("@membershipAuth.canView(#id)")
 	public ResponseEntity<MembershipResponse> getById(@PathVariable UUID id) {
 		return ResponseEntity.ok(membershipService.findById(id));
 	}
 
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
-	@Operation(summary = "Delete membership")
+	@Operation(summary = "Delete membership (system admin escape hatch)")
 	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		membershipService.deleteById(id);
 		return ResponseEntity.noContent().build();

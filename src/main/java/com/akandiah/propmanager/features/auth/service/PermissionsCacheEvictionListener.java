@@ -9,16 +9,13 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
-import com.akandiah.propmanager.features.invite.domain.InviteAcceptedEvent;
-import com.akandiah.propmanager.features.invite.domain.TargetType;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Evicts entries from the "permissions" cache when user access may have changed.
- * Listens for {@link PermissionsChangedEvent} (explicit permission mutations)
- * and {@link InviteAcceptedEvent} (tenant gains unit-level READ on acceptance).
+ * Listens for {@link PermissionsChangedEvent} (explicit permission mutations).
  */
 @Component
 @RequiredArgsConstructor
@@ -30,14 +27,6 @@ public class PermissionsCacheEvictionListener {
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onPermissionsChanged(PermissionsChangedEvent event) {
 		evict(event.affectedUserIds());
-	}
-
-	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	public void onInviteAccepted(InviteAcceptedEvent event) {
-		if (event.invite().getTargetType() != TargetType.LEASE) {
-			return;
-		}
-		evict(Set.of(event.claimedUser().getId()));
 	}
 
 	private void evict(Set<UUID> userIds) {

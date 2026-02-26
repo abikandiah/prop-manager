@@ -7,12 +7,14 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.invite.domain.Invite;
+import com.akandiah.propmanager.features.invite.domain.InviteAcceptedEvent;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.invite.domain.InviteStatus;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
@@ -29,8 +31,10 @@ import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.domain.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MembershipService {
@@ -95,9 +99,9 @@ public class MembershipService {
 	 * 3. Creates and sends an Invite pointing to the Membership.
 	 */
 	@Transactional
-	public MembershipResponse inviteMember(UUID organizationId, String email, 
+	public MembershipResponse inviteMember(UUID organizationId, String email,
 			List<CreateMemberScopeRequest> initialScopes, User invitedBy) {
-		
+
 		// Check for existing active membership by email if user exists
 		userRepository.findByEmail(email).ifPresent(user -> {
 			if (membershipRepository.existsByUserIdAndOrganizationId(user.getId(), organizationId)) {
@@ -112,7 +116,7 @@ public class MembershipService {
 
 		// 1. Create Membership (user=null)
 		MembershipResponse membershipRes = doCreate(organizationId, null);
-		
+
 		// 2. Create Scopes
 		if (initialScopes != null) {
 			for (CreateMemberScopeRequest scopeReq : initialScopes) {
@@ -148,10 +152,40 @@ public class MembershipService {
 		return MembershipResponse.from(m);
 	}
 
+	@EventListener
+	@Transactional
+	public void onInviteAccepted(InviteAcceptedEvent event) {
+		if (event.invite().getTargetType() != TargetType.MEMBERSHIP) {
+			return;
+		}
+
+		User claimedBy = event.claimedUser();
+		UUID membershipId = event.invite().getTargetId();
+
+		log.info("Processing membership invite acceptance: user={}, membership={}",
+				claimedBy.getId(), membershipId);
+
+		Membership membership = membershipRepository.findById(membershipId)
+				.orElseThrow(() -> new ResourceNotFoundException("Membership", membershipId));
+
+		if (membership.getUser() != null) {
+			throw new IllegalStateException(
+					"Membership " + membershipId + " is already claimed by user " + membership.getUser().getId());
+		}
+
+		membership.setUser(claimedBy);
+		membershipRepository.save(membership);
+
+		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(claimedBy.getId())));
+
+		log.info("Linked membership id={} to user id={} in org id={}",
+				membershipId, claimedBy.getId(), membership.getOrganization().getId());
+	}
+
 	private MembershipResponse doCreate(UUID organizationId, UUID userId) {
 		Organization org = organizationRepository.findById(organizationId)
 				.orElseThrow(() -> new ResourceNotFoundException("Organization", organizationId));
-		
+
 		User user = null;
 		if (userId != null) {
 			user = userRepository.findById(userId)

@@ -3,11 +3,7 @@ package com.akandiah.propmanager.features.invite.service;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.AccessEntry;
@@ -20,11 +16,10 @@ import com.akandiah.propmanager.features.invite.domain.TargetType;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.user.domain.User;
+import com.akandiah.propmanager.common.util.SecurityUtils;
 import com.akandiah.propmanager.security.HierarchyAwareAuthorizationService;
-import com.akandiah.propmanager.security.JwtAccessHydrationFilter;
 import com.akandiah.propmanager.security.JwtUserResolver;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,7 +45,7 @@ public class InviteAuthorizationService {
 	 */
 	public boolean canCreateInviteForTarget(TargetType targetType, UUID targetId) {
 		try {
-			if (hasRole("ADMIN"))
+			if (SecurityUtils.isGlobalAdmin())
 				return true;
 			return checkTargetAccess(targetType, targetId, Actions.CREATE);
 		} catch (Exception e) {
@@ -66,7 +61,7 @@ public class InviteAuthorizationService {
 	 */
 	public boolean canManageInvite(UUID inviteId) {
 		try {
-			if (hasRole("ADMIN")) {
+			if (SecurityUtils.isGlobalAdmin()) {
 				return true;
 			}
 
@@ -101,7 +96,7 @@ public class InviteAuthorizationService {
 	 */
 	public boolean canViewInvitesForTarget(TargetType targetType, UUID targetId) {
 		try {
-			if (hasRole("ADMIN"))
+			if (SecurityUtils.isGlobalAdmin())
 				return true;
 			return checkTargetAccess(targetType, targetId, Actions.READ);
 		} catch (Exception e) {
@@ -159,14 +154,14 @@ public class InviteAuthorizationService {
 						: null;
 				if (orgId == null)
 					yield false;
-				List<AccessEntry> access = getAccessFromRequest();
+				List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
 				yield authorizationService.allow(access, requiredAction, PermissionDomains.LEASES,
 						ResourceType.UNIT, unitId, orgId);
 			}
 			case MEMBERSHIP -> {
 				// targetId is the org ID
-				List<AccessEntry> access = getAccessFromRequest();
-				yield authorizationService.allow(access, requiredAction, PermissionDomains.TENANTS,
+				List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
+				yield authorizationService.allow(access, requiredAction, PermissionDomains.ORGANIZATION,
 						ResourceType.ORG, targetId, targetId);
 			}
 		};
@@ -180,23 +175,4 @@ public class InviteAuthorizationService {
 		return checkTargetAccess(targetType, targetId, Actions.READ);
 	}
 
-	private boolean hasRole(String role) {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (authentication == null) {
-			return false;
-		}
-		return authentication.getAuthorities().stream()
-				.anyMatch(a -> a.getAuthority().equals("ROLE_" + role));
-	}
-
-	@SuppressWarnings("unchecked")
-	private List<AccessEntry> getAccessFromRequest() {
-		ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-		if (attrs == null) {
-			return List.of();
-		}
-		HttpServletRequest request = attrs.getRequest();
-		Object attr = request.getAttribute(JwtAccessHydrationFilter.REQUEST_ATTRIBUTE_ACCESS);
-		return attr instanceof List<?> list ? (List<AccessEntry>) list : List.of();
-	}
 }
