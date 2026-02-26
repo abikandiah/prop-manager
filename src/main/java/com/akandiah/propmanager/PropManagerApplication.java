@@ -4,6 +4,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
+import com.akandiah.propmanager.common.listener.StartupFailureListener;
+
 import io.github.cdimascio.dotenv.Dotenv;
 
 @SpringBootApplication
@@ -14,7 +16,9 @@ public class PropManagerApplication {
 		Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
 		dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
 
-		SpringApplication.run(PropManagerApplication.class, args);
+		SpringApplication app = new SpringApplication(PropManagerApplication.class);
+		app.addListeners(new StartupFailureListener());
+		app.run(args);
 	}
 
 }
