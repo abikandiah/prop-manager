@@ -27,7 +27,6 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/assets")
-@PreAuthorize("isAuthenticated()")
 @Tag(name = "Assets", description = "Asset/equipment resource (linked to Prop or Unit)")
 public class AssetController {
 
@@ -38,44 +37,61 @@ public class AssetController {
 	}
 
 	@GetMapping
-	@Operation(summary = "List assets, optionally by property ID or unit ID")
-	public List<AssetResponse> list(
-			@RequestParam(required = false) UUID propId,
-			@RequestParam(required = false) UUID unitId) {
-		if (propId != null) {
-			return assetService.findByPropId(propId);
-		}
-		if (unitId != null) {
-			return assetService.findByUnitId(unitId);
-		}
+	@PreAuthorize("hasRole('ADMIN')")
+	@Operation(summary = "List all assets (admin only — no scope filter)")
+	public List<AssetResponse> listAll() {
 		return assetService.findAll();
 	}
 
+	@GetMapping(params = { "propId", "orgId" })
+	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'm', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #propId, #orgId)")
+	@Operation(summary = "List assets by property ID")
+	public List<AssetResponse> listByProp(
+			@RequestParam UUID propId,
+			@RequestParam UUID orgId) {
+		return assetService.findByPropId(propId);
+	}
+
+	@GetMapping(params = { "unitId", "orgId" })
+	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'm', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #unitId, #orgId)")
+	@Operation(summary = "List assets by unit ID")
+	public List<AssetResponse> listByUnit(
+			@RequestParam UUID unitId,
+			@RequestParam UUID orgId) {
+		return assetService.findByUnitId(unitId);
+	}
+
 	@GetMapping("/{id}")
+	@PreAuthorize("@permissionGuard.hasAssetAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'm', #id, #orgId)")
 	@Operation(summary = "Get asset by ID")
-	public AssetResponse getById(@PathVariable UUID id) {
+	public AssetResponse getById(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return assetService.findById(id);
 	}
 
 	@PostMapping
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("@permissionGuard.hasAssetCreateAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'm', #request.propertyId, #request.unitId, #orgId)")
 	@Operation(summary = "Create an asset (set exactly one of propertyId or unitId)")
-	public ResponseEntity<AssetResponse> create(@Valid @RequestBody CreateAssetRequest request) {
+	public ResponseEntity<AssetResponse> create(
+			@Valid @RequestBody CreateAssetRequest request,
+			@RequestParam UUID orgId) {
 		AssetResponse created = assetService.create(request);
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
 	}
 
 	@PatchMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("@permissionGuard.hasAssetAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'm', #id, #orgId)")
 	@Operation(summary = "Update an asset")
-	public AssetResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateAssetRequest request) {
+	public AssetResponse update(
+			@PathVariable UUID id,
+			@Valid @RequestBody UpdateAssetRequest request,
+			@RequestParam UUID orgId) {
 		return assetService.update(id, request);
 	}
 
 	@DeleteMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("@permissionGuard.hasAssetAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'm', #id, #orgId)")
 	@Operation(summary = "Delete an asset")
-	public ResponseEntity<Void> delete(@PathVariable UUID id) {
+	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID orgId) {
 		assetService.deleteById(id);
 		return ResponseEntity.noContent().build();
 	}

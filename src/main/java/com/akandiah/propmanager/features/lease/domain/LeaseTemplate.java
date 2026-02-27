@@ -9,7 +9,12 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
 
+import com.akandiah.propmanager.features.organization.domain.Organization;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -37,6 +42,11 @@ public class LeaseTemplate {
 	@Id
 	@UuidGenerator(style = UuidGenerator.Style.TIME)
 	private UUID id;
+
+	@Setter
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "org_id", nullable = false)
+	private Organization org;
 
 	@Setter
 	@Column(nullable = false, length = 255)

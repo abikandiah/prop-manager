@@ -4,5 +4,6 @@ package com.akandiah.propmanager.common.permission;
 public enum ResourceType {
 	ORG,
 	PROPERTY,
-	UNIT
+	UNIT,
+	ASSET
 }

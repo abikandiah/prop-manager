@@ -2,6 +2,7 @@ package com.akandiah.propmanager.features.lease.api.dto;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.UUID;
 
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 
@@ -11,6 +12,8 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 public record UpdateLeaseTemplateRequest(
+		@NotNull(message = "orgId is required") UUID orgId,
+
 		@Size(max = 255) String name,
 
 		@Size(max = 50) String versionTag,

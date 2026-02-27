@@ -1,0 +1,140 @@
+package com.akandiah.propmanager.security;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import com.akandiah.propmanager.common.permission.Actions;
+import com.akandiah.propmanager.common.permission.PermissionDomains;
+import com.akandiah.propmanager.common.permission.ResourceType;
+import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
+
+@ExtendWith(MockitoExtension.class)
+class PermissionGuardTest {
+
+	@Mock
+	private HierarchyAwareAuthorizationService authorizationService;
+	@Mock
+	private LeaseRepository leaseRepository;
+
+	private PermissionGuard guard;
+
+	private static final UUID ORG_ID = UUID.randomUUID();
+	private static final UUID ASSET_ID = UUID.randomUUID();
+	private static final UUID PROP_ID = UUID.randomUUID();
+	private static final UUID UNIT_ID = UUID.randomUUID();
+
+	@BeforeEach
+	void setUp() {
+		guard = new PermissionGuard(authorizationService, leaseRepository);
+		// Set up a non-admin security context and a request with an empty access list
+		SecurityContextHolder.getContext().setAuthentication(
+				new TestingAuthenticationToken("user", null, List.of()));
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.setAttribute(JwtAccessHydrationFilter.REQUEST_ATTRIBUTE_ACCESS, List.of());
+		RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+	}
+
+	@AfterEach
+	void tearDown() {
+		SecurityContextHolder.clearContext();
+		RequestContextHolder.resetRequestAttributes();
+	}
+
+	// ─────────────────── hasAssetAccess ───────────────────
+
+	@Test
+	void hasAssetAccess_delegatesToResourceTypeAsset() {
+		when(authorizationService.allow(any(), eq(Actions.READ), eq(PermissionDomains.MAINTENANCE),
+				eq(ResourceType.ASSET), eq(ASSET_ID), eq(ORG_ID))).thenReturn(true);
+
+		boolean result = guard.hasAssetAccess(Actions.READ, PermissionDomains.MAINTENANCE, ASSET_ID, ORG_ID);
+
+		assertThat(result).isTrue();
+		verify(authorizationService).allow(any(), eq(Actions.READ), eq(PermissionDomains.MAINTENANCE),
+				eq(ResourceType.ASSET), eq(ASSET_ID), eq(ORG_ID));
+	}
+
+	@Test
+	void hasAssetAccess_returnsTrueForGlobalAdmin() {
+		SecurityContextHolder.getContext().setAuthentication(
+				new TestingAuthenticationToken("admin", null,
+						List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
+		boolean result = guard.hasAssetAccess(Actions.DELETE, PermissionDomains.MAINTENANCE, ASSET_ID, ORG_ID);
+
+		assertThat(result).isTrue();
+	}
+
+	// ─────────────────── hasAssetCreateAccess ───────────────────
+
+	@Test
+	void hasAssetCreateAccess_checksPropertyScopeWhenPropertyIdProvided() {
+		when(authorizationService.allow(any(), eq(Actions.CREATE), eq(PermissionDomains.MAINTENANCE),
+				eq(ResourceType.PROPERTY), eq(PROP_ID), eq(ORG_ID))).thenReturn(true);
+
+		boolean result = guard.hasAssetCreateAccess(
+				Actions.CREATE, PermissionDomains.MAINTENANCE, PROP_ID, null, ORG_ID);
+
+		assertThat(result).isTrue();
+		verify(authorizationService).allow(any(), eq(Actions.CREATE), eq(PermissionDomains.MAINTENANCE),
+				eq(ResourceType.PROPERTY), eq(PROP_ID), eq(ORG_ID));
+	}
+
+	@Test
+	void hasAssetCreateAccess_checksUnitScopeWhenUnitIdProvided() {
+		when(authorizationService.allow(any(), eq(Actions.CREATE), eq(PermissionDomains.MAINTENANCE),
+				eq(ResourceType.UNIT), eq(UNIT_ID), eq(ORG_ID))).thenReturn(true);
+
+		boolean result = guard.hasAssetCreateAccess(
+				Actions.CREATE, PermissionDomains.MAINTENANCE, null, UNIT_ID, ORG_ID);
+
+		assertThat(result).isTrue();
+		verify(authorizationService).allow(any(), eq(Actions.CREATE), eq(PermissionDomains.MAINTENANCE),
+				eq(ResourceType.UNIT), eq(UNIT_ID), eq(ORG_ID));
+	}
+
+	@Test
+	void hasAssetCreateAccess_propertyIdTakesPrecedenceOverUnitId() {
+		when(authorizationService.allow(any(), eq(Actions.CREATE), eq(PermissionDomains.MAINTENANCE),
+				eq(ResourceType.PROPERTY), eq(PROP_ID), eq(ORG_ID))).thenReturn(true);
+
+		// Both provided — property wins
+		boolean result = guard.hasAssetCreateAccess(
+				Actions.CREATE, PermissionDomains.MAINTENANCE, PROP_ID, UNIT_ID, ORG_ID);
+
+		assertThat(result).isTrue();
+		verify(authorizationService).allow(any(), eq(Actions.CREATE), eq(PermissionDomains.MAINTENANCE),
+				eq(ResourceType.PROPERTY), eq(PROP_ID), eq(ORG_ID));
+	}
+
+	@Test
+	void hasAssetCreateAccess_returnsTrueForGlobalAdmin() {
+		SecurityContextHolder.getContext().setAuthentication(
+				new TestingAuthenticationToken("admin", null,
+						List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
+		boolean result = guard.hasAssetCreateAccess(
+				Actions.CREATE, PermissionDomains.MAINTENANCE, PROP_ID, null, ORG_ID);
+
+		assertThat(result).isTrue();
+	}
+}

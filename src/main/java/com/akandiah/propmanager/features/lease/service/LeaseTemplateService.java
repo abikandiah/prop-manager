@@ -3,6 +3,7 @@ package com.akandiah.propmanager.features.lease.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,35 +17,40 @@ import com.akandiah.propmanager.features.lease.api.dto.UpdateLeaseTemplateReques
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplateRepository;
+import com.akandiah.propmanager.features.organization.domain.Organization;
+import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 
 @Service
 public class LeaseTemplateService {
 
 	private final LeaseTemplateRepository repository;
 	private final LeaseRepository leaseRepository;
+	private final OrganizationRepository organizationRepository;
 
-	public LeaseTemplateService(LeaseTemplateRepository repository, LeaseRepository leaseRepository) {
+	public LeaseTemplateService(LeaseTemplateRepository repository, LeaseRepository leaseRepository,
+			OrganizationRepository organizationRepository) {
 		this.repository = repository;
 		this.leaseRepository = leaseRepository;
+		this.organizationRepository = organizationRepository;
 	}
 
 	@Transactional(readOnly = true)
-	public List<LeaseTemplateResponse> findAll() {
-		return repository.findAll().stream()
+	public List<LeaseTemplateResponse> findAll(UUID orgId) {
+		return repository.findByOrg_Id(orgId).stream()
 				.map(LeaseTemplateResponse::from)
 				.toList();
 	}
 
 	@Transactional(readOnly = true)
-	public List<LeaseTemplateResponse> findActive() {
-		return repository.findByActiveTrueOrderByNameAsc().stream()
+	public List<LeaseTemplateResponse> findActive(UUID orgId) {
+		return repository.findByOrg_IdAndActiveTrueOrderByNameAsc(orgId).stream()
 				.map(LeaseTemplateResponse::from)
 				.toList();
 	}
 
 	@Transactional(readOnly = true)
-	public List<LeaseTemplateResponse> search(String query) {
-		return repository.findByNameContainingIgnoreCaseOrderByNameAsc(query).stream()
+	public List<LeaseTemplateResponse> search(String query, UUID orgId) {
+		return repository.findByOrg_IdAndNameContainingIgnoreCaseOrderByNameAsc(orgId, query).stream()
 				.map(LeaseTemplateResponse::from)
 				.toList();
 	}
@@ -65,7 +71,11 @@ public class LeaseTemplateService {
 
 	@Transactional
 	public LeaseTemplateResponse create(CreateLeaseTemplateRequest request) {
+		Organization org = organizationRepository.findById(request.orgId())
+				.orElseThrow(() -> new ResourceNotFoundException("Organization", request.orgId()));
+
 		LeaseTemplate template = LeaseTemplate.builder()
+				.org(org)
 				.name(request.name())
 				.versionTag(request.versionTag())
 				.templateMarkdown(request.templateMarkdown())
@@ -83,6 +93,10 @@ public class LeaseTemplateService {
 	public LeaseTemplateResponse update(UUID id, UpdateLeaseTemplateRequest request) {
 		LeaseTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("LeaseTemplate", id));
+
+		if (template.getOrg() == null || !template.getOrg().getId().equals(request.orgId())) {
+			throw new AccessDeniedException("Template does not belong to the specified organization");
+		}
 
 		OptimisticLockingUtil.requireVersionMatch("LeaseTemplate", id, template.getVersion(), request.version());
 
@@ -121,9 +135,14 @@ public class LeaseTemplateService {
 	 * and then delete the template.
 	 */
 	@Transactional
-	public void deleteById(UUID id) {
+	public void deleteById(UUID id, UUID orgId) {
 		LeaseTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("LeaseTemplate", id));
+
+		if (template.getOrg() == null || !template.getOrg().getId().equals(orgId)) {
+			throw new AccessDeniedException("Template does not belong to the specified organization");
+		}
+
 		long draftCount = leaseRepository.countByLeaseTemplate_IdAndStatusIn(id,
 				java.util.List.of(LeaseStatus.DRAFT));
 		DeleteGuardUtil.requireNoChildren("LeaseTemplate", id, draftCount,

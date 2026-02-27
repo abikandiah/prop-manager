@@ -38,14 +38,15 @@ public class LeaseTemplateController {
 	}
 
 	@GetMapping
-	@Operation(summary = "List lease templates", description = "Filter with ?active=true for active-only, or ?search= for name search")
+	@Operation(summary = "List lease templates for an org", description = "Filter with ?active=true for active-only, or ?search= for name search")
 	public ResponseEntity<List<LeaseTemplateResponse>> list(
+			@RequestParam UUID orgId,
 			@RequestParam(required = false, defaultValue = "false") boolean active,
 			@RequestParam(required = false) String search) {
 		if (search != null && !search.isBlank()) {
-			return ResponseEntity.ok(service.search(search.strip()));
+			return ResponseEntity.ok(service.search(search.strip(), orgId));
 		}
-		return ResponseEntity.ok(active ? service.findActive() : service.findAll());
+		return ResponseEntity.ok(active ? service.findActive(orgId) : service.findAll(orgId));
 	}
 
 	@GetMapping("/{id}")
@@ -55,7 +56,7 @@ public class LeaseTemplateController {
 	}
 
 	@PostMapping
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("@permissionGuard.hasOrgAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'l', #request.orgId)")
 	@Operation(summary = "Create a lease template")
 	public ResponseEntity<LeaseTemplateResponse> create(
 			@Valid @RequestBody CreateLeaseTemplateRequest request) {
@@ -63,7 +64,7 @@ public class LeaseTemplateController {
 	}
 
 	@PatchMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("@permissionGuard.hasOrgAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', #request.orgId)")
 	@Operation(summary = "Update a lease template", description = "Requires 'version' for optimistic-lock verification; returns 409 if stale")
 	public ResponseEntity<LeaseTemplateResponse> update(
 			@PathVariable UUID id,
@@ -72,10 +73,10 @@ public class LeaseTemplateController {
 	}
 
 	@DeleteMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
+	@PreAuthorize("@permissionGuard.hasOrgAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'l', #orgId)")
 	@Operation(summary = "Delete a lease template")
-	public ResponseEntity<Void> delete(@PathVariable UUID id) {
-		service.deleteById(id);
+	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID orgId) {
+		service.deleteById(id, orgId);
 		return ResponseEntity.noContent().build();
 	}
 }

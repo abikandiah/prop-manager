@@ -10,6 +10,7 @@ import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
 
 public record LeaseTemplateResponse(
 		UUID id,
+		UUID orgId,
 		String name,
 		String versionTag,
 		Integer version,
@@ -25,6 +26,7 @@ public record LeaseTemplateResponse(
 	public static LeaseTemplateResponse from(LeaseTemplate t) {
 		return new LeaseTemplateResponse(
 				t.getId(),
+				t.getOrg() != null ? t.getOrg().getId() : null,
 				t.getName(),
 				t.getVersionTag(),
 				t.getVersion(),

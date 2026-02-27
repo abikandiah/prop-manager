@@ -9,10 +9,14 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import com.akandiah.propmanager.security.JwtAccessHydrationFilter;
 
-/** Builds per-resource-type access filters from a hydrated access list for list endpoints. */
+/**
+ * Builds per-resource-type access filters from a hydrated access list for list
+ * endpoints.
+ */
 public final class AccessListUtil {
 
-	private AccessListUtil() {}
+	private AccessListUtil() {
+	}
 
 	// ──────────────────────── Filter records ────────────────────────
 
@@ -22,7 +26,10 @@ public final class AccessListUtil {
 		}
 	}
 
-	/** Filter for resources scoped at org, property, or unit level (units, leases, etc.). */
+	/**
+	 * Filter for resources scoped at org, property, or unit level (units, leases,
+	 * etc.).
+	 */
 	public record ScopedAccessFilter(Set<UUID> orgIds, Set<UUID> propIds, Set<UUID> unitIds) {
 		public boolean isEmpty() {
 			return orgIds.isEmpty() && propIds.isEmpty() && unitIds.isEmpty();
@@ -36,11 +43,13 @@ public final class AccessListUtil {
 		Set<UUID> propIds = new HashSet<>();
 		for (AccessEntry e : access) {
 			int mask = e.permissions().getOrDefault(domain, 0);
-			if (!PermissionMaskUtil.hasAccess(mask, action)) continue;
+			if (!PermissionMaskUtil.hasAccess(mask, action))
+				continue;
 			switch (e.scopeType()) {
 				case ORG -> orgIds.add(e.orgId());
 				case PROPERTY -> propIds.add(e.scopeId());
-				case UNIT -> {}
+				case UNIT, ASSET -> {
+				}
 			}
 		}
 		return new PropAccessFilter(orgIds, propIds);
@@ -53,11 +62,14 @@ public final class AccessListUtil {
 		Set<UUID> unitIds = new HashSet<>();
 		for (AccessEntry e : access) {
 			int mask = e.permissions().getOrDefault(domain, 0);
-			if (!PermissionMaskUtil.hasAccess(mask, action)) continue;
+			if (!PermissionMaskUtil.hasAccess(mask, action))
+				continue;
 			switch (e.scopeType()) {
 				case ORG -> orgIds.add(e.orgId());
 				case PROPERTY -> propIds.add(e.scopeId());
 				case UNIT -> unitIds.add(e.scopeId());
+				case ASSET -> {
+				}
 			}
 		}
 		return new ScopedAccessFilter(orgIds, propIds, unitIds);

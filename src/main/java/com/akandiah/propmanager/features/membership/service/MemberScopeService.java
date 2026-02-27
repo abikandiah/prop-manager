@@ -21,6 +21,7 @@ import com.akandiah.propmanager.features.membership.domain.MemberScope;
 import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
+import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
@@ -35,6 +36,7 @@ public class MemberScopeService {
 	private final MembershipRepository membershipRepository;
 	private final PropRepository propRepository;
 	private final UnitRepository unitRepository;
+	private final AssetRepository assetRepository;
 	private final ApplicationEventPublisher eventPublisher;
 
 	public List<MemberScopeResponse> findByMembershipId(UUID membershipId) {
@@ -116,7 +118,8 @@ public class MemberScopeService {
 		MemberScope scope = memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId)
 				.orElseThrow(() -> new ResourceNotFoundException("MemberScope", scopeId));
 		UUID userId = scope.getMembership().getUser() != null
-				? scope.getMembership().getUser().getId() : null;
+				? scope.getMembership().getUser().getId()
+				: null;
 		memberScopeRepository.deleteById(scopeId);
 		if (userId != null) {
 			eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(userId)));
@@ -128,6 +131,8 @@ public class MemberScopeService {
 			case ORG -> request.scopeId().equals(orgId);
 			case PROPERTY -> propRepository.existsByIdAndOrganization_Id(request.scopeId(), orgId);
 			case UNIT -> unitRepository.existsByIdAndProp_Organization_Id(request.scopeId(), orgId);
+			case ASSET -> assetRepository.existsByIdAndProp_Organization_Id(request.scopeId(), orgId) ||
+					assetRepository.existsByIdAndUnit_Prop_Organization_Id(request.scopeId(), orgId);
 		};
 		if (!valid) {
 			throw new ResourceNotFoundException(request.scopeType().name(), request.scopeId());

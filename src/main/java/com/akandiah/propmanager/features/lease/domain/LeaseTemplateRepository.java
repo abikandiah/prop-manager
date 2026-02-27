@@ -7,7 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LeaseTemplateRepository extends JpaRepository<LeaseTemplate, UUID> {
 
-	List<LeaseTemplate> findByActiveTrueOrderByNameAsc();
+	List<LeaseTemplate> findByOrg_Id(UUID orgId);
 
-	List<LeaseTemplate> findByNameContainingIgnoreCaseOrderByNameAsc(String name);
+	List<LeaseTemplate> findByOrg_IdAndActiveTrueOrderByNameAsc(UUID orgId);
+
+	List<LeaseTemplate> findByOrg_IdAndNameContainingIgnoreCaseOrderByNameAsc(UUID orgId, String query);
+
+	long countByOrg_Id(UUID orgId);
 }

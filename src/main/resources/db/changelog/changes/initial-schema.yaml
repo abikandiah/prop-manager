@@ -539,6 +539,28 @@ databaseChangeLog:
                   defaultValueNumeric: 0
                   constraints:
                     nullable: false
+              - column:
+                  name: org_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: "initial-lease-templates-org-fk"
+      author: "prop-manager"
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: lease_templates
+            baseColumnNames: org_id
+            constraintName: fk_lease_templates_org
+            referencedTableName: organizations
+            referencedColumnNames: id
+        - createIndex:
+            indexName: idx_lease_templates_org_id
+            tableName: lease_templates
+            columns:
+              - column:
+                  name: org_id
 
   # leases - FK units, prop, lease_templates
   - changeSet:

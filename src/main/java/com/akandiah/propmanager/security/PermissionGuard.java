@@ -63,4 +63,23 @@ public class PermissionGuard {
 				.map(unitId -> hasAccess(requiredAction, domain, ResourceType.UNIT, unitId, orgId))
 				.orElse(false);
 	}
+
+	/**
+	 * Checks access for an asset resource.
+	 */
+	public boolean hasAssetAccess(int action, String domain, UUID assetId, UUID orgId) {
+		return hasAccess(action, domain, ResourceType.ASSET, assetId, orgId);
+	}
+
+	/**
+	 * For asset creation: checks access on the parent resource (property or unit).
+	 * Exactly one of {@code propertyId} / {@code unitId} must be non-null.
+	 */
+	public boolean hasAssetCreateAccess(int action, String domain,
+			UUID propertyId, UUID unitId, UUID orgId) {
+		if (propertyId != null) {
+			return hasAccess(action, domain, ResourceType.PROPERTY, propertyId, orgId);
+		}
+		return hasAccess(action, domain, ResourceType.UNIT, unitId, orgId);
+	}
 }

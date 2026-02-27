@@ -3,6 +3,7 @@ package com.akandiah.propmanager.features.lease.service;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -17,11 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplateRepository;
+import com.akandiah.propmanager.features.organization.domain.Organization;
+import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 
 /**
- * Initializes default lease templates on first application startup.
- * Idempotent - only creates templates if none exist.
- * Reads template markdown from classpath resources for easier maintenance.
+ * Initializes default lease templates on first application startup, per organization.
+ * Idempotent — only seeds templates for orgs that have none yet.
  */
 @Component
 public class DefaultLeaseTemplatesInitializer implements ApplicationRunner {
@@ -30,34 +32,45 @@ public class DefaultLeaseTemplatesInitializer implements ApplicationRunner {
 	private static final String TEMPLATE_BASE_PATH = "classpath:templates/lease/";
 
 	private final LeaseTemplateRepository repository;
+	private final OrganizationRepository organizationRepository;
 	private final ResourceLoader resourceLoader;
 
-	public DefaultLeaseTemplatesInitializer(LeaseTemplateRepository repository, ResourceLoader resourceLoader) {
+	public DefaultLeaseTemplatesInitializer(LeaseTemplateRepository repository,
+			OrganizationRepository organizationRepository,
+			ResourceLoader resourceLoader) {
 		this.repository = repository;
+		this.organizationRepository = organizationRepository;
 		this.resourceLoader = resourceLoader;
 	}
 
 	@Override
 	@Transactional
 	public void run(ApplicationArguments args) {
-		long count = repository.count();
-		if (count > 0) {
-			log.info("[Data Init] Found {} existing lease template(s), skipping defaults", count);
+		List<Organization> orgs = organizationRepository.findAll();
+		if (orgs.isEmpty()) {
+			log.info("[Data Init] No organizations found, skipping lease template seeding");
 			return;
 		}
 
-		log.info("[Data Init] No lease templates found. Creating default templates...");
+		for (Organization org : orgs) {
+			long count = repository.countByOrg_Id(org.getId());
+			if (count > 0) {
+				log.info("[Data Init] Org '{}' already has {} lease template(s), skipping", org.getId(), count);
+				continue;
+			}
 
-		createResidentialLeaseTemplate();
-		createCommercialLeaseTemplate();
-
-		log.info("[Data Init] Default lease templates created successfully");
+			log.info("[Data Init] Seeding default lease templates for org '{}'", org.getId());
+			createResidentialLeaseTemplate(org);
+			createCommercialLeaseTemplate(org);
+			log.info("[Data Init] Default lease templates created for org '{}'", org.getId());
+		}
 	}
 
-	private void createResidentialLeaseTemplate() {
+	private void createResidentialLeaseTemplate(Organization org) {
 		String markdown = loadMarkdownFromResources("residential-lease-template.md");
 
 		LeaseTemplate residential = LeaseTemplate.builder()
+				.org(org)
 				.name("Standard Residential Lease Agreement")
 				.versionTag("v1.0")
 				.templateMarkdown(markdown)
@@ -76,10 +89,11 @@ public class DefaultLeaseTemplatesInitializer implements ApplicationRunner {
 		log.info("[Data Init] Created: {}", residential.getName());
 	}
 
-	private void createCommercialLeaseTemplate() {
+	private void createCommercialLeaseTemplate(Organization org) {
 		String markdown = loadMarkdownFromResources("commercial-lease-template.md");
 
 		LeaseTemplate commercial = LeaseTemplate.builder()
+				.org(org)
 				.name("Standard Commercial Lease Agreement")
 				.versionTag("v1.0")
 				.templateMarkdown(markdown)

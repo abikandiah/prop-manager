@@ -230,7 +230,7 @@ class JwtHydrationServiceTest {
 			assertThat(entry.scopeType()).isEqualTo(ResourceType.UNIT);
 			assertThat(entry.scopeId()).isEqualTo(unitId);
 			assertThat(entry.permissions()).containsEntry(PermissionDomains.LEASES, Actions.READ);
-			assertThat(entry.permissions()).doesNotContainKey(PermissionDomains.MAINTENANCE);
+			assertThat(entry.permissions()).containsEntry(PermissionDomains.MAINTENANCE, Actions.READ);
 			assertThat(entry.permissions()).doesNotContainKey(PermissionDomains.FINANCES);
 			assertThat(entry.permissions()).doesNotContainKey(PermissionDomains.TENANTS);
 		}

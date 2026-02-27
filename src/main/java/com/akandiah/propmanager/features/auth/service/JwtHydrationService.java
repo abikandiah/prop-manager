@@ -77,9 +77,10 @@ public class JwtHydrationService {
 			PermissionDomains.FINANCES, FULL_CRUD,
 			PermissionDomains.TENANTS, FULL_CRUD);
 
-	/** Tenant: read-only on leases domain only. */
+	/** Tenant: read-only on leases and maintenance domains. */
 	private static final Map<String, Integer> TENANT_MASKS = Map.of(
-			PermissionDomains.LEASES, Actions.READ);
+			PermissionDomains.LEASES, Actions.READ,
+			PermissionDomains.MAINTENANCE, Actions.READ);
 
 	@Cacheable(value = CacheConfig.CACHE_PERMISSIONS, key = "#userId", sync = true)
 	@Transactional(readOnly = true)
@@ -142,6 +143,12 @@ public class JwtHydrationService {
 									.filter(s -> s.getScopeType() == ResourceType.UNIT)
 									.forEach(s -> access.add(
 											new AccessEntry(orgId, ResourceType.UNIT, s.getScopeId(), masks)));
+						case ASSET ->
+							// ASSET items activate per binding row
+							scopes.stream()
+									.filter(s -> s.getScopeType() == ResourceType.ASSET)
+									.forEach(s -> access.add(
+											new AccessEntry(orgId, ResourceType.ASSET, s.getScopeId(), masks)));
 					}
 				}
 			}
