@@ -59,7 +59,7 @@ class MemberScopeServiceTest {
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		Map<String, String> perms = Map.of("l", "rcud");
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, perms);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.PROPERTY, scopeId, perms);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -79,7 +79,7 @@ class MemberScopeServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, null);
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.PROPERTY, scopeId, null);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -100,7 +100,7 @@ class MemberScopeServiceTest {
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		CreateMemberScopeRequest req = new CreateMemberScopeRequest(
-				ResourceType.PROPERTY, scopeId, Map.of("l", "x")); // invalid letter
+				null, ResourceType.PROPERTY, scopeId, Map.of("l", "x")); // invalid letter
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -117,7 +117,7 @@ class MemberScopeServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID orgId = membership.getOrganization().getId();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.ORG, orgId, Map.of());
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.ORG, orgId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -132,7 +132,7 @@ class MemberScopeServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID wrongOrgId = UUID.randomUUID();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.ORG, wrongOrgId, Map.of());
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.ORG, wrongOrgId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 
@@ -146,7 +146,7 @@ class MemberScopeServiceTest {
 		UUID unitId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID orgId = membership.getOrganization().getId();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.UNIT, unitId, Map.of());
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.UNIT, unitId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(unitRepository.existsByIdAndProp_Organization_Id(unitId, orgId)).thenReturn(true);
@@ -163,7 +163,7 @@ class MemberScopeServiceTest {
 		UUID unitId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID orgId = membership.getOrganization().getId();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.UNIT, unitId, Map.of());
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.UNIT, unitId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(unitRepository.existsByIdAndProp_Organization_Id(unitId, orgId)).thenReturn(false);
@@ -179,7 +179,7 @@ class MemberScopeServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		UUID scopeId = UUID.randomUUID();
 		Membership membership = membershipWithoutUser(membershipId);
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(ResourceType.PROPERTY, scopeId, Map.of());
+		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.PROPERTY, scopeId, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
@@ -201,11 +201,11 @@ class MemberScopeServiceTest {
 		User user = TestDataFactory.user().build();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
-				.id(membershipId).user(user).organization(org).version(0).build();
+				.id(membershipId).user(user).organization(org).build();
 		MemberScope scope = MemberScope.builder()
 				.id(scopeId).membership(membership)
 				.scopeType(ResourceType.PROPERTY).scopeId(UUID.randomUUID())
-				.permissions(Map.of("l", "r")).version(0).build();
+				.permissions(Map.of("l", "r")).build();
 		Map<String, String> newPerms = Map.of("l", "rcud");
 		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(newPerms, 0);
 
@@ -225,7 +225,7 @@ class MemberScopeServiceTest {
 		UUID scopeId = UUID.randomUUID();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
-				.id(membershipId).organization(org).version(0).build();
+				.id(membershipId).organization(org).build();
 		MemberScope scope = MemberScope.builder()
 				.id(scopeId).membership(membership)
 				.scopeType(ResourceType.ORG).scopeId(org.getId())
@@ -245,11 +245,11 @@ class MemberScopeServiceTest {
 		UUID scopeId = UUID.randomUUID();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
-				.id(membershipId).user(null).organization(org).version(0).build();
+				.id(membershipId).user(null).organization(org).build();
 		MemberScope scope = MemberScope.builder()
 				.id(scopeId).membership(membership)
 				.scopeType(ResourceType.ORG).scopeId(org.getId())
-				.permissions(Map.of()).version(0).build();
+				.permissions(Map.of()).build();
 		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of("l", "r"), 0);
 
 		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
@@ -284,11 +284,11 @@ class MemberScopeServiceTest {
 		User user = TestDataFactory.user().build();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
-				.id(membershipId).user(user).organization(org).version(0).build();
+				.id(membershipId).user(user).organization(org).build();
 		MemberScope scope = MemberScope.builder()
 				.id(scopeId).membership(membership)
 				.scopeType(ResourceType.ORG).scopeId(org.getId())
-				.permissions(Map.of()).version(0).build();
+				.permissions(Map.of()).build();
 
 		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
 				.thenReturn(Optional.of(scope));
@@ -307,11 +307,11 @@ class MemberScopeServiceTest {
 		UUID scopeId = UUID.randomUUID();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
-				.id(membershipId).user(null).organization(org).version(0).build();
+				.id(membershipId).user(null).organization(org).build();
 		MemberScope scope = MemberScope.builder()
 				.id(scopeId).membership(membership)
 				.scopeType(ResourceType.ORG).scopeId(org.getId())
-				.permissions(Map.of()).version(0).build();
+				.permissions(Map.of()).build();
 
 		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
 				.thenReturn(Optional.of(scope));
@@ -340,12 +340,12 @@ class MemberScopeServiceTest {
 		User user = TestDataFactory.user().build();
 		Organization org = TestDataFactory.organization().build();
 		return Membership.builder()
-				.id(id).user(user).organization(org).version(0).build();
+				.id(id).user(user).organization(org).build();
 	}
 
 	private static Membership membershipWithoutUser(UUID id) {
 		Organization org = TestDataFactory.organization().build();
 		return Membership.builder()
-				.id(id).user(null).organization(org).version(0).build();
+				.id(id).user(null).organization(org).build();
 	}
 }

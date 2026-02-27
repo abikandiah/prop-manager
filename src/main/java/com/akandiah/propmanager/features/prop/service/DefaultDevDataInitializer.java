@@ -265,10 +265,11 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 		}
 
 		log.info("[Data Init] Seeding admin membership for dev user in organization '{}'", org.getName());
-		var membership = membershipService.create(org.getId(), 
-				new com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest(user.getId()));
-		
+		var membership = membershipService.create(org.getId(),
+				new com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest(null, user.getId()));
+
 		memberScopeService.create(membership.id(), new com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest(
+				null,
 				com.akandiah.propmanager.common.permission.ResourceType.ORG,
 				org.getId(),
 				java.util.Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud", "o", "rcud", "p", "rcud")));

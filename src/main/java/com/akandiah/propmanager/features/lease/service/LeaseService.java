@@ -114,6 +114,7 @@ public class LeaseService {
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", request.propertyId()));
 
 		Lease lease = Lease.builder()
+				.id(request.id())
 				.leaseTemplate(template)
 				.leaseTemplateName(template.getName())
 				.leaseTemplateVersionTag(template.getVersionTag())

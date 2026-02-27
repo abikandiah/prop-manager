@@ -1,47 +1,35 @@
 package com.akandiah.propmanager.features.lease.domain;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.Map;
-import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
 
+import com.akandiah.propmanager.common.domain.BaseEntity;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "lease_templates")
 @Getter
-@Builder
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class LeaseTemplate {
-
-	@Id
-	@UuidGenerator(style = UuidGenerator.Style.TIME)
-	private UUID id;
+@SuperBuilder
+@NoArgsConstructor
+public class LeaseTemplate extends BaseEntity {
 
 	@Setter
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -55,10 +43,6 @@ public class LeaseTemplate {
 	@Setter
 	@Column(name = "version_tag")
 	private String versionTag;
-
-	@Version
-	@Column(nullable = false)
-	private Integer version;
 
 	@Setter
 	@Lob
@@ -87,22 +71,4 @@ public class LeaseTemplate {
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "template_parameters")
 	private Map<String, String> templateParameters;
-
-	@Column(name = "created_at", nullable = false, updatable = false)
-	private Instant createdAt;
-
-	@Column(name = "updated_at", nullable = false)
-	private Instant updatedAt;
-
-	@PrePersist
-	void prePersist() {
-		Instant now = Instant.now();
-		createdAt = (createdAt == null) ? now : createdAt;
-		updatedAt = now;
-	}
-
-	@PreUpdate
-	void preUpdate() {
-		updatedAt = Instant.now();
-	}
 }

@@ -25,6 +25,8 @@ public record LeaseTenantResponse(
 		LocalDate signedDate,
 		/** Timestamp of the last resend, null if never resent. */
 		Instant lastResentAt,
+		/** Expiry timestamp of the originating invite. */
+		Instant expiresAt,
 		/** Status of the most recent invite email delivery attempt, null if not yet attempted. */
 		NotificationDeliveryStatus latestEmailStatus,
 		/** Error detail from the last failed send attempt, null if last send succeeded. */
@@ -60,6 +62,7 @@ public record LeaseTenantResponse(
 				lt.getInvitedDate(),
 				lt.getSignedDate(),
 				lt.getInvite().getLastResentAt(),
+				lt.getInvite().getExpiresAt(),
 				latestDelivery != null ? latestDelivery.getStatus() : null,
 				latestDelivery != null ? latestDelivery.getErrorMessage() : null,
 				lt.getVersion(),

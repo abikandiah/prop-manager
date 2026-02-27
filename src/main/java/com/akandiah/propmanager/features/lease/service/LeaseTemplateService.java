@@ -75,6 +75,7 @@ public class LeaseTemplateService {
 				.orElseThrow(() -> new ResourceNotFoundException("Organization", request.orgId()));
 
 		LeaseTemplate template = LeaseTemplate.builder()
+				.id(request.id())
 				.org(org)
 				.name(request.name())
 				.versionTag(request.versionTag())

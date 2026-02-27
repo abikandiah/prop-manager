@@ -352,6 +352,7 @@ public final class TestDataFactory {
 		public CreatePropRequest buildCreateRequest() {
 			Address propAddress = this.address != null ? this.address : TestDataFactory.address().build();
 			return new CreatePropRequest(
+					null,
 					legalName,
 					new AddressInput(
 							propAddress.getAddressLine1(),
@@ -721,6 +722,7 @@ public final class TestDataFactory {
 			Prop leaseProp = this.property != null ? this.property : TestDataFactory.prop().id(UUID.randomUUID()).build();
 
 			return new CreateLeaseRequest(
+					null,
 					template.getId(),
 					leaseUnit.getId(),
 					leaseProp.getId(),

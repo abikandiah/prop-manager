@@ -84,6 +84,7 @@ public class MemberScopeService {
 		PermissionStringValidator.validate(permissions);
 
 		MemberScope scope = MemberScope.builder()
+				.id(request.id())
 				.membership(membership)
 				.scopeType(request.scopeType())
 				.scopeId(request.scopeId())

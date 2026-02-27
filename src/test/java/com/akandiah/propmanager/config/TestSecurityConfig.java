@@ -4,9 +4,12 @@ import java.util.List;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * Test-only security config: provides a mock {@link JwtDecoder} so tests run
@@ -18,6 +21,12 @@ import org.springframework.security.oauth2.jwt.JwtException;
  */
 @TestConfiguration
 public class TestSecurityConfig {
+
+    /** Satisfies EmailNotificationService in tests */
+    @Bean
+    JavaMailSender javaMailSender() {
+        return mock(JavaMailSender.class);
+    }
 
 	/**
 	 * Decoder that accepts any non-blank token and returns a minimal JWT with

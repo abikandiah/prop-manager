@@ -62,6 +62,7 @@ public class UnitService {
 		Prop prop = propRepository.findById(request.propertyId())
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", request.propertyId()));
 		Unit unit = Unit.builder()
+				.id(request.id())
 				.prop(prop)
 				.unitNumber(request.unitNumber())
 				.status(request.status())

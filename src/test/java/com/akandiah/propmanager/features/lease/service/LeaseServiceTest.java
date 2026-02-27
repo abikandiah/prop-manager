@@ -202,6 +202,7 @@ class LeaseServiceTest {
 		Prop property = prop().id(propertyId).legalName("Test Building").build();
 
 		CreateLeaseRequest request = new CreateLeaseRequest(
+					null,
 				templateId,
 				unitId,
 				propertyId,
@@ -267,6 +268,7 @@ class LeaseServiceTest {
 		Prop property = prop().id(propertyId).build();
 
 		CreateLeaseRequest request = new CreateLeaseRequest(
+				null,
 				templateId,
 				unitId,
 				propertyId,
@@ -618,7 +620,7 @@ class LeaseServiceTest {
 		Prop property = prop().id(propertyId).build();
 
 		CreateLeaseRequest request = new CreateLeaseRequest(
-				templateId, unitId, propertyId,
+				null, templateId, unitId, propertyId,
 				LocalDate.now(), LocalDate.now().plusYears(1),
 				new BigDecimal("2000.00"), 1, null,
 				null, null, null, null, requestParams);

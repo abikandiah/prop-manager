@@ -19,6 +19,8 @@ import jakarta.validation.constraints.PositiveOrZero;
  * Tenants are invited separately via POST /api/leases/{id}/tenants/invite.
  */
 public record CreateLeaseRequest(
+		UUID id,
+
 		@NotNull(message = "Lease template ID is required") UUID leaseTemplateId,
 
 		@NotNull(message = "Unit ID is required") UUID unitId,

@@ -67,6 +67,7 @@ public class PropService {
 		Organization organization = organizationRepository.findById(orgId)
 				.orElseThrow(() -> new ResourceNotFoundException("Organization", orgId));
 		Prop prop = Prop.builder()
+				.id(request.id())
 				.legalName(request.legalName())
 				.address(address)
 				.propertyType(request.propertyType())

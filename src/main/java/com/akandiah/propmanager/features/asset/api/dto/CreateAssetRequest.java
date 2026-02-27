@@ -9,6 +9,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record CreateAssetRequest(
+		UUID id,
+
 		UUID propertyId,
 
 		UUID unitId,

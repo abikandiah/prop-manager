@@ -77,7 +77,7 @@ public class MembershipService {
 
 	@Transactional
 	public MembershipResponse create(UUID organizationId, CreateMembershipRequest request) {
-		MembershipResponse membership = doCreate(organizationId, request.userId(), null);
+		MembershipResponse membership = doCreate(organizationId, request.userId(), null, request.id());
 		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(request.userId())));
 		return membership;
 	}
@@ -89,7 +89,7 @@ public class MembershipService {
 	@Transactional
 	public MembershipResponse createWithInitialScope(UUID organizationId, CreateMembershipRequest request,
 			CreateMemberScopeRequest initialScope) {
-		MembershipResponse membership = doCreate(organizationId, request.userId(), null);
+		MembershipResponse membership = doCreate(organizationId, request.userId(), null, request.id());
 		if (initialScope != null) {
 			memberScopeService.createWithoutEvent(membership.id(), initialScope);
 		}
@@ -133,8 +133,8 @@ public class MembershipService {
 					.orElseThrow(() -> new ResourceNotFoundException("MembershipTemplate", templateId));
 		}
 
-		// 1. Create Membership (user=null), optionally linked to template
-		MembershipResponse membershipRes = doCreate(organizationId, null, template);
+		// 1. Create Membership (user=null), optionally linked to template (server generates ID for invite flow)
+		MembershipResponse membershipRes = doCreate(organizationId, null, template, null);
 
 		// 2. Create Scopes (binding rows + explicit custom permissions)
 		if (initialScopes != null) {
@@ -203,7 +203,7 @@ public class MembershipService {
 				membershipId, claimedBy.getId(), membership.getOrganization().getId());
 	}
 
-	private MembershipResponse doCreate(UUID organizationId, UUID userId, MembershipTemplate template) {
+	private MembershipResponse doCreate(UUID organizationId, UUID userId, MembershipTemplate template, UUID id) {
 		Organization org = organizationRepository.findById(organizationId)
 				.orElseThrow(() -> new ResourceNotFoundException("Organization", organizationId));
 
@@ -214,6 +214,7 @@ public class MembershipService {
 		}
 
 		Membership m = Membership.builder()
+				.id(id)
 				.user(user)
 				.organization(org)
 				.membershipTemplate(template)
@@ -246,7 +247,7 @@ public class MembershipService {
 							membershipId, scopeType, resourceId);
 					if (!exists) {
 						memberScopeService.createWithoutEvent(membershipId,
-								new CreateMemberScopeRequest(scopeType, resourceId, null));
+								new CreateMemberScopeRequest(null, scopeType, resourceId, null));
 					}
 				}
 			});

@@ -327,7 +327,6 @@ class JwtHydrationServiceTest {
 		return Organization.builder()
 				.id(id)
 				.name("Test Org")
-				.version(0)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();
@@ -343,7 +342,6 @@ class JwtHydrationServiceTest {
 				.id(id)
 				.user(user)
 				.organization(org)
-				.version(0)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();
@@ -357,7 +355,6 @@ class JwtHydrationServiceTest {
 				.scopeType(scopeType)
 				.scopeId(scopeId)
 				.permissions(permissions)
-				.version(0)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();

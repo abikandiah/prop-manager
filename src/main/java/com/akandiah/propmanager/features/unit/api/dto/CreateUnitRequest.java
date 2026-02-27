@@ -11,6 +11,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record CreateUnitRequest(
+		UUID id,
+
 		@NotNull(message = "Property ID is required") UUID propertyId,
 
 		@NotBlank(message = "Unit number is required") @Size(max = 64) String unitNumber,

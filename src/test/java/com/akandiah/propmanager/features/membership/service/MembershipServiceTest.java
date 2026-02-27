@@ -80,7 +80,7 @@ class MembershipServiceTest {
 		UUID userId = UUID.randomUUID();
 		Organization org = TestDataFactory.organization().id(orgId).build();
 		User user = TestDataFactory.user().id(userId).build();
-		CreateMembershipRequest req = new CreateMembershipRequest(userId);
+		CreateMembershipRequest req = new CreateMembershipRequest(null, userId);
 
 		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
 		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -100,7 +100,7 @@ class MembershipServiceTest {
 	void create_throwsWhenOrgNotFound() {
 		UUID orgId = UUID.randomUUID();
 		UUID userId = UUID.randomUUID();
-		CreateMembershipRequest req = new CreateMembershipRequest(userId);
+		CreateMembershipRequest req = new CreateMembershipRequest(null, userId);
 
 		when(organizationRepository.findById(orgId)).thenReturn(Optional.empty());
 
@@ -114,7 +114,7 @@ class MembershipServiceTest {
 		UUID orgId = UUID.randomUUID();
 		UUID userId = UUID.randomUUID();
 		Organization org = TestDataFactory.organization().id(orgId).build();
-		CreateMembershipRequest req = new CreateMembershipRequest(userId);
+		CreateMembershipRequest req = new CreateMembershipRequest(null, userId);
 
 		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
 		when(userRepository.findById(userId)).thenReturn(Optional.empty());
@@ -147,7 +147,6 @@ class MembershipServiceTest {
 						.user(m.getUser())
 						.organization(m.getOrganization())
 						.invite(m.getInvite())
-						.version(0)
 						.build();
 			}
 			return m;
@@ -165,7 +164,7 @@ class MembershipServiceTest {
 				.thenReturn(inviteRes);
 		when(membershipRepository.findById(membershipId)).thenReturn(
 				Optional.of(Membership.builder()
-						.id(membershipId).organization(org).version(0).build()));
+						.id(membershipId).organization(org).build()));
 		when(inviteRepository.findById(inviteId)).thenReturn(Optional.of(invite));
 
 		var result = service.inviteMember(orgId, email, null, null, inviter);
@@ -187,7 +186,7 @@ class MembershipServiceTest {
 		UUID inviteId = UUID.randomUUID();
 
 		CreateMemberScopeRequest scopeReq = new CreateMemberScopeRequest(
-				ResourceType.ORG, orgId, Map.of("l", "rcud"));
+				null, ResourceType.ORG, orgId, Map.of("l", "rcud"));
 
 		when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 		when(membershipRepository.existsPendingInviteForEmailInOrg(email, orgId)).thenReturn(false);
@@ -196,7 +195,7 @@ class MembershipServiceTest {
 			Membership m = inv.getArgument(0);
 			if (m.getId() == null) {
 				return Membership.builder()
-						.id(membershipId).user(null).organization(org).version(0).build();
+						.id(membershipId).user(null).organization(org).build();
 			}
 			return m;
 		});
@@ -213,7 +212,7 @@ class MembershipServiceTest {
 				.thenReturn(inviteRes);
 		when(membershipRepository.findById(membershipId)).thenReturn(
 				Optional.of(Membership.builder()
-						.id(membershipId).organization(org).version(0).build()));
+						.id(membershipId).organization(org).build()));
 		when(inviteRepository.findById(inviteId)).thenReturn(Optional.of(invite));
 
 		service.inviteMember(orgId, email, null, List.of(scopeReq), inviter);
@@ -231,7 +230,7 @@ class MembershipServiceTest {
 		User inviter = TestDataFactory.user().build();
 		String email = "newbie@example.com";
 		MembershipTemplate template = MembershipTemplate.builder()
-				.id(templateId).name("Reader").version(0).build();
+				.id(templateId).name("Reader").build();
 
 		when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 		when(membershipRepository.existsPendingInviteForEmailInOrg(email, orgId)).thenReturn(false);
@@ -242,7 +241,7 @@ class MembershipServiceTest {
 			if (m.getId() == null) {
 				return Membership.builder()
 						.id(membershipId).user(null).organization(org)
-						.membershipTemplate(m.getMembershipTemplate()).version(0).build();
+						.membershipTemplate(m.getMembershipTemplate()).build();
 			}
 			return m;
 		});
@@ -260,7 +259,7 @@ class MembershipServiceTest {
 		when(membershipRepository.findById(membershipId)).thenReturn(
 				Optional.of(Membership.builder()
 						.id(membershipId).organization(org)
-						.membershipTemplate(template).version(0).build()));
+						.membershipTemplate(template).build()));
 		when(inviteRepository.findById(inviteId)).thenReturn(Optional.of(invite));
 
 		var result = service.inviteMember(orgId, email, templateId, null, inviter);
@@ -327,7 +326,7 @@ class MembershipServiceTest {
 		User user = TestDataFactory.user().build();
 		Organization org = TestDataFactory.organization().id(orgId).build();
 		Membership membership = Membership.builder()
-				.id(membershipId).user(user).organization(org).version(0).build();
+				.id(membershipId).user(user).organization(org).build();
 
 		when(membershipRepository.findByIdAndOrganizationId(membershipId, orgId))
 				.thenReturn(Optional.of(membership));
@@ -348,7 +347,7 @@ class MembershipServiceTest {
 		UUID membershipId = UUID.randomUUID();
 		Organization org = TestDataFactory.organization().id(orgId).build();
 		Membership membership = Membership.builder()
-				.id(membershipId).user(null).organization(org).version(0).build();
+				.id(membershipId).user(null).organization(org).build();
 
 		when(membershipRepository.findByIdAndOrganizationId(membershipId, orgId))
 				.thenReturn(Optional.of(membership));
@@ -376,7 +375,6 @@ class MembershipServiceTest {
 				.user(null)
 				.organization(org)
 				.invite(invite)
-				.version(0)
 				.build();
 
 		when(membershipRepository.findByIdAndOrganizationId(membershipId, orgId))

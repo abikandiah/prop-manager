@@ -1,10 +1,8 @@
 package com.akandiah.propmanager.features.prop.domain;
 
-import java.time.Instant;
 import java.util.UUID;
 
-import org.hibernate.annotations.UuidGenerator;
-
+import com.akandiah.propmanager.common.domain.BaseEntity;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 
 import jakarta.persistence.Column;
@@ -12,32 +10,21 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "prop")
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
-public class Prop {
-
-	@Id
-	@UuidGenerator(style = UuidGenerator.Style.TIME)
-	private UUID id;
+public class Prop extends BaseEntity {
 
 	@Column(name = "legal_name", nullable = false, length = 255)
 	private String legalName;
@@ -68,30 +55,4 @@ public class Prop {
 
 	@Column(name = "year_built")
 	private Integer yearBuilt;
-
-	@Version
-	@Column(nullable = false)
-	private Integer version;
-
-	@Column(name = "created_at", nullable = false, updatable = false)
-	@Setter(AccessLevel.NONE)
-	private Instant createdAt;
-
-	@Column(name = "updated_at", nullable = false)
-	@Setter(AccessLevel.NONE)
-	private Instant updatedAt;
-
-	@PrePersist
-	void prePersist() {
-		Instant now = Instant.now();
-		if (createdAt == null) {
-			createdAt = now;
-		}
-		updatedAt = now;
-	}
-
-	@PreUpdate
-	void preUpdate() {
-		updatedAt = Instant.now();
-	}
 }

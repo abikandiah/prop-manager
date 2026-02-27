@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.membership.service.MemberScopeService;
 import com.akandiah.propmanager.features.membership.service.MembershipService;
 import com.akandiah.propmanager.features.organization.domain.Organization;
+import com.akandiah.propmanager.features.organization.domain.OrganizationCreatedEvent;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 
@@ -36,6 +38,7 @@ public class OrganizationService {
 	private final MembershipService membershipService;
 	private final MemberScopeService memberScopeService;
 	private final PropRepository propRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	/**
 	 * Returns only the organizations the given user is a member of (data-isolated).
@@ -66,20 +69,23 @@ public class OrganizationService {
 	@Transactional
 	public OrganizationResponse create(CreateOrganizationRequest request, UUID creatorUserId) {
 		Organization org = Organization.builder()
+				.id(request.id())
 				.name(request.name())
 				.taxId(request.taxId())
 				.settings(request.settings())
 				.build();
 		org = repository.save(org);
 
-		// Auto-enroll creator with full ORG-scoped permissions
+		// Auto-enroll creator with full ORG-scoped permissions (server generates IDs for internal records)
 		MembershipResponse membership = membershipService.create(org.getId(),
-				new CreateMembershipRequest(creatorUserId));
+				new CreateMembershipRequest(null, creatorUserId));
 		memberScopeService.create(membership.id(), new CreateMemberScopeRequest(
+				null,
 				ResourceType.ORG,
 				org.getId(),
 				Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud", "o", "rcud", "p", "rcud")));
 
+		eventPublisher.publishEvent(new OrganizationCreatedEvent(org.getId()));
 		return OrganizationResponse.from(org);
 	}
 

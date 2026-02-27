@@ -1,3 +1,16 @@
+🤖 AI Collaboration Protocol
+
+You (Claude) are the Primary Implementer. You are paired with the Gemini CLI, which acts as your High-Context Research Assistant.
+When to use Gemini via CLI:
+
+    Massive Context: If you need to analyze patterns across the entire codebase (which exceeds your current context window).
+
+    Needle-in-a-Haystack: When searching for specific logic or variable flows across many directories.
+
+    Architectural Review: When a plan .md needs a "second opinion" based on global project knowledge.
+
+    Usage: Run gemini -p "@src/ [your query]" to get a summary of global patterns.
+
 # prop-manager — Spring Boot API
 
 Property management REST API. Spring Boot 4.0.2, Java 21, stateless JWT auth (Spring Security OAuth2 Resource Server). Feature-based package structure.
@@ -109,6 +122,7 @@ public class Prop {
 ```
 
 **Rules:**
+
 - `@UuidGenerator(style = TIME)` on every `@Id` — never `@GeneratedValue(strategy = AUTO)`
 - `@Version Integer version` on every entity — no exceptions
 - `createdAt` and `updatedAt` via `@PrePersist` / `@PreUpdate`
@@ -158,6 +172,7 @@ public class PropService {
 ```
 
 **Rules:**
+
 - `@Transactional(readOnly=true)` at the class level; `@Transactional` on every write method
 - Services return DTOs, **never entities**
 - `ResourceNotFoundException("ResourceName", id)` for missing entities → 404
@@ -197,6 +212,7 @@ public record PropResponse(
 ```
 
 **Rules:**
+
 - All DTOs are **Java records**
 - Create requests: `@NotBlank`/`@NotNull` on required fields
 - Update requests: all fields optional; `version` always `@NotNull`
@@ -250,6 +266,7 @@ public class PropController {
 ```
 
 **Rules:**
+
 - HTTP methods: `GET` list/get, `POST` create, `@PatchMapping` update (partial), `DELETE` delete
 - `@Valid` on every `@RequestBody`
 - `@Operation(summary = "...")` on every endpoint (required for Swagger)
@@ -263,15 +280,15 @@ public class PropController {
 
 `GlobalExceptionHandler` in `common.exception` returns RFC 7807 `ProblemDetail` for all errors:
 
-| Exception | Status | When |
-|---|---|---|
-| `ResourceNotFoundException` | 404 | Entity not found by ID |
-| `MethodArgumentNotValidException` | 400 | `@Valid` constraint failure |
-| `OptimisticLockException` | 409 | `@Version` conflict |
-| `DataIntegrityViolationException` | 409 | DB constraint violation |
-| `HasChildrenException` | 422 | Can't delete parent with children |
-| `AccessDeniedException` | 403 | Missing role/permission |
-| `AuthenticationException` | 401 | Invalid/missing JWT |
+| Exception                         | Status | When                              |
+| --------------------------------- | ------ | --------------------------------- |
+| `ResourceNotFoundException`       | 404    | Entity not found by ID            |
+| `MethodArgumentNotValidException` | 400    | `@Valid` constraint failure       |
+| `OptimisticLockException`         | 409    | `@Version` conflict               |
+| `DataIntegrityViolationException` | 409    | DB constraint violation           |
+| `HasChildrenException`            | 422    | Can't delete parent with children |
+| `AccessDeniedException`           | 403    | Missing role/permission           |
+| `AuthenticationException`         | 401    | Invalid/missing JWT               |
 
 Do not add controller-level `@ExceptionHandler`. Extend `GlobalExceptionHandler` for new exception types.
 
@@ -381,10 +398,10 @@ databaseChangeLog:
 
 ## Configuration Profiles
 
-| Profile | DB | JWT | CORS | Liquibase |
-|---|---|---|---|---|
-| `dev` (default) | H2 in-memory | Local HS256 (DevAuthController) | localhost:3000 | Disabled |
-| `prod` | PostgreSQL | External OIDC (`AUTH_ISSUER_URI`) | Configured domains | Enabled |
+| Profile         | DB           | JWT                               | CORS               | Liquibase |
+| --------------- | ------------ | --------------------------------- | ------------------ | --------- |
+| `dev` (default) | H2 in-memory | Local HS256 (DevAuthController)   | localhost:3000     | Disabled  |
+| `prod`          | PostgreSQL   | External OIDC (`AUTH_ISSUER_URI`) | Configured domains | Enabled   |
 
 Set `SPRING_PROFILES_ACTIVE=prod` in production.
 
@@ -415,9 +432,9 @@ Available test infrastructure:
 
 These failures exist in the repo independently of any feature work. Do not investigate them unless directly relevant to the task at hand.
 
-| Test | Failure reason |
-|---|---|
-| `PropManagerApplicationTests.contextLoads` | `JavaMailSender` bean not available in the test context — mail sender not mocked |
+| Test                                              | Failure reason                                                                         |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `PropManagerApplicationTests.contextLoads`        | `JavaMailSender` bean not available in the test context — mail sender not mocked       |
 | `LeaseServiceTest.shouldActivateAndStampTemplate` | Mockito interaction on `LeaseTemplateRenderer` — `stampMarkdownFromLease` never called |
 
 ### Unit Test (Service)

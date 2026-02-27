@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.features.prop.api.dto;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import com.akandiah.propmanager.features.prop.domain.PropertyType;
 
@@ -10,6 +11,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record CreatePropRequest(
+		UUID id,
+
 		@NotBlank(message = "Legal name is required") @Size(max = 255) String legalName,
 
 		@NotNull(message = "Address is required") @Valid AddressInput address,
@@ -20,7 +23,7 @@ public record CreatePropRequest(
 
 		@Size(max = 64) String parcelNumber,
 
-		java.util.UUID ownerId,
+		UUID ownerId,
 
 		Integer totalArea,
 

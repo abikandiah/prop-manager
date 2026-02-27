@@ -80,6 +80,7 @@ public class MembershipTemplateService {
 		}
 
 		MembershipTemplate template = MembershipTemplate.builder()
+				.id(request.id())
 				.org(org)
 				.name(request.name())
 				.items(request.items().stream()

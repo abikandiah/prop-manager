@@ -86,8 +86,8 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldListByOrg() {
 		UUID orgId = UUID.randomUUID();
-		MembershipTemplate system = template(null, "System Full", orgItem(Map.of("l", "rcud")));
-		MembershipTemplate orgTpl = template(orgId, "Org Template", propItem(Map.of("l", "ru")));
+		MembershipTemplate system = template(null, 0, null, "System Full", orgItem(Map.of("l", "rcud")));
+		MembershipTemplate orgTpl = template(null, 0, orgId, "Org Template", propItem(Map.of("l", "ru")));
 
 		when(repository.findByOrgIsNullOrOrg_IdOrderByNameAsc(orgId)).thenReturn(List.of(system, orgTpl));
 
@@ -105,8 +105,7 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldFindById() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate t = template(null, "Test", orgItem(Map.of("l", "r")));
-		t.setId(id);
+		MembershipTemplate t = template(id, 0, null, "Test", orgItem(Map.of("l", "r")));
 		when(repository.findById(id)).thenReturn(Optional.of(t));
 
 		MembershipTemplateResponse response = service.findById(id);
@@ -133,14 +132,9 @@ class MembershipTemplateServiceTest {
 	void shouldCreateSystemTemplate() {
 		List<MembershipTemplateItemView> items = List.of(
 				new MembershipTemplateItemView(ResourceType.ORG, Map.of("l", "rcud", "m", "r")));
-		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest("Full Access", null, items);
-		UUID id = UUID.randomUUID();
+		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest(null, "Full Access", null, items);
 
-		when(repository.save(any(MembershipTemplate.class))).thenAnswer(inv -> {
-			MembershipTemplate t = inv.getArgument(0);
-			t.setId(id);
-			return t;
-		});
+		when(repository.save(any(MembershipTemplate.class))).thenAnswer(inv -> inv.getArgument(0));
 
 		MembershipTemplateResponse response = service.create(req);
 
@@ -157,10 +151,10 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldCreateOrgScopedTemplate() {
 		UUID orgId = UUID.randomUUID();
-		Organization org = Organization.builder().id(orgId).name("Acme").version(0).build();
+		Organization org = Organization.builder().id(orgId).name("Acme").build();
 		List<MembershipTemplateItemView> items = List.of(
 				new MembershipTemplateItemView(ResourceType.PROPERTY, Map.of("l", "cru")));
-		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest("Prop Manager", orgId, items);
+		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest(null, "Prop Manager", orgId, items);
 
 		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -177,7 +171,7 @@ class MembershipTemplateServiceTest {
 	void shouldThrowWhenCreatingWithInvalidPermissions() {
 		List<MembershipTemplateItemView> items = List.of(
 				new MembershipTemplateItemView(ResourceType.ORG, Map.of("x", "r"))); // unknown domain
-		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest("Bad", null, items);
+		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest(null, "Bad", null, items);
 
 		assertThatThrownBy(() -> service.create(req))
 				.isInstanceOf(InvalidPermissionStringException.class);
@@ -190,7 +184,7 @@ class MembershipTemplateServiceTest {
 		setUserContext();
 		List<MembershipTemplateItemView> items = List.of(
 				new MembershipTemplateItemView(ResourceType.ORG, Map.of("l", "r")));
-		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest("System", null, items);
+		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest(null, "System", null, items);
 
 		assertThatThrownBy(() -> service.create(req))
 				.isInstanceOf(AccessDeniedException.class);
@@ -203,9 +197,7 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldUpdateTemplateNameAndItems() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(null, "Old", orgItem(Map.of("l", "r")));
-		existing.setId(id);
-		existing.setVersion(1);
+		MembershipTemplate existing = template(id, 1, null, "Old", orgItem(Map.of("l", "r")));
 		List<MembershipTemplateItemView> newItems = List.of(
 				new MembershipTemplateItemView(ResourceType.ORG, Map.of("l", "rcud")));
 		UpdateMembershipTemplateRequest req = new UpdateMembershipTemplateRequest("New Name", newItems, 1);
@@ -224,13 +216,11 @@ class MembershipTemplateServiceTest {
 	@Test
 	void update_evictsCacheForLinkedMemberships() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(null, "T", orgItem(Map.of("l", "r")));
-		existing.setId(id);
-		existing.setVersion(0);
+		MembershipTemplate existing = template(id, 0, null, "T", orgItem(Map.of("l", "r")));
 
 		com.akandiah.propmanager.features.user.domain.User user = TestDataFactory.user().build();
 		Membership linkedMembership = Membership.builder()
-				.id(UUID.randomUUID()).user(user).version(0).build();
+				.id(UUID.randomUUID()).user(user).build();
 
 		List<MembershipTemplateItemView> newItems = List.of(
 				new MembershipTemplateItemView(ResourceType.ORG, Map.of("l", "rcud")));
@@ -250,9 +240,7 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldThrowOnVersionMismatch() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(null, "T", orgItem(Map.of("l", "r")));
-		existing.setId(id);
-		existing.setVersion(2);
+		MembershipTemplate existing = template(id, 2, null, "T", orgItem(Map.of("l", "r")));
 		UpdateMembershipTemplateRequest req = new UpdateMembershipTemplateRequest("T", null, 1);
 
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
@@ -268,9 +256,7 @@ class MembershipTemplateServiceTest {
 		setUserContext();
 		UUID orgId = UUID.randomUUID();
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(orgId, "T", orgItem(Map.of("l", "r")));
-		existing.setId(id);
-		existing.setVersion(0);
+		MembershipTemplate existing = template(id, 0, orgId, "T", orgItem(Map.of("l", "r")));
 
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
 		when(permissionGuard.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(true);
@@ -287,9 +273,7 @@ class MembershipTemplateServiceTest {
 		setUserContext();
 		UUID orgId = UUID.randomUUID();
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(orgId, "T", orgItem(Map.of("l", "r")));
-		existing.setId(id);
-		existing.setVersion(0);
+		MembershipTemplate existing = template(id, 0, orgId, "T", orgItem(Map.of("l", "r")));
 
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
 		when(permissionGuard.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(false);
@@ -305,8 +289,7 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldDeleteById() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate t = template(null, "T", orgItem(Map.of("l", "r")));
-		t.setId(id);
+		MembershipTemplate t = template(id, 0, null, "T", orgItem(Map.of("l", "r")));
 		when(repository.findById(id)).thenReturn(Optional.of(t));
 		when(membershipRepository.findByMembershipTemplateIdAndUserIsNotNull(id)).thenReturn(List.of());
 
@@ -331,8 +314,7 @@ class MembershipTemplateServiceTest {
 	void delete_systemTemplate_deniesNonAdmin() {
 		setUserContext();
 		UUID id = UUID.randomUUID();
-		MembershipTemplate t = template(null, "T", orgItem(Map.of("l", "r")));
-		t.setId(id);
+		MembershipTemplate t = template(id, 0, null, "T", orgItem(Map.of("l", "r")));
 		when(repository.findById(id)).thenReturn(Optional.of(t));
 
 		assertThatThrownBy(() -> service.deleteById(id))
@@ -343,15 +325,16 @@ class MembershipTemplateServiceTest {
 
 	// --- helpers ---
 
-	private static MembershipTemplate template(UUID orgId, String name, MembershipTemplateItem... items) {
+	private static MembershipTemplate template(UUID id, int version, UUID orgId, String name, MembershipTemplateItem... items) {
 		Organization org = orgId != null
-				? Organization.builder().id(orgId).name("Org").version(0).build()
+				? Organization.builder().id(orgId).name("Org").build()
 				: null;
 		return MembershipTemplate.builder()
+				.id(id)
 				.org(org)
 				.name(name)
 				.items(new ArrayList<>(List.of(items)))
-				.version(0)
+				.version(version)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();

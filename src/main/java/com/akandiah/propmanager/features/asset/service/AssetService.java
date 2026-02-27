@@ -73,6 +73,7 @@ public class AssetService {
 					.orElseThrow(() -> new ResourceNotFoundException("Unit", request.unitId()));
 		}
 		Asset asset = Asset.builder()
+				.id(request.id())
 				.prop(prop)
 				.unit(unit)
 				.category(request.category())

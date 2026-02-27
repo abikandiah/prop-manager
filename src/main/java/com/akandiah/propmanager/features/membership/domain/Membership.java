@@ -1,33 +1,22 @@
 package com.akandiah.propmanager.features.membership.domain;
 
-import java.time.Instant;
-import java.util.UUID;
-
-import org.hibernate.annotations.UuidGenerator;
-
+import com.akandiah.propmanager.common.domain.BaseEntity;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.user.domain.User;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.persistence.Version;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Bridge between User and Organization. One row per (user, org).
@@ -43,14 +32,9 @@ import lombok.Setter;
 })
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
-@AllArgsConstructor
-public class Membership {
-
-	@Id
-	@UuidGenerator(style = UuidGenerator.Style.TIME)
-	private UUID id;
+public class Membership extends BaseEntity {
 
 	/**
 	 * Null until the invited user accepts the invite.
@@ -76,30 +60,4 @@ public class Membership {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "membership_template_id")
 	private MembershipTemplate membershipTemplate;
-
-	@Version
-	@Column(nullable = false)
-	private Integer version;
-
-	@Column(name = "created_at", nullable = false, updatable = false)
-	@Setter(AccessLevel.NONE)
-	private Instant createdAt;
-
-	@Column(name = "updated_at", nullable = false)
-	@Setter(AccessLevel.NONE)
-	private Instant updatedAt;
-
-	@PrePersist
-	void prePersist() {
-		Instant now = Instant.now();
-		if (createdAt == null) {
-			createdAt = now;
-		}
-		updatedAt = now;
-	}
-
-	@PreUpdate
-	void preUpdate() {
-		updatedAt = Instant.now();
-	}
 }

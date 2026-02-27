@@ -4,5 +4,5 @@ services:
     container_name: mailpit
     ports:
       - "8025:8025" # Dashboard
-      - "1025:1025" # SMTP
+      - "${MAIL_PORT}:1025" # SMTP
     restart: unless-stopped
