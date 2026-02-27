@@ -169,7 +169,7 @@ class PropServiceTest {
 					.build();
 		});
 
-		PropResponse response = propService.create(request);
+		PropResponse response = propService.create(request, orgId);
 
 		assertThat(response.legalName()).isEqualTo(request.legalName());
 		assertThat(response.propertyType()).isEqualTo(request.propertyType());
@@ -209,7 +209,7 @@ class PropServiceTest {
 			return prop().id(UUID.randomUUID()).address(p.getAddress()).build();
 		});
 
-		propService.create(request);
+		propService.create(request, orgId);
 
 		Address capturedAddress = addressCaptor.getValue();
 		assertThat(capturedAddress.getAddressLine1()).isEqualTo("456 Oak Avenue");

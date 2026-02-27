@@ -1,11 +1,49 @@
 # For agents: when adding or changing Liquibase schema migrations, update only
 # this file (initial-schema.yaml). Do not create new changelog files.
 databaseChangeLog:
-  # addresses - no FKs
   - changeSet:
-      id: "initial-addresses"
+      id: "initial-schema-v1"
       author: "prop-manager"
       changes:
+        # organizations
+        - createTable:
+            tableName: organizations
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tax_id
+                  type: varchar(64)
+              - column:
+                  name: settings
+                  type: jsonb
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+
+        # addresses
         - createTable:
             tableName: addresses
             columns:
@@ -40,7 +78,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: country_code
-                  type: char(2)
+                  type: varchar(2)
                   constraints:
                     nullable: false
               - column:
@@ -60,11 +98,7 @@ databaseChangeLog:
                   constraints:
                     nullable: false
 
-  # users - no FKs
-  - changeSet:
-      id: "initial-users"
-      author: "prop-manager"
-      changes:
+        # users
         - createTable:
             tableName: users
             columns:
@@ -73,12 +107,6 @@ databaseChangeLog:
                   type: uuid
                   constraints:
                     primaryKey: true
-                    nullable: false
-              - column:
-                  name: idp_sub
-                  type: varchar(255)
-                  constraints:
-                    unique: true
                     nullable: false
               - column:
                   name: name
@@ -98,6 +126,15 @@ databaseChangeLog:
                   name: avatar_url
                   type: varchar(512)
               - column:
+                  name: terms_accepted
+                  type: boolean
+                  constraints:
+                    nullable: false
+                  defaultValueBoolean: false
+              - column:
+                  name: last_logged_in_at
+                  type: timestamptz
+              - column:
                   name: created_at
                   type: timestamptz
                   constraints:
@@ -108,11 +145,7 @@ databaseChangeLog:
                   constraints:
                     nullable: false
 
-  # user_identities - links OIDC (issuer + sub) to users; allows multiple IdPs per account
-  - changeSet:
-      id: "user-identities-table"
-      author: "prop-manager"
-      changes:
+        # user_identities
         - createTable:
             tableName: user_identities
             columns:
@@ -154,49 +187,7 @@ databaseChangeLog:
             referencedTableName: users
             referencedColumnNames: id
 
-  # Migrate existing users: one identity per user with issuer 'legacy'
-  - changeSet:
-      id: "user-identities-migrate-from-idp-sub"
-      author: "prop-manager"
-      changes:
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO user_identities (id, user_id, issuer, sub, created_at)
-              SELECT gen_random_uuid(), id, 'legacy', idp_sub, created_at FROM users
-
-  # Remove idp_sub from users; account is now keyed by email + identities
-  - changeSet:
-      id: "users-drop-idp-sub"
-      author: "prop-manager"
-      changes:
-        - dropColumn:
-            tableName: users
-            columnName: idp_sub
-
-  # users: terms and last login
-  - changeSet:
-      id: "users-terms-and-last-logged-in"
-      author: "prop-manager"
-      changes:
-        - addColumn:
-            tableName: users
-            columns:
-              - column:
-                  name: terms_accepted
-                  type: boolean
-                  constraints:
-                    nullable: false
-                  defaultValueBoolean: false
-              - column:
-                  name: last_logged_in_at
-                  type: timestamptz
-
-  # prop - FK addresses
-  - changeSet:
-      id: "initial-prop"
-      author: "prop-manager"
-      changes:
+        # props
         - createTable:
             tableName: prop
             columns:
@@ -207,7 +198,17 @@ databaseChangeLog:
                     primaryKey: true
                     nullable: false
               - column:
+                  name: organization_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
                   name: address_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: owner_id
                   type: uuid
                   constraints:
                     nullable: false
@@ -228,16 +229,17 @@ databaseChangeLog:
                   name: parcel_number
                   type: varchar(64)
               - column:
-                  name: owner_id
-                  type: uuid
-                  constraints:
-                    nullable: false
-              - column:
                   name: total_area
-                  type: int
+                  type: integer
               - column:
                   name: year_built
+                  type: integer
+              - column:
+                  name: version
                   type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
               - column:
                   name: created_at
                   type: timestamptz
@@ -248,12 +250,12 @@ databaseChangeLog:
                   type: timestamptz
                   constraints:
                     nullable: false
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
-                  constraints:
-                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: prop
+            baseColumnNames: organization_id
+            constraintName: fk_prop_organization
+            referencedTableName: organizations
+            referencedColumnNames: id
         - addForeignKeyConstraint:
             baseTableName: prop
             baseColumnNames: address_id
@@ -266,12 +268,14 @@ databaseChangeLog:
             constraintName: fk_prop_owner
             referencedTableName: users
             referencedColumnNames: id
+        - createIndex:
+            indexName: idx_prop_organization_id
+            tableName: prop
+            columns:
+              - column:
+                  name: organization_id
 
-  # units - FK prop
-  - changeSet:
-      id: "initial-units"
-      author: "prop-manager"
-      changes:
+        # units
         - createTable:
             tableName: units
             columns:
@@ -310,13 +314,13 @@ databaseChangeLog:
                   type: decimal(19,4)
               - column:
                   name: bedrooms
-                  type: int
+                  type: integer
               - column:
                   name: bathrooms
-                  type: int
+                  type: integer
               - column:
                   name: square_footage
-                  type: int
+                  type: integer
               - column:
                   name: balcony
                   type: boolean
@@ -327,6 +331,12 @@ databaseChangeLog:
                   name: hardwood_floors
                   type: boolean
               - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
                   name: created_at
                   type: timestamptz
                   constraints:
@@ -336,12 +346,6 @@ databaseChangeLog:
                   type: timestamptz
                   constraints:
                     nullable: false
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
-                  constraints:
-                    nullable: false
         - addForeignKeyConstraint:
             baseTableName: units
             baseColumnNames: property_id
@@ -349,11 +353,7 @@ databaseChangeLog:
             referencedTableName: prop
             referencedColumnNames: id
 
-  # tenants - FK users
-  - changeSet:
-      id: "initial-tenants"
-      author: "prop-manager"
-      changes:
+        # tenants
         - createTable:
             tableName: tenants
             columns:
@@ -387,6 +387,12 @@ databaseChangeLog:
                   name: notes
                   type: text
               - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
                   name: created_at
                   type: timestamptz
                   constraints:
@@ -396,12 +402,6 @@ databaseChangeLog:
                   type: timestamptz
                   constraints:
                     nullable: false
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
-                  constraints:
-                    nullable: false
         - addForeignKeyConstraint:
             baseTableName: tenants
             baseColumnNames: user_id
@@ -409,11 +409,7 @@ databaseChangeLog:
             referencedTableName: users
             referencedColumnNames: id
 
-  # assets - FK prop, unit
-  - changeSet:
-      id: "initial-assets"
-      author: "prop-manager"
-      changes:
+        # assets
         - createTable:
             tableName: assets
             columns:
@@ -450,6 +446,12 @@ databaseChangeLog:
                   name: last_service_date
                   type: date
               - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
                   name: created_at
                   type: timestamptz
                   constraints:
@@ -457,12 +459,6 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: timestamptz
-                  constraints:
-                    nullable: false
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
                   constraints:
                     nullable: false
         - addForeignKeyConstraint:
@@ -478,11 +474,7 @@ databaseChangeLog:
             referencedTableName: units
             referencedColumnNames: id
 
-  # lease_templates
-  - changeSet:
-      id: "initial-lease-templates"
-      author: "prop-manager"
-      changes:
+        # lease_templates
         - createTable:
             tableName: lease_templates
             columns:
@@ -491,6 +483,11 @@ databaseChangeLog:
                   type: uuid
                   constraints:
                     primaryKey: true
+                    nullable: false
+              - column:
+                  name: org_id
+                  type: uuid
+                  constraints:
                     nullable: false
               - column:
                   name: name
@@ -513,7 +510,7 @@ databaseChangeLog:
                   type: decimal(19,4)
               - column:
                   name: default_notice_period_days
-                  type: int
+                  type: integer
               - column:
                   name: is_active
                   type: boolean
@@ -524,6 +521,12 @@ databaseChangeLog:
                   name: template_parameters
                   type: jsonb
               - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
                   name: created_at
                   type: timestamptz
                   constraints:
@@ -533,22 +536,6 @@ databaseChangeLog:
                   type: timestamptz
                   constraints:
                     nullable: false
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
-                  constraints:
-                    nullable: false
-              - column:
-                  name: org_id
-                  type: uuid
-                  constraints:
-                    nullable: false
-
-  - changeSet:
-      id: "initial-lease-templates-org-fk"
-      author: "prop-manager"
-      changes:
         - addForeignKeyConstraint:
             baseTableName: lease_templates
             baseColumnNames: org_id
@@ -562,11 +549,7 @@ databaseChangeLog:
               - column:
                   name: org_id
 
-  # leases - FK units, prop, lease_templates
-  - changeSet:
-      id: "initial-leases"
-      author: "prop-manager"
-      changes:
+        # leases
         - createTable:
             tableName: leases
             columns:
@@ -617,7 +600,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: rent_due_day
-                  type: int
+                  type: integer
                   constraints:
                     nullable: false
               - column:
@@ -631,7 +614,7 @@ databaseChangeLog:
                   type: decimal(19,4)
               - column:
                   name: notice_period_days
-                  type: int
+                  type: integer
               - column:
                   name: executed_content_markdown
                   type: text
@@ -642,6 +625,12 @@ databaseChangeLog:
                   name: template_parameters
                   type: jsonb
               - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
                   name: created_at
                   type: timestamptz
                   constraints:
@@ -649,12 +638,6 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: timestamptz
-                  constraints:
-                    nullable: false
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
                   constraints:
                     nullable: false
         - addForeignKeyConstraint:
@@ -677,57 +660,7 @@ databaseChangeLog:
             referencedColumnNames: id
             onDelete: SET NULL
 
-  # lease_tenants - join lease <> tenants with role (e.g. primary vs occupant)
-  - changeSet:
-      id: "initial-lease-tenants"
-      author: "prop-manager"
-      changes:
-        - createTable:
-            tableName: lease_tenants
-            columns:
-              - column:
-                  name: id
-                  type: uuid
-                  constraints:
-                    primaryKey: true
-                    nullable: false
-              - column:
-                  name: lease_id
-                  type: uuid
-                  constraints:
-                    nullable: false
-              - column:
-                  name: tenant_id
-                  type: uuid
-                  constraints:
-                    nullable: false
-              - column:
-                  name: role
-                  type: varchar(32)
-                  constraints:
-                    nullable: false
-        - addUniqueConstraint:
-            tableName: lease_tenants
-            columnNames: lease_id, tenant_id
-            constraintName: uk_lease_tenants_lease_tenant
-        - addForeignKeyConstraint:
-            baseTableName: lease_tenants
-            baseColumnNames: lease_id
-            constraintName: fk_lease_tenants_lease
-            referencedTableName: leases
-            referencedColumnNames: id
-        - addForeignKeyConstraint:
-            baseTableName: lease_tenants
-            baseColumnNames: tenant_id
-            constraintName: fk_lease_tenants_tenant
-            referencedTableName: tenants
-            referencedColumnNames: id
-
-  # invite - FK users (invited_by, claimed_user). Depends on users.
-  - changeSet:
-      id: "initial-invite"
-      author: "prop-manager"
-      changes:
+        # invites
         - createTable:
             tableName: invite
             columns:
@@ -759,11 +692,6 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
-                  name: role
-                  type: varchar(64)
-                  constraints:
-                    nullable: false
-              - column:
                   name: invited_by_id
                   type: uuid
                   constraints:
@@ -773,8 +701,20 @@ databaseChangeLog:
                   type: varchar(16)
                   constraints:
                     nullable: false
+                  defaultValue: PENDING
+              - column:
+                  name: attributes
+                  type: jsonb
+                  defaultValue: '{}'
+                  constraints:
+                    nullable: false
               - column:
                   name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
                   type: timestamptz
                   constraints:
                     nullable: false
@@ -795,20 +735,6 @@ databaseChangeLog:
               - column:
                   name: claimed_user_id
                   type: uuid
-              - column:
-                  name: email_status
-                  type: varchar(16)
-                  defaultValue: NOT_SENT
-                  constraints:
-                    nullable: false
-              - column:
-                  name: email_error
-                  type: varchar(500)
-              - column:
-                  name: updated_at
-                  type: timestamptz
-                  constraints:
-                    nullable: false
         - addForeignKeyConstraint:
             baseTableName: invite
             baseColumnNames: invited_by_id
@@ -848,59 +774,34 @@ databaseChangeLog:
               - column:
                   name: status
 
-  # add email_retry_count to invite — tracks automatic retry attempts after FAILED delivery
-  - changeSet:
-      id: "add-invite-email-retry-count"
-      author: "prop-manager"
-      changes:
-        - addColumn:
-            tableName: invite
+        # lease_tenants
+        - createTable:
+            tableName: lease_tenants
             columns:
               - column:
-                  name: email_retry_count
-                  type: int
-                  defaultValueNumeric: 0
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: lease_id
+                  type: uuid
                   constraints:
                     nullable: false
-
-  # alter lease_tenants: make tenant_id nullable, add invite_id FK, add missing audit/lifecycle columns
-  - changeSet:
-      id: "alter-lease-tenants-for-invite"
-      author: "prop-manager"
-      changes:
-        # Drop the unique constraint that assumed tenant_id was always set
-        - dropUniqueConstraint:
-            tableName: lease_tenants
-            constraintName: uk_lease_tenants_lease_tenant
-        # Make tenant_id nullable (it is now null until the invitee accepts)
-        - dropNotNullConstraint:
-            tableName: lease_tenants
-            columnName: tenant_id
-            columnDataType: uuid
-        # Add invite_id column (non-nullable — every LeaseTenant row originates from an invite)
-        - addColumn:
-            tableName: lease_tenants
-            columns:
+              - column:
+                  name: tenant_id
+                  type: uuid
               - column:
                   name: invite_id
                   type: uuid
                   constraints:
                     nullable: false
-        - addForeignKeyConstraint:
-            baseTableName: lease_tenants
-            baseColumnNames: invite_id
-            constraintName: fk_lease_tenants_invite
-            referencedTableName: invite
-            referencedColumnNames: id
-        # Unique: one invite maps to exactly one LeaseTenant slot
-        - addUniqueConstraint:
-            tableName: lease_tenants
-            columnNames: lease_id, invite_id
-            constraintName: uk_lease_tenants_lease_invite
-        # Lifecycle columns present in the entity but missing from the original migration
-        - addColumn:
-            tableName: lease_tenants
-            columns:
+              - column:
+                  name: role
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
               - column:
                   name: invited_date
                   type: date
@@ -915,22 +816,40 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: created_at
-                  type: timestamp with time zone
+                  type: timestamptz
                   constraints:
                     nullable: false
                   defaultValueComputed: now()
               - column:
                   name: updated_at
-                  type: timestamp with time zone
+                  type: timestamptz
                   constraints:
                     nullable: false
                   defaultValueComputed: now()
+        - addForeignKeyConstraint:
+            baseTableName: lease_tenants
+            baseColumnNames: lease_id
+            constraintName: fk_lease_tenants_lease
+            referencedTableName: leases
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: lease_tenants
+            baseColumnNames: tenant_id
+            constraintName: fk_lease_tenants_tenant
+            referencedTableName: tenants
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: lease_tenants
+            baseColumnNames: invite_id
+            constraintName: fk_lease_tenants_invite
+            referencedTableName: invite
+            referencedColumnNames: id
+        - addUniqueConstraint:
+            tableName: lease_tenants
+            columnNames: lease_id, invite_id
+            constraintName: uk_lease_tenants_lease_invite
 
-  # notification_deliveries — general delivery log for all notification types
-  - changeSet:
-      id: "add-notification-deliveries"
-      author: "prop-manager"
-      changes:
+        # notification_deliveries
         - createTable:
             tableName: notification_deliveries
             columns:
@@ -994,16 +913,16 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
                   name: sent_at
                   type: timestamptz
               - column:
                   name: viewed_at
                   type: timestamptz
-              - column:
-                  name: updated_at
-                  type: timestamptz
-                  constraints:
-                    nullable: false
         - addForeignKeyConstraint:
             baseTableName: notification_deliveries
             baseColumnNames: user_id
@@ -1036,11 +955,7 @@ databaseChangeLog:
               - column:
                   name: user_id
 
-  # user_notification_preferences — per-user opt-out settings
-  - changeSet:
-      id: "add-user-notification-preferences"
-      author: "prop-manager"
-      changes:
+        # user_notification_preferences
         - createTable:
             tableName: user_notification_preferences
             columns:
@@ -1098,277 +1013,7 @@ databaseChangeLog:
             columnNames: user_id, notification_type, channel
             constraintName: uk_user_notification_preferences
 
-  # remove invite email tracking columns — now handled by notification_deliveries
-  - changeSet:
-      id: "remove-invite-email-tracking-columns"
-      author: "prop-manager"
-      changes:
-        - dropColumn:
-            tableName: invite
-            columnName: email_status
-        - dropColumn:
-            tableName: invite
-            columnName: email_retry_count
-        - dropColumn:
-            tableName: invite
-            columnName: email_error
-
-  # organizations — multi-tenant root
-  - changeSet:
-      id: "add-organizations-table"
-      author: "prop-manager"
-      changes:
-        - createTable:
-            tableName: organizations
-            columns:
-              - column:
-                  name: id
-                  type: uuid
-                  constraints:
-                    primaryKey: true
-                    nullable: false
-              - column:
-                  name: name
-                  type: varchar(255)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: tax_id
-                  type: varchar(64)
-              - column:
-                  name: settings
-                  type: jsonb
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
-                  constraints:
-                    nullable: false
-              - column:
-                  name: created_at
-                  type: timestamptz
-                  constraints:
-                    nullable: false
-              - column:
-                  name: updated_at
-                  type: timestamptz
-                  constraints:
-                    nullable: false
-
-  # memberships — bridge user <-> organization with role
-  - changeSet:
-      id: "add-memberships-table"
-      author: "prop-manager"
-      changes:
-        - createTable:
-            tableName: memberships
-            columns:
-              - column:
-                  name: id
-                  type: uuid
-                  constraints:
-                    primaryKey: true
-                    nullable: false
-              - column:
-                  name: user_id
-                  type: uuid
-                  constraints:
-                    nullable: false
-              - column:
-                  name: org_id
-                  type: uuid
-                  constraints:
-                    nullable: false
-              - column:
-                  name: role
-                  type: varchar(32)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
-                  constraints:
-                    nullable: false
-              - column:
-                  name: created_at
-                  type: timestamptz
-                  constraints:
-                    nullable: false
-              - column:
-                  name: updated_at
-                  type: timestamptz
-                  constraints:
-                    nullable: false
-            constraints:
-              - uniqueConstraint:
-                  tableName: memberships
-                  columnNames: user_id, org_id
-                  constraintName: uk_memberships_user_org
-        - addForeignKeyConstraint:
-            baseTableName: memberships
-            baseColumnNames: user_id
-            constraintName: fk_memberships_user
-            referencedTableName: users
-            referencedColumnNames: id
-        - addForeignKeyConstraint:
-            baseTableName: memberships
-            baseColumnNames: org_id
-            constraintName: fk_memberships_org
-            referencedTableName: organizations
-            referencedColumnNames: id
-        - createIndex:
-            indexName: idx_memberships_user_id
-            tableName: memberships
-            columns:
-              - column:
-                  name: user_id
-        - createIndex:
-            indexName: idx_memberships_org_id
-            tableName: memberships
-            columns:
-              - column:
-                  name: org_id
-
-  # member_scopes — granular access per membership
-  - changeSet:
-      id: "add-member-scopes-table"
-      author: "prop-manager"
-      changes:
-        - createTable:
-            tableName: member_scopes
-            columns:
-              - column:
-                  name: id
-                  type: uuid
-                  constraints:
-                    primaryKey: true
-                    nullable: false
-              - column:
-                  name: membership_id
-                  type: uuid
-                  constraints:
-                    nullable: false
-              - column:
-                  name: scope_type
-                  type: varchar(32)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: scope_id
-                  type: uuid
-                  constraints:
-                    nullable: false
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
-                  constraints:
-                    nullable: false
-              - column:
-                  name: created_at
-                  type: timestamptz
-                  constraints:
-                    nullable: false
-              - column:
-                  name: updated_at
-                  type: timestamptz
-                  constraints:
-                    nullable: false
-            constraints:
-              - uniqueConstraint:
-                  tableName: member_scopes
-                  columnNames: membership_id, scope_type, scope_id
-                  constraintName: uk_member_scopes_membership_scope
-        - addForeignKeyConstraint:
-            baseTableName: member_scopes
-            baseColumnNames: membership_id
-            constraintName: fk_member_scopes_membership
-            referencedTableName: memberships
-            referencedColumnNames: id
-        - createIndex:
-            indexName: idx_member_scopes_membership_id
-            tableName: member_scopes
-            columns:
-              - column:
-                  name: membership_id
-        - createIndex:
-            indexName: idx_member_scopes_scope
-            tableName: member_scopes
-            columns:
-              - column:
-                  name: scope_type
-              - column:
-                  name: scope_id
-
-  # memberships.permissions (JSONB, nullable) — Piece 5
-  - changeSet:
-      id: "add-memberships-permissions-column"
-      author: "prop-manager"
-      changes:
-        - addColumn:
-            tableName: memberships
-            columns:
-              - column:
-                  name: permissions
-                  type: jsonb
-
-  # member_scopes.permissions (JSONB, NOT NULL, backfill existing with {})
-  - changeSet:
-      id: "add-member-scopes-permissions-column"
-      author: "prop-manager"
-      changes:
-        - addColumn:
-            tableName: member_scopes
-            columns:
-              - column:
-                  name: permissions
-                  type: jsonb
-                  defaultValueComputed: "'{}'::jsonb"
-                  constraints:
-                    nullable: false
-
-  # prop — add organization_id (nullable for existing rows)
-  - changeSet:
-      id: "add-prop-organization-id"
-      author: "prop-manager"
-      changes:
-        - addColumn:
-            tableName: prop
-            columns:
-              - column:
-                  name: organization_id
-                  type: uuid
-        - addForeignKeyConstraint:
-            baseTableName: prop
-            baseColumnNames: organization_id
-            constraintName: fk_prop_organization
-            referencedTableName: organizations
-            referencedColumnNames: id
-        - createIndex:
-            indexName: idx_prop_organization_id
-            tableName: prop
-            columns:
-              - column:
-                  name: organization_id
-
-  # prop.organization_id — make NOT NULL now that all rows have an org
-  - changeSet:
-      id: "prop-organization-id-not-null"
-      author: "prop-manager"
-      changes:
-        - addNotNullConstraint:
-            tableName: prop
-            columnName: organization_id
-            columnDataType: uuid
-
-  # membership_templates — system (org_id NULL) or org-scoped role blueprints
-  # Each template contains ordered items (membership_template_items) defining permissions per scope level.
-  # Permissions are resolved live at JWT hydration time — not materialised into member_scopes rows.
-  - changeSet:
-      id: "add-membership-templates-table"
-      author: "prop-manager"
-      changes:
+        # membership_templates
         - createTable:
             tableName: membership_templates
             columns:
@@ -1421,11 +1066,7 @@ databaseChangeLog:
               - column:
                   name: org_id
 
-  # membership_template_items — one row per scope-level entry within a template
-  - changeSet:
-      id: "add-membership-template-items-table"
-      author: "prop-manager"
-      changes:
+        # membership_template_items
         - createTable:
             tableName: membership_template_items
             columns:
@@ -1436,7 +1077,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: item_order
-                  type: int
+                  type: integer
                   constraints:
                     nullable: false
               - column:
@@ -1462,17 +1103,69 @@ databaseChangeLog:
             referencedColumnNames: id
             onDelete: CASCADE
 
-  # memberships.membership_template_id — optional FK to the role blueprint applied to this membership
-  - changeSet:
-      id: "add-memberships-membership-template-id"
-      author: "prop-manager"
-      changes:
-        - addColumn:
+        # memberships
+        - createTable:
             tableName: memberships
             columns:
               - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+              - column:
+                  name: org_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: invite_id
+                  type: uuid
+              - column:
                   name: membership_template_id
                   type: uuid
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+            constraints:
+              - uniqueConstraint:
+                  tableName: memberships
+                  columnNames: user_id, org_id
+                  constraintName: uk_memberships_user_org
+        - addForeignKeyConstraint:
+            baseTableName: memberships
+            baseColumnNames: user_id
+            constraintName: fk_memberships_user
+            referencedTableName: users
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: memberships
+            baseColumnNames: org_id
+            constraintName: fk_memberships_org
+            referencedTableName: organizations
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: memberships
+            baseColumnNames: invite_id
+            constraintName: fk_memberships_invite
+            referencedTableName: invite
+            referencedColumnNames: id
         - addForeignKeyConstraint:
             baseTableName: memberships
             baseColumnNames: membership_template_id
@@ -1480,44 +1173,94 @@ databaseChangeLog:
             referencedTableName: membership_templates
             referencedColumnNames: id
             onDelete: SET NULL
-
-  # Piece 11: drop memberships.role — replaced by member_scopes
-  - changeSet:
-      id: "drop-memberships-role-column"
-      author: "prop-manager"
-      changes:
-        - dropColumn:
+        - createIndex:
+            indexName: idx_memberships_user_id
             tableName: memberships
-            columnName: role
-
-  # Piece 11: drop memberships.permissions — replaced by member_scopes.permissions
-  - changeSet:
-      id: "drop-memberships-permissions-column"
-      author: "prop-manager"
-      changes:
-        - dropColumn:
-            tableName: memberships
-            columnName: permissions
-
-  # Invite: replace role column with flexible JSON attributes map
-  - changeSet:
-      id: "add-invite-attributes-column"
-      author: "dev"
-      changes:
-        - addColumn:
-            tableName: invite
             columns:
               - column:
-                  name: attributes
-                  type: jsonb
-                  defaultValue: '{}'
+                  name: user_id
+        - createIndex:
+            indexName: idx_memberships_org_id
+            tableName: memberships
+            columns:
+              - column:
+                  name: org_id
+        - createIndex:
+            indexName: idx_memberships_invite_id
+            tableName: memberships
+            columns:
+              - column:
+                  name: invite_id
+
+        # member_scopes
+        - createTable:
+            tableName: member_scopes
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: membership_id
+                  type: uuid
                   constraints:
                     nullable: false
-        - sql:
-            sql: >
-              UPDATE invite
-              SET attributes = jsonb_build_object('role', role)
-              WHERE role IS NOT NULL
-        - dropColumn:
-            tableName: invite
-            columnName: role
+              - column:
+                  name: scope_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scope_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: permissions
+                  type: jsonb
+                  defaultValueComputed: "'{}'::jsonb"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+            constraints:
+              - uniqueConstraint:
+                  tableName: member_scopes
+                  columnNames: membership_id, scope_type, scope_id
+                  constraintName: uk_member_scopes_membership_scope
+        - addForeignKeyConstraint:
+            baseTableName: member_scopes
+            baseColumnNames: membership_id
+            constraintName: fk_member_scopes_membership
+            referencedTableName: memberships
+            referencedColumnNames: id
+        - createIndex:
+            indexName: idx_member_scopes_membership_id
+            tableName: member_scopes
+            columns:
+              - column:
+                  name: membership_id
+        - createIndex:
+            indexName: idx_member_scopes_scope
+            tableName: member_scopes
+            columns:
+              - column:
+                  name: scope_type
+              - column:
+                  name: scope_id

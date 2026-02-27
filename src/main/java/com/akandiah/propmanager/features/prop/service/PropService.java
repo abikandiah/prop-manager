@@ -61,11 +61,11 @@ public class PropService {
 	}
 
 	@Transactional
-	public PropResponse create(CreatePropRequest request) {
+	public PropResponse create(CreatePropRequest request, UUID orgId) {
 		Address address = mapToAddress(request.address());
 		address = addressRepository.save(address);
-		Organization organization = organizationRepository.findById(request.organizationId())
-				.orElseThrow(() -> new ResourceNotFoundException("Organization", request.organizationId()));
+		Organization organization = organizationRepository.findById(orgId)
+				.orElseThrow(() -> new ResourceNotFoundException("Organization", orgId));
 		Prop prop = Prop.builder()
 				.legalName(request.legalName())
 				.address(address)

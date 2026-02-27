@@ -365,7 +365,6 @@ public final class TestDataFactory {
 					propertyType,
 					description,
 					parcelNumber,
-					organization != null ? organization.getId() : null,
 					ownerId,
 					totalArea,
 					yearBuilt);

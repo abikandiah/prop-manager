@@ -20,8 +20,6 @@ public record CreatePropRequest(
 
 		@Size(max = 64) String parcelNumber,
 
-		@NotNull(message = "Organization ID is required") java.util.UUID organizationId,
-
 		java.util.UUID ownerId,
 
 		Integer totalArea,

@@ -69,10 +69,11 @@ public class PropController {
 	}
 
 	@PostMapping
-	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'p', T(com.akandiah.propmanager.common.permission.ResourceType).ORG, #request.organizationId, #request.organizationId)")
+	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'p', T(com.akandiah.propmanager.common.permission.ResourceType).ORG, #orgId, #orgId)")
 	@Operation(summary = "Create a prop")
-	public ResponseEntity<PropResponse> create(@Valid @RequestBody CreatePropRequest request) {
-		PropResponse created = propService.create(request);
+	public ResponseEntity<PropResponse> create(@Valid @RequestBody CreatePropRequest request,
+			@RequestParam UUID orgId) {
+		PropResponse created = propService.create(request, orgId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(created);
 	}
 

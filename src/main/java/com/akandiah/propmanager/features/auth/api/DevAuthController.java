@@ -4,10 +4,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -85,6 +88,51 @@ public class DevAuthController {
 		signedJWT.sign(signer);
 
 		return Map.of("token", signedJWT.serialize());
+	}
+
+	@PostMapping("/token/refresh")
+	@Operation(summary = "Refresh dev JWT", description = "Evicts the permissions cache and re-issues a JWT with fresh access claims. Uses the existing token as the credential. ONLY for local development.")
+	public ResponseEntity<Map<String, String>> refreshToken(Authentication authentication) throws Exception {
+		if (authentication == null || !authentication.isAuthenticated()) {
+			throw new BadCredentialsException("Valid JWT required to refresh token");
+		}
+
+		String email = authentication.getName();
+		log.info("DEV TOKEN REFRESH - User: {}", email);
+
+		var user = userRepository.findByEmail(email)
+				.orElseThrow(() -> new BadCredentialsException("User not found: " + email));
+
+		// Bust the Caffeine cache so hydrate() re-reads from DB (picks up new org)
+		jwtHydrationService.evict(user.getId());
+
+		List<Map<String, Object>> accessClaim = jwtHydrationService.hydrate(user.getId()).stream()
+				.map(AccessEntry::toClaimMap)
+				.collect(Collectors.toList());
+
+		// Preserve the original groups (strip ROLE_ prefix added by Spring Security)
+		List<String> groups = authentication.getAuthorities().stream()
+				.map(a -> a.getAuthority().replaceFirst("^ROLE_", ""))
+				.collect(Collectors.toList());
+
+		JWSSigner signer = new MACSigner(jwtSecret.getBytes());
+
+		JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
+				.subject(email)
+				.issuer("https://prop-manager-dev")
+				.expirationTime(new Date(new Date().getTime() + 3600 * 1000)) // 1 hour
+				.claim("name", email)
+				.claim("email", email)
+				.claim("groups", groups);
+		if (!accessClaim.isEmpty()) {
+			claimsBuilder.claim("access", accessClaim);
+		}
+		JWTClaimsSet claimsSet = claimsBuilder.build();
+
+		SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsSet);
+		signedJWT.sign(signer);
+
+		return ResponseEntity.ok(Map.of("token", signedJWT.serialize()));
 	}
 
 	public record DevLoginRequest(

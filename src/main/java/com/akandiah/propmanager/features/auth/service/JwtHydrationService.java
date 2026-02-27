@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -81,6 +82,11 @@ public class JwtHydrationService {
 	private static final Map<String, Integer> TENANT_MASKS = Map.of(
 			PermissionDomains.LEASES, Actions.READ,
 			PermissionDomains.MAINTENANCE, Actions.READ);
+
+	@CacheEvict(value = CacheConfig.CACHE_PERMISSIONS, key = "#userId")
+	public void evict(UUID userId) {
+		// Intentionally empty — @CacheEvict removes the cached entry for this userId.
+	}
 
 	@Cacheable(value = CacheConfig.CACHE_PERMISSIONS, key = "#userId", sync = true)
 	@Transactional(readOnly = true)
