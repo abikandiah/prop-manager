@@ -16,6 +16,8 @@ public record MembershipResponse(
 		UUID inviteId,
 		String inviteEmail,
 		InviteStatus inviteStatus,
+		Instant lastResentAt,
+		Instant expiresAt,
 		Integer version,
 		Instant createdAt,
 		Instant updatedAt) {
@@ -31,6 +33,8 @@ public record MembershipResponse(
 				m.getInvite() != null ? m.getInvite().getId() : null,
 				m.getInvite() != null ? m.getInvite().getEmail() : null,
 				m.getInvite() != null ? m.getInvite().getStatus() : null,
+				m.getInvite() != null ? m.getInvite().getLastResentAt() : null,
+				m.getInvite() != null ? m.getInvite().getExpiresAt() : null,
 				m.getVersion(),
 				m.getCreatedAt(),
 				m.getUpdatedAt());
