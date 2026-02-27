@@ -31,6 +31,8 @@ app:
   # Often differs from server port/address (e.g. https behind Caddy vs internal :8080).
   # Override with APP_BASE_URL.
   base-url: ${APP_BASE_URL:https://propmanager.com}
+  auth:
+    logout-url: ${AUTH_LOGOUT_URL:}
   rate-limit:
     cache-expire-minutes: 15
   cache:

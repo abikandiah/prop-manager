@@ -33,8 +33,14 @@
 	@protected {
 		path /api/*
 		path /swagger-ui*
-		path /actuator/*
+		path /actuator/metrics*
+		path /actuator/prometheus*
 		path /v3/api-docs*
+	}
+
+	# 2.5 PUBLIC: Health check
+	handle /actuator/health* {
+		reverse_proxy app:8080
 	}
 
 	handle @protected {

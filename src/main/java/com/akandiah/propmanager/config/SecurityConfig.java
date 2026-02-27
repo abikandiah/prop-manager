@@ -48,6 +48,8 @@ public class SecurityConfig {
 				.authorizeHttpRequests(auth -> {
 					// 1. Infrastructure & Health
 					auth.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+							.requestMatchers("/actuator/metrics", "/actuator/metrics/**").hasRole("ADMIN")
+							.requestMatchers("/actuator/prometheus", "/actuator/prometheus/**").hasRole("ADMIN")
 							.requestMatchers("/error").permitAll();
 
 					// 2. Swagger / OpenAPI (Standard paths)
