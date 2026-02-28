@@ -55,6 +55,32 @@ public class InviteAuthorizationService {
 	}
 
 	/**
+	 * Convenience method for membership invite authorization — avoids T() operator in SpEL.
+	 * Delegates to {@link #canCreateInviteForTarget} with {@link TargetType#MEMBERSHIP}.
+	 *
+	 * @param orgId the organization ID (serves as both target and context)
+	 */
+	public boolean canCreateMembershipInvite(UUID orgId) {
+		return canCreateInviteForTarget(TargetType.MEMBERSHIP, orgId);
+	}
+
+	/**
+	 * Convenience method for lease invite authorization — avoids T() operator in SpEL.
+	 * Delegates to {@link #canViewInvitesForTarget} with {@link TargetType#LEASE}.
+	 */
+	public boolean canViewLeaseInvites(UUID leaseId) {
+		return canViewInvitesForTarget(TargetType.LEASE, leaseId);
+	}
+
+	/**
+	 * Convenience method for lease invite authorization — avoids T() operator in SpEL.
+	 * Delegates to {@link #canCreateInviteForTarget} with {@link TargetType#LEASE}.
+	 */
+	public boolean canCreateLeaseInvite(UUID leaseId) {
+		return canCreateInviteForTarget(TargetType.LEASE, leaseId);
+	}
+
+	/**
 	 * Check if the current user can manage (resend/revoke) a specific invite.
 	 * Resolves the target from the invite and delegates to
 	 * canCreateInviteForTarget.

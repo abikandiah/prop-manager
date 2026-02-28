@@ -56,24 +56,26 @@ public class LeaseTemplateController {
 	}
 
 	@PostMapping
-	@PreAuthorize("@permissionGuard.hasOrgAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'l', #request.orgId)")
+	@PreAuthorize("@permissionGuard.hasOrgAccess('CREATE', 'LEASES', #orgId)")
 	@Operation(summary = "Create a lease template")
 	public ResponseEntity<LeaseTemplateResponse> create(
-			@Valid @RequestBody CreateLeaseTemplateRequest request) {
+			@Valid @RequestBody CreateLeaseTemplateRequest request,
+			@RequestParam UUID orgId) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
 	}
 
 	@PatchMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasOrgAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', #request.orgId)")
+	@PreAuthorize("@permissionGuard.hasOrgAccess('UPDATE', 'LEASES', #orgId)")
 	@Operation(summary = "Update a lease template", description = "Requires 'version' for optimistic-lock verification; returns 409 if stale")
 	public ResponseEntity<LeaseTemplateResponse> update(
 			@PathVariable UUID id,
-			@Valid @RequestBody UpdateLeaseTemplateRequest request) {
+			@Valid @RequestBody UpdateLeaseTemplateRequest request,
+			@RequestParam UUID orgId) {
 		return ResponseEntity.ok(service.update(id, request));
 	}
 
 	@DeleteMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasOrgAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'l', #orgId)")
+	@PreAuthorize("@permissionGuard.hasOrgAccess('DELETE', 'LEASES', #orgId)")
 	@Operation(summary = "Delete a lease template")
 	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID orgId) {
 		service.deleteById(id, orgId);

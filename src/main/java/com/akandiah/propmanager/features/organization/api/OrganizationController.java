@@ -71,7 +71,7 @@ public class OrganizationController {
 
 	@PatchMapping("/{id}")
 	@Operation(summary = "Update an organization")
-	@PreAuthorize("@permissionGuard.hasOrgAccess(4, 'o', #id)")
+	@PreAuthorize("@permissionGuard.hasOrgAccess('UPDATE', 'ORG', #id)")
 	public ResponseEntity<OrganizationResponse> update(
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateOrganizationRequest request) {
@@ -80,7 +80,7 @@ public class OrganizationController {
 
 	@DeleteMapping("/{id}")
 	@Operation(summary = "Delete an organization")
-	@PreAuthorize("@permissionGuard.hasOrgAccess(8, 'o', #id)")
+	@PreAuthorize("@permissionGuard.hasOrgAccess('DELETE', 'ORG', #id)")
 	public ResponseEntity<Void> delete(@PathVariable UUID id) {
 		organizationService.deleteById(id);
 		return ResponseEntity.noContent().build();
@@ -95,7 +95,7 @@ public class OrganizationController {
 
 	@PostMapping("/{id}/members/invites")
 	@Operation(summary = "Invite a member to the organization")
-	@PreAuthorize("@inviteAuthService.canCreateInviteForTarget(T(com.akandiah.propmanager.features.invite.domain.TargetType).MEMBERSHIP, #id)")
+	@PreAuthorize("@inviteAuthService.canCreateMembershipInvite(#id)")
 	public ResponseEntity<MembershipResponse> inviteMember(
 			@PathVariable UUID id,
 			@Valid @RequestBody InviteMemberRequest request) {
@@ -106,7 +106,7 @@ public class OrganizationController {
 
 	@DeleteMapping("/{id}/members/{membershipId}")
 	@Operation(summary = "Remove a member from the organization")
-	@PreAuthorize("@permissionGuard.hasOrgAccess(8, 'o', #id)")
+	@PreAuthorize("@permissionGuard.hasOrgAccess('DELETE', 'ORG', #id)")
 	public ResponseEntity<Void> deleteMember(
 			@PathVariable UUID id,
 			@PathVariable UUID membershipId) {

@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
+
+import com.akandiah.propmanager.security.annotations.PreAuthorizeLeaseAccess;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -67,7 +69,7 @@ public class LeaseController {
 	}
 
 	@GetMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasLeaseAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'l', #id, #orgId)")
+	@PreAuthorizeLeaseAccess("READ")
 	@Operation(summary = "Get lease by ID")
 	public ResponseEntity<LeaseResponse> getById(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return ResponseEntity.ok(service.findById(id));
@@ -76,7 +78,7 @@ public class LeaseController {
 	// ───────────────────────── Stamp (create) ─────────────────────────
 
 	@PostMapping
-	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'l', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #request.unitId, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess('CREATE', 'LEASES', 'UNIT', #request.unitId, #orgId)")
 	@Operation(summary = "Stamp a new lease from a template", description = "Creates a DRAFT lease with template defaults applied; markdown is rendered on activate")
 	public ResponseEntity<LeaseResponse> create(@Valid @RequestBody CreateLeaseRequest request,
 			@RequestParam UUID orgId) {
@@ -86,7 +88,7 @@ public class LeaseController {
 	// ───────────────────────── Edit (DRAFT only) ─────────────────────────
 
 	@PatchMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasLeaseAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', #id, #orgId)")
+	@PreAuthorizeLeaseAccess("UPDATE")
 	@Operation(summary = "Update a DRAFT lease", description = "Only DRAFT leases can be modified; returns 422 otherwise")
 	public ResponseEntity<LeaseResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateLeaseRequest request,
 			@RequestParam UUID orgId) {
@@ -96,28 +98,28 @@ public class LeaseController {
 	// ───────────────────────── Status transitions ─────────────────────────
 
 	@PostMapping("/{id}/submit")
-	@PreAuthorize("@permissionGuard.hasLeaseAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', #id, #orgId)")
+	@PreAuthorizeLeaseAccess("UPDATE")
 	@Operation(summary = "Submit draft for tenant review", description = "DRAFT → REVIEW")
 	public ResponseEntity<LeaseResponse> submitForReview(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return ResponseEntity.ok(service.submitForReview(id));
 	}
 
 	@PostMapping("/{id}/activate")
-	@PreAuthorize("@permissionGuard.hasLeaseAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', #id, #orgId)")
+	@PreAuthorizeLeaseAccess("UPDATE")
 	@Operation(summary = "Activate a reviewed lease", description = "REVIEW → ACTIVE (read-only); stamps template markdown")
 	public ResponseEntity<LeaseResponse> activate(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return ResponseEntity.ok(service.activate(id));
 	}
 
 	@PostMapping("/{id}/revert")
-	@PreAuthorize("@permissionGuard.hasLeaseAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', #id, #orgId)")
+	@PreAuthorizeLeaseAccess("UPDATE")
 	@Operation(summary = "Revert to draft for further edits", description = "REVIEW → DRAFT")
 	public ResponseEntity<LeaseResponse> revertToDraft(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return ResponseEntity.ok(service.revertToDraft(id));
 	}
 
 	@PostMapping("/{id}/terminate")
-	@PreAuthorize("@permissionGuard.hasLeaseAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'l', #id, #orgId)")
+	@PreAuthorizeLeaseAccess("UPDATE")
 	@Operation(summary = "Terminate an active lease early", description = "ACTIVE → TERMINATED")
 	public ResponseEntity<LeaseResponse> terminate(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return ResponseEntity.ok(service.terminate(id));
@@ -126,7 +128,7 @@ public class LeaseController {
 	// ───────────────────────── Delete (DRAFT only) ─────────────────────────
 
 	@DeleteMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasLeaseAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'l', #id, #orgId)")
+	@PreAuthorizeLeaseAccess("DELETE")
 	@Operation(summary = "Delete a DRAFT lease", description = "Only DRAFT leases can be deleted; returns 422 otherwise")
 	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID orgId) {
 		service.deleteById(id);

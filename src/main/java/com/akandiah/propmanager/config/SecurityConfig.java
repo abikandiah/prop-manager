@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.core.annotation.AnnotationTemplateExpressionDefaults;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -34,6 +35,12 @@ public class SecurityConfig {
 
 	private final CorsConfigurationSource corsConfigurationSource;
 	private final Environment environment;
+
+	/** Enables {placeholder} substitution in @PreAuthorize meta-annotations. */
+	@Bean
+	static AnnotationTemplateExpressionDefaults annotationTemplateExpressionDefaults() {
+		return new AnnotationTemplateExpressionDefaults();
+	}
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

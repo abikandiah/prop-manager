@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
+
+import com.akandiah.propmanager.security.annotations.PreAuthorizeUnitAccess;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -54,14 +56,14 @@ public class UnitController {
 	}
 
 	@GetMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'p', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
+	@PreAuthorizeUnitAccess("READ")
 	@Operation(summary = "Get unit by ID")
 	public UnitResponse getById(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return unitService.findById(id);
 	}
 
 	@PostMapping
-	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'p', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #request.propertyId, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess('CREATE', 'PORTFOLIO', 'PROPERTY', #request.propertyId, #orgId)")
 	@Operation(summary = "Create a unit")
 	public ResponseEntity<UnitResponse> create(@Valid @RequestBody CreateUnitRequest request,
 			@RequestParam UUID orgId) {
@@ -70,7 +72,7 @@ public class UnitController {
 	}
 
 	@PatchMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'p', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
+	@PreAuthorizeUnitAccess("UPDATE")
 	@Operation(summary = "Update a unit")
 	public UnitResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUnitRequest request,
 			@RequestParam UUID orgId) {
@@ -78,7 +80,7 @@ public class UnitController {
 	}
 
 	@DeleteMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'p', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #id, #orgId)")
+	@PreAuthorizeUnitAccess("DELETE")
 	@Operation(summary = "Delete a unit")
 	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID orgId) {
 		unitService.deleteById(id);

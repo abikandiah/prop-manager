@@ -60,8 +60,7 @@ public class TenantController {
 	}
 
 	@GetMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasTenantAccess("
-			+ "T(com.akandiah.propmanager.common.permission.Actions).READ, 't', #id, #orgId)")
+	@PreAuthorize("@permissionGuard.hasTenantAccess('READ', 'TENANTS', #id, #orgId)")
 	@Operation(summary = "Get tenant by ID",
 			description = "Accessible to property managers and owners with LEASES:READ access on the tenant's unit, property, or organization. Tenant users cannot view other tenants' profiles.")
 	public ResponseEntity<TenantResponse> getById(

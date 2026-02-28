@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -186,6 +187,85 @@ class PermissionGuardTest {
 
 		boolean result = guard.hasAssetCreateAccess(
 				Actions.CREATE, PermissionDomains.MAINTENANCE, PROP_ID, null, ORG_ID);
+
+		assertThat(result).isTrue();
+	}
+
+	// ─────────────────── String-based Overloads ───────────────────
+
+	@Test
+	void hasAccess_stringOverload_mapsStringsCorrectly() {
+		UUID resourceId = UUID.randomUUID();
+		when(authorizationService.allow(any(), eq(Actions.READ), eq(PermissionDomains.PORTFOLIO),
+				eq(ResourceType.PROPERTY), eq(resourceId), eq(ORG_ID))).thenReturn(true);
+
+		boolean result = guard.hasAccess("READ", "PORTFOLIO", "PROPERTY", resourceId, ORG_ID);
+
+		assertThat(result).isTrue();
+		verify(authorizationService).allow(any(), eq(Actions.READ), eq(PermissionDomains.PORTFOLIO),
+				eq(ResourceType.PROPERTY), eq(resourceId), eq(ORG_ID));
+	}
+
+	@Test
+	void hasAccess_stringOverload_handlesCaseInsensitivity() {
+		UUID resourceId = UUID.randomUUID();
+		when(authorizationService.allow(any(), eq(Actions.UPDATE), eq(PermissionDomains.PORTFOLIO),
+				eq(ResourceType.UNIT), eq(resourceId), eq(ORG_ID))).thenReturn(true);
+
+		boolean result = guard.hasAccess("update", "portfolio", "unit", resourceId, ORG_ID);
+
+		assertThat(result).isTrue();
+	}
+
+	@Test
+	void hasAccess_stringOverload_throwsOnInvalidAction() {
+		assertThatThrownBy(() -> guard.hasAccess("INVALID", "PORTFOLIO", "PROPERTY", UUID.randomUUID(), ORG_ID))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Invalid security action");
+	}
+
+	@Test
+	void hasAccess_stringOverload_throwsOnInvalidDomain() {
+		assertThatThrownBy(() -> guard.hasAccess("READ", "INVALID", "PROPERTY", UUID.randomUUID(), ORG_ID))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Invalid security domain");
+	}
+
+	@Test
+	void hasAccess_stringOverload_throwsOnInvalidResourceType() {
+		assertThatThrownBy(() -> guard.hasAccess("READ", "PORTFOLIO", "INVALID", UUID.randomUUID(), ORG_ID))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Invalid security resource type");
+	}
+
+	@Test
+	void hasOrgAccess_stringOverload_mapsCorrectly() {
+		when(authorizationService.allow(any(), eq(Actions.CREATE), eq(PermissionDomains.ORGANIZATION),
+				eq(ResourceType.ORG), eq(ORG_ID), eq(ORG_ID))).thenReturn(true);
+
+		boolean result = guard.hasOrgAccess("CREATE", "ORG", ORG_ID);
+
+		assertThat(result).isTrue();
+	}
+
+	@Test
+	void hasLeaseAccess_stringOverload_mapsCorrectly() {
+		UUID leaseId = UUID.randomUUID();
+		when(leaseRepository.findUnitIdById(leaseId)).thenReturn(java.util.Optional.of(UNIT_ID));
+		when(authorizationService.allow(any(), eq(Actions.READ), eq(PermissionDomains.LEASES),
+				eq(ResourceType.UNIT), eq(UNIT_ID), eq(ORG_ID))).thenReturn(true);
+
+		boolean result = guard.hasLeaseAccess("READ", "LEASES", leaseId, ORG_ID);
+
+		assertThat(result).isTrue();
+	}
+
+	@Test
+	void hasAssetAccess_stringOverload_mapsCorrectly() {
+		when(authorizationService.allow(any(), eq(Actions.UPDATE), eq(PermissionDomains.MAINTENANCE),
+				eq(ResourceType.ASSET), eq(ASSET_ID), eq(ORG_ID))).thenReturn(true);
+
+		boolean result = guard.hasAssetAccess("UPDATE", "MAINTENANCE", ASSET_ID, ORG_ID);
 
 		assertThat(result).isTrue();
 	}

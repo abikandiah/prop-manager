@@ -44,7 +44,7 @@ public class AssetController {
 	}
 
 	@GetMapping(params = { "propId", "orgId" })
-	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'm', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #propId, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess('READ', 'MAINTENANCE', 'PROPERTY', #propId, #orgId)")
 	@Operation(summary = "List assets by property ID")
 	public List<AssetResponse> listByProp(
 			@RequestParam UUID propId,
@@ -53,7 +53,7 @@ public class AssetController {
 	}
 
 	@GetMapping(params = { "unitId", "orgId" })
-	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'm', T(com.akandiah.propmanager.common.permission.ResourceType).UNIT, #unitId, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess('READ', 'MAINTENANCE', 'UNIT', #unitId, #orgId)")
 	@Operation(summary = "List assets by unit ID")
 	public List<AssetResponse> listByUnit(
 			@RequestParam UUID unitId,
@@ -62,14 +62,14 @@ public class AssetController {
 	}
 
 	@GetMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasAssetAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'm', #id, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAssetAccess('READ', 'MAINTENANCE', #id, #orgId)")
 	@Operation(summary = "Get asset by ID")
 	public AssetResponse getById(@PathVariable UUID id, @RequestParam UUID orgId) {
 		return assetService.findById(id);
 	}
 
 	@PostMapping
-	@PreAuthorize("@permissionGuard.hasAssetCreateAccess(T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'm', #request.propertyId, #request.unitId, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAssetCreateAccess('CREATE', 'MAINTENANCE', #request.propertyId, #request.unitId, #orgId)")
 	@Operation(summary = "Create an asset (set exactly one of propertyId or unitId)")
 	public ResponseEntity<AssetResponse> create(
 			@Valid @RequestBody CreateAssetRequest request,
@@ -79,7 +79,7 @@ public class AssetController {
 	}
 
 	@PatchMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasAssetAccess(T(com.akandiah.propmanager.common.permission.Actions).UPDATE, 'm', #id, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAssetAccess('UPDATE', 'MAINTENANCE', #id, #orgId)")
 	@Operation(summary = "Update an asset")
 	public AssetResponse update(
 			@PathVariable UUID id,
@@ -89,7 +89,7 @@ public class AssetController {
 	}
 
 	@DeleteMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasAssetAccess(T(com.akandiah.propmanager.common.permission.Actions).DELETE, 'm', #id, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAssetAccess('DELETE', 'MAINTENANCE', #id, #orgId)")
 	@Operation(summary = "Delete an asset")
 	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID orgId) {
 		assetService.deleteById(id);
