@@ -61,7 +61,7 @@ public class LeaseTemplateController {
 	public ResponseEntity<LeaseTemplateResponse> create(
 			@Valid @RequestBody CreateLeaseTemplateRequest request,
 			@RequestParam UUID orgId) {
-		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
+		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request, orgId));
 	}
 
 	@PatchMapping("/{id}")
@@ -71,7 +71,7 @@ public class LeaseTemplateController {
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateLeaseTemplateRequest request,
 			@RequestParam UUID orgId) {
-		return ResponseEntity.ok(service.update(id, request));
+		return ResponseEntity.ok(service.update(id, request, orgId));
 	}
 
 	@DeleteMapping("/{id}")

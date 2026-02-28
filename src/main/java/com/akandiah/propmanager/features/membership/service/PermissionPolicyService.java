@@ -66,17 +66,17 @@ public class PermissionPolicyService {
 	}
 
 	@Transactional
-	public PermissionPolicyResponse create(CreatePermissionPolicyRequest request) {
-		if (request.orgId() == null && !SecurityUtils.isGlobalAdmin()) {
+	public PermissionPolicyResponse create(CreatePermissionPolicyRequest request, UUID orgId) {
+		if (orgId == null && !SecurityUtils.isGlobalAdmin()) {
 			throw new AccessDeniedException("Only system administrators can create system policies");
 		}
 
 		PermissionStringValidator.validate(request.permissions());
 
 		Organization org = null;
-		if (request.orgId() != null) {
-			org = organizationRepository.findById(request.orgId())
-					.orElseThrow(() -> new ResourceNotFoundException("Organization", request.orgId()));
+		if (orgId != null) {
+			org = organizationRepository.findById(orgId)
+					.orElseThrow(() -> new ResourceNotFoundException("Organization", orgId));
 		}
 
 		PermissionPolicy policy = PermissionPolicy.builder()
@@ -90,11 +90,15 @@ public class PermissionPolicyService {
 	}
 
 	@Transactional
-	public PermissionPolicyResponse update(UUID id, UpdatePermissionPolicyRequest request) {
+	public PermissionPolicyResponse update(UUID id, UpdatePermissionPolicyRequest request, UUID orgId) {
 		PermissionPolicy policy = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("PermissionPolicy", id));
 
-		requireUpdateAccess(policy);
+		if (policy.getOrg() != null && !policy.getOrg().getId().equals(orgId)) {
+			throw new AccessDeniedException("Policy does not belong to the specified organization");
+		}
+
+		requireUpdateAccess(policy, orgId);
 		OptimisticLockingUtil.requireVersionMatch("PermissionPolicy", id, policy.getVersion(), request.version());
 
 		boolean permissionsChanged = false;
@@ -117,11 +121,15 @@ public class PermissionPolicyService {
 	}
 
 	@Transactional
-	public void deleteById(UUID id) {
+	public void deleteById(UUID id, UUID orgId) {
 		PermissionPolicy policy = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("PermissionPolicy", id));
 
-		requireDeleteAccess(policy);
+		if (policy.getOrg() != null && !policy.getOrg().getId().equals(orgId)) {
+			throw new AccessDeniedException("Policy does not belong to the specified organization");
+		}
+
+		requireDeleteAccess(policy, orgId);
 
 		evictLinkedMemberships(id);
 		repository.delete(policy);
@@ -129,13 +137,12 @@ public class PermissionPolicyService {
 
 	// --- helpers ---
 
-	private void requireUpdateAccess(PermissionPolicy policy) {
+	private void requireUpdateAccess(PermissionPolicy policy, UUID orgId) {
 		if (policy.getOrg() == null) {
 			if (!SecurityUtils.isGlobalAdmin()) {
 				throw new AccessDeniedException("Only system administrators can modify system policies");
 			}
 		} else {
-			UUID orgId = policy.getOrg().getId();
 			if (!SecurityUtils.isGlobalAdmin() &&
 					!permissionGuard.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)) {
 				throw new AccessDeniedException("Insufficient permissions to modify this organization's policies");
@@ -143,13 +150,12 @@ public class PermissionPolicyService {
 		}
 	}
 
-	private void requireDeleteAccess(PermissionPolicy policy) {
+	private void requireDeleteAccess(PermissionPolicy policy, UUID orgId) {
 		if (policy.getOrg() == null) {
 			if (!SecurityUtils.isGlobalAdmin()) {
 				throw new AccessDeniedException("Only system administrators can delete system policies");
 			}
 		} else {
-			UUID orgId = policy.getOrg().getId();
 			if (!SecurityUtils.isGlobalAdmin() &&
 					!permissionGuard.hasAccess(Actions.DELETE, "o", ResourceType.ORG, orgId, orgId)) {
 				throw new AccessDeniedException("Insufficient permissions to delete this organization's policies");

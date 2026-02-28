@@ -51,29 +51,30 @@ public class PermissionPolicyController {
 	@PostMapping
 	@Operation(summary = "Create a permission policy")
 	@PreAuthorize("hasRole('ADMIN') or " +
-			"(#request.orgId() != null and @permissionGuard.hasAccess(" +
-			"T(com.akandiah.propmanager.common.permission.Actions).CREATE, 'o', " +
-			"T(com.akandiah.propmanager.common.permission.ResourceType).ORG, " +
-			"#request.orgId(), #request.orgId()))")
+			"(@orgGuard.isMember(#orgId, authentication) and @permissionGuard.hasOrgAccess('CREATE', 'ORG', #orgId))")
 	public ResponseEntity<PermissionPolicyResponse> create(
-			@Valid @RequestBody CreatePermissionPolicyRequest request) {
-		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
+			@Valid @RequestBody CreatePermissionPolicyRequest request,
+			@RequestParam(required = false) UUID orgId) {
+		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request, orgId));
 	}
 
 	@PatchMapping("/{id}")
 	@Operation(summary = "Update a permission policy", description = "Requires 'version' for optimistic-lock verification.")
-	@PreAuthorize("isAuthenticated()")
+	@PreAuthorize("hasRole('ADMIN') or " +
+			"(@orgGuard.isMember(#orgId, authentication) and @permissionGuard.hasOrgAccess('UPDATE', 'ORG', #orgId))")
 	public ResponseEntity<PermissionPolicyResponse> update(
 			@PathVariable UUID id,
-			@Valid @RequestBody UpdatePermissionPolicyRequest request) {
-		return ResponseEntity.ok(service.update(id, request));
+			@Valid @RequestBody UpdatePermissionPolicyRequest request,
+			@RequestParam(required = false) UUID orgId) {
+		return ResponseEntity.ok(service.update(id, request, orgId));
 	}
 
 	@DeleteMapping("/{id}")
 	@Operation(summary = "Delete a permission policy")
-	@PreAuthorize("isAuthenticated()")
-	public ResponseEntity<Void> delete(@PathVariable UUID id) {
-		service.deleteById(id);
+	@PreAuthorize("hasRole('ADMIN') or " +
+			"(@orgGuard.isMember(#orgId, authentication) and @permissionGuard.hasOrgAccess('DELETE', 'ORG', #orgId))")
+	public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam(required = false) UUID orgId) {
+		service.deleteById(id, orgId);
 		return ResponseEntity.noContent().build();
 	}
 }

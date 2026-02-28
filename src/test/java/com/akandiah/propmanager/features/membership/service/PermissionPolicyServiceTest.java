@@ -129,11 +129,11 @@ class PermissionPolicyServiceTest {
 	@Test
 	void shouldCreateSystemPolicy() {
 		Map<String, String> perms = Map.of("l", "rcud", "m", "r");
-		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "Full Access", null, perms);
+		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "Full Access", perms);
 
 		when(repository.save(any(PermissionPolicy.class))).thenAnswer(inv -> inv.getArgument(0));
 
-		PermissionPolicyResponse response = service.create(req);
+		PermissionPolicyResponse response = service.create(req, null);
 
 		ArgumentCaptor<PermissionPolicy> captor = ArgumentCaptor.forClass(PermissionPolicy.class);
 		verify(repository).save(captor.capture());
@@ -149,12 +149,12 @@ class PermissionPolicyServiceTest {
 		UUID orgId = UUID.randomUUID();
 		Organization org = Organization.builder().id(orgId).name("Acme").build();
 		Map<String, String> perms = Map.of("l", "cru");
-		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "Prop Manager", orgId, perms);
+		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "Prop Manager", perms);
 
 		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-		PermissionPolicyResponse response = service.create(req);
+		PermissionPolicyResponse response = service.create(req, orgId);
 
 		ArgumentCaptor<PermissionPolicy> captor = ArgumentCaptor.forClass(PermissionPolicy.class);
 		verify(repository).save(captor.capture());
@@ -165,9 +165,9 @@ class PermissionPolicyServiceTest {
 	@Test
 	void shouldThrowWhenCreatingWithInvalidPermissions() {
 		Map<String, String> perms = Map.of("x", "r"); // unknown domain key
-		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "Bad", null, perms);
+		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "Bad", perms);
 
-		assertThatThrownBy(() -> service.create(req))
+		assertThatThrownBy(() -> service.create(req, null))
 				.isInstanceOf(InvalidPermissionStringException.class);
 
 		verify(repository, never()).save(any());
@@ -177,9 +177,9 @@ class PermissionPolicyServiceTest {
 	void create_systemPolicy_deniesNonAdmin() {
 		setUserContext();
 		Map<String, String> perms = Map.of("l", "r");
-		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "System", null, perms);
+		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "System", perms);
 
-		assertThatThrownBy(() -> service.create(req))
+		assertThatThrownBy(() -> service.create(req, null))
 				.isInstanceOf(AccessDeniedException.class);
 
 		verify(repository, never()).save(any());
@@ -198,7 +198,7 @@ class PermissionPolicyServiceTest {
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 		when(assignmentRepository.findByPolicyId(id)).thenReturn(List.of());
 
-		PermissionPolicyResponse response = service.update(id, req);
+		PermissionPolicyResponse response = service.update(id, req, null);
 
 		assertThat(response.name()).isEqualTo("New Name");
 		assertThat(response.permissions()).isEqualTo(newPerms);
@@ -224,7 +224,7 @@ class PermissionPolicyServiceTest {
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 		when(assignmentRepository.findByPolicyId(id)).thenReturn(List.of(assignment));
 
-		service.update(id, req);
+		service.update(id, req, null);
 
 		verify(eventPublisher).publishEvent(any(
 				com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent.class));
@@ -238,7 +238,7 @@ class PermissionPolicyServiceTest {
 
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
 
-		assertThatThrownBy(() -> service.update(id, req))
+		assertThatThrownBy(() -> service.update(id, req, null))
 				.isInstanceOf(OptimisticLockException.class);
 
 		verify(repository, never()).save(any());
@@ -256,7 +256,7 @@ class PermissionPolicyServiceTest {
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 		PermissionPolicyResponse response = service.update(id,
-				new UpdatePermissionPolicyRequest("New", null, 0));
+				new UpdatePermissionPolicyRequest("New", null, 0), orgId);
 
 		assertThat(response.name()).isEqualTo("New");
 	}
@@ -271,7 +271,7 @@ class PermissionPolicyServiceTest {
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
 		when(permissionGuard.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(false);
 
-		assertThatThrownBy(() -> service.update(id, new UpdatePermissionPolicyRequest("T", null, 0)))
+		assertThatThrownBy(() -> service.update(id, new UpdatePermissionPolicyRequest("T", null, 0), orgId))
 				.isInstanceOf(AccessDeniedException.class);
 
 		verify(repository, never()).save(any());
@@ -286,7 +286,7 @@ class PermissionPolicyServiceTest {
 		when(repository.findById(id)).thenReturn(Optional.of(p));
 		when(assignmentRepository.findByPolicyId(id)).thenReturn(List.of());
 
-		service.deleteById(id);
+		service.deleteById(id, null);
 
 		verify(repository).delete(p);
 	}
@@ -296,7 +296,7 @@ class PermissionPolicyServiceTest {
 		UUID id = UUID.randomUUID();
 		when(repository.findById(id)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.deleteById(id))
+		assertThatThrownBy(() -> service.deleteById(id, null))
 				.isInstanceOf(ResourceNotFoundException.class)
 				.hasMessageContaining("PermissionPolicy");
 
@@ -310,7 +310,7 @@ class PermissionPolicyServiceTest {
 		PermissionPolicy p = policy(id, 0, null, "T", Map.of("l", "r"));
 		when(repository.findById(id)).thenReturn(Optional.of(p));
 
-		assertThatThrownBy(() -> service.deleteById(id))
+		assertThatThrownBy(() -> service.deleteById(id, null))
 				.isInstanceOf(AccessDeniedException.class);
 
 		verify(repository, never()).delete(any());

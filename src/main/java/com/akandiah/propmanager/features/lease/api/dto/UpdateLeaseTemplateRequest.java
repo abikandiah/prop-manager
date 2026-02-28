@@ -12,8 +12,6 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 public record UpdateLeaseTemplateRequest(
-		@NotNull(message = "orgId is required") UUID orgId,
-
 		@Size(max = 255) String name,
 
 		@Size(max = 50) String versionTag,

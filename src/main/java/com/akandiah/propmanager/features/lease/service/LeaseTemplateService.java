@@ -70,9 +70,9 @@ public class LeaseTemplateService {
 	}
 
 	@Transactional
-	public LeaseTemplateResponse create(CreateLeaseTemplateRequest request) {
-		Organization org = organizationRepository.findById(request.orgId())
-				.orElseThrow(() -> new ResourceNotFoundException("Organization", request.orgId()));
+	public LeaseTemplateResponse create(CreateLeaseTemplateRequest request, UUID orgId) {
+		Organization org = organizationRepository.findById(orgId)
+				.orElseThrow(() -> new ResourceNotFoundException("Organization", orgId));
 
 		LeaseTemplate template = LeaseTemplate.builder()
 				.id(request.id())
@@ -91,11 +91,11 @@ public class LeaseTemplateService {
 	}
 
 	@Transactional
-	public LeaseTemplateResponse update(UUID id, UpdateLeaseTemplateRequest request) {
+	public LeaseTemplateResponse update(UUID id, UpdateLeaseTemplateRequest request, UUID orgId) {
 		LeaseTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("LeaseTemplate", id));
 
-		if (template.getOrg() == null || !template.getOrg().getId().equals(request.orgId())) {
+		if (template.getOrg() == null || !template.getOrg().getId().equals(orgId)) {
 			throw new AccessDeniedException("Template does not belong to the specified organization");
 		}
 
