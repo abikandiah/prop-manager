@@ -98,34 +98,24 @@ features/{name}/
 @Entity
 @Table(name = "props")
 @Getter
-@Builder
+@SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class Prop {
+public class Prop extends BaseEntity {
 
-    @Id
-    @UuidGenerator(style = UuidGenerator.Style.TIME)  // UUID v7 — never AUTO
-    private UUID id;
+    @Column(name = "legal_name", nullable = false, length = 255)
+    private String legalName;
 
-    @Version
-    private Integer version;  // Required — optimistic locking
-
-    private Instant createdAt;
-    private Instant updatedAt;
-
-    @PrePersist
-    void prePersist() { createdAt = updatedAt = Instant.now(); }
-
-    @PreUpdate
-    void preUpdate() { updatedAt = Instant.now(); }
+    // id, version, createdAt, updatedAt — inherited from BaseEntity
 }
 ```
 
 **Rules:**
 
-- `@UuidGenerator(style = TIME)` on every `@Id` — never `@GeneratedValue(strategy = AUTO)`
-- `@Version Integer version` on every entity — no exceptions
-- `createdAt` and `updatedAt` via `@PrePersist` / `@PreUpdate`
+- All user-facing entities **extend `BaseEntity`** — never declare `@Id`, `@Version`, `createdAt`, or `updatedAt` directly
+- Use `@SuperBuilder` — never `@Builder` (which can't see inherited fields)
+- Remove `@AllArgsConstructor` — `@SuperBuilder` generates its own constructor chain; coexistence causes a compile error
+- Keep `@NoArgsConstructor(access = AccessLevel.PROTECTED)` — JPA requires it
+- Exceptions: `Address` (owned value object, never client-addressed by ID) and system-managed entities (`User`, `Invite`) keep their own `@UuidGenerator(style = TIME)` and do not extend `BaseEntity`
 - Monetary fields: `BigDecimal` with `@Column(precision=19, scale=4)`
 - JSON columns: `@JdbcTypeCode(SqlTypes.JSON)` for maps or complex embedded types
 - Large text: `@Lob` for markdown/template content
@@ -184,6 +174,7 @@ public class PropService {
 ```java
 // Create request — required fields annotated, no version
 public record CreatePropRequest(
+    UUID id, // Client-supplied identity (null -> generator fallback)
     @NotBlank(message = "Legal name is required") String legalName,
     @NotNull @Valid AddressInput address,
     @NotNull PropertyType propertyType
@@ -490,7 +481,7 @@ Controller `@PreAuthorize` rules are covered at the service layer via `@ExtendWi
 ## Adding a New Feature — Checklist
 
 1. **Package**: Create `features.{name}` package
-2. **Entity**: `domain/{Entity}.java` — follow entity conventions (UUID v7, `@Version`, timestamps)
+2. **Entity**: `domain/{Entity}.java` — extend `BaseEntity`; `@SuperBuilder`; remove redundant fields and constructors
 3. **Repository**: `domain/{Entity}Repository.java` — `extends JpaRepository<Entity, UUID>`
 4. **DTOs**: `api/dto/` — `Create{Name}Request`, `Update{Name}Request` (with `version`), `{Name}Response` (with `from(Entity)`)
 5. **Service**: `service/{Entity}Service.java` — `findAll`, `findById`, `create`, `update`, `deleteById`; use `ResourceNotFoundException`, `OptimisticLockingUtil`, `DeleteGuardUtil`
