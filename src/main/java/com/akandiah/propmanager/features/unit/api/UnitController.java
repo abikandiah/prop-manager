@@ -16,6 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.akandiah.propmanager.common.permission.AccessListUtil;
+import com.akandiah.propmanager.common.permission.AccessListUtil.ScopedAccessFilter;
+import com.akandiah.propmanager.common.permission.Actions;
+import com.akandiah.propmanager.common.permission.PermissionDomains;
 import com.akandiah.propmanager.features.unit.api.dto.CreateUnitRequest;
 import com.akandiah.propmanager.features.unit.api.dto.UnitResponse;
 import com.akandiah.propmanager.features.unit.api.dto.UpdateUnitRequest;
@@ -23,6 +27,7 @@ import com.akandiah.propmanager.features.unit.service.UnitService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -37,10 +42,15 @@ public class UnitController {
 	}
 
 	@GetMapping
-	@PreAuthorize("@permissionGuard.hasAccess(T(com.akandiah.propmanager.common.permission.Actions).READ, 'p', T(com.akandiah.propmanager.common.permission.ResourceType).PROPERTY, #propId, #orgId)")
-	@Operation(summary = "List units for a property")
-	public List<UnitResponse> list(@RequestParam UUID propId, @RequestParam UUID orgId) {
-		return unitService.findByPropId(propId);
+	@PreAuthorize("@orgGuard.isMember(#orgId, authentication)")
+	@Operation(summary = "List units (optionally filtered by propId, or all accessible in organization)")
+	public List<UnitResponse> list(
+			@RequestParam(required = false) UUID propId,
+			@RequestParam UUID orgId,
+			HttpServletRequest request) {
+		ScopedAccessFilter filter = AccessListUtil.forScopedResources(
+				AccessListUtil.fromRequest(request), PermissionDomains.PORTFOLIO, Actions.READ);
+		return unitService.findAll(filter, orgId, propId);
 	}
 
 	@GetMapping("/{id}")

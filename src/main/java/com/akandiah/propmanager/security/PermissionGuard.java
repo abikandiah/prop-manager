@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.SecurityUtils;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class PermissionGuard {
 
 	private final HierarchyAwareAuthorizationService authorizationService;
 	private final LeaseRepository leaseRepository;
+	private final LeaseTenantRepository leaseTenantRepository;
 
 	/**
 	 * Main entry point for hierarchy-aware permission checks.
@@ -62,6 +64,25 @@ public class PermissionGuard {
 		return leaseRepository.findUnitIdById(leaseId)
 				.map(unitId -> hasAccess(requiredAction, domain, ResourceType.UNIT, unitId, orgId))
 				.orElse(false);
+	}
+
+	/**
+	 * Resolves the tenant's active lease unit IDs, then checks UNIT-level access
+	 * against any of them using the supplied domain. Returns false if the tenant has
+	 * no active leases or the caller lacks access to any of those units.
+	 *
+	 * <p>Must be called with domain {@code 't'} (TENANTS) so that co-tenants are
+	 * explicitly blocked: tenant users receive {@code LEASES:READ} on their unit but
+	 * have no {@code TENANTS} domain permissions at all.
+	 */
+	public boolean hasTenantAccess(int requiredAction, String domain, UUID tenantId, UUID orgId) {
+		if (SecurityUtils.isGlobalAdmin()) {
+			return true;
+		}
+		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
+		return leaseTenantRepository.findUnitIdsByTenantId(tenantId).stream()
+				.anyMatch(uid -> authorizationService.allow(
+						access, requiredAction, domain, ResourceType.UNIT, uid, orgId));
 	}
 
 	/**

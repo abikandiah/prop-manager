@@ -12,13 +12,21 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.akandiah.propmanager.common.permission.AccessListUtil;
+import com.akandiah.propmanager.common.permission.Actions;
+import com.akandiah.propmanager.common.permission.PermissionDomains;
+import com.akandiah.propmanager.common.permission.AccessListUtil.ScopedAccessFilter;
+import com.akandiah.propmanager.common.util.SecurityUtils;
 import com.akandiah.propmanager.features.tenant.api.dto.TenantResponse;
 import com.akandiah.propmanager.features.tenant.api.dto.UpdateTenantRequest;
 import com.akandiah.propmanager.features.tenant.service.TenantService;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.security.JwtUserResolver;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,19 +42,31 @@ public class TenantController {
 	private final TenantService tenantService;
 	private final JwtUserResolver jwtUserResolver;
 
-	// ───────────────────────── Admin queries ─────────────────────────
+	// ───────────────────────── Scoped queries ─────────────────────────
 
 	@GetMapping
-	@PreAuthorize("hasRole('ADMIN')")
-	@Operation(summary = "List all tenants (admin only)")
-	public ResponseEntity<List<TenantResponse>> list() {
-		return ResponseEntity.ok(tenantService.findAll());
+	@PreAuthorize("isAuthenticated()")
+	@Operation(summary = "List tenants",
+			description = "Admins see all tenants. Authenticated users with LEASES:READ access see only tenants on their managed properties/units. Pass activeOnly=false to include tenants from expired leases.")
+	public ResponseEntity<List<TenantResponse>> list(
+			@RequestParam(defaultValue = "true") boolean activeOnly,
+			HttpServletRequest request) {
+		if (SecurityUtils.isGlobalAdmin()) {
+			return ResponseEntity.ok(tenantService.findAll());
+		}
+		ScopedAccessFilter filter = AccessListUtil.forScopedResources(
+				AccessListUtil.fromRequest(request), PermissionDomains.TENANTS, Actions.READ);
+		return ResponseEntity.ok(tenantService.findAll(filter, activeOnly));
 	}
 
 	@GetMapping("/{id}")
-	@PreAuthorize("hasRole('ADMIN')")
-	@Operation(summary = "Get tenant by ID (admin only)")
-	public ResponseEntity<TenantResponse> getById(@PathVariable UUID id) {
+	@PreAuthorize("@permissionGuard.hasTenantAccess("
+			+ "T(com.akandiah.propmanager.common.permission.Actions).READ, 't', #id, #orgId)")
+	@Operation(summary = "Get tenant by ID",
+			description = "Accessible to property managers and owners with LEASES:READ access on the tenant's unit, property, or organization. Tenant users cannot view other tenants' profiles.")
+	public ResponseEntity<TenantResponse> getById(
+			@PathVariable UUID id,
+			@RequestParam UUID orgId) {
 		return ResponseEntity.ok(tenantService.findById(id));
 	}
 

@@ -23,12 +23,17 @@ public interface UnitRepository extends JpaRepository<Unit, UUID> {
 
 	@Query("""
 			SELECT u FROM Unit u
-			WHERE u.prop.organization.id IN :orgIds
+			WHERE (u.prop.organization.id IN :orgIds
 			   OR u.prop.id IN :propIds
-			   OR u.id IN :unitIds
+			   OR u.id IN :unitIds)
+			AND u.prop.organization.id = :orgId
+			AND (:propId IS NULL OR u.prop.id = :propId)
+			ORDER BY u.prop.legalName ASC, u.unitNumber ASC
 			""")
 	List<Unit> findByAccessFilter(
 			@Param("orgIds") Collection<UUID> orgIds,
 			@Param("propIds") Collection<UUID> propIds,
-			@Param("unitIds") Collection<UUID> unitIds);
+			@Param("unitIds") Collection<UUID> unitIds,
+			@Param("orgId") UUID orgId,
+			@Param("propId") UUID propId);
 }

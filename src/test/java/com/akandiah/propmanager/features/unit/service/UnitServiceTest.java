@@ -21,6 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import com.akandiah.propmanager.TestDataFactory;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.AccessListUtil.ScopedAccessFilter;
 import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
@@ -28,6 +29,8 @@ import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.membership.domain.MemberScope;
 import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.membership.domain.Membership;
+import com.akandiah.propmanager.features.unit.api.dto.UnitResponse;
+import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 import com.akandiah.propmanager.features.user.domain.User;
 
@@ -47,6 +50,33 @@ class UnitServiceTest {
 
 	@InjectMocks
 	private UnitService service;
+
+	@Test
+	void findAll_withFilter_returnsFilteredUnits() {
+		UUID orgId = UUID.randomUUID();
+		UUID propId = UUID.randomUUID();
+		ScopedAccessFilter filter = new ScopedAccessFilter(Set.of(orgId), Set.of(), Set.of());
+		Unit unit = TestDataFactory.unit().id(UUID.randomUUID()).unitNumber("101").build();
+
+		when(unitRepository.findByAccessFilter(filter.orgIds(), filter.propIds(), filter.unitIds(), orgId, propId))
+				.thenReturn(List.of(unit));
+
+		List<UnitResponse> result = service.findAll(filter, orgId, propId);
+
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).unitNumber()).isEqualTo("101");
+		verify(unitRepository).findByAccessFilter(filter.orgIds(), filter.propIds(), filter.unitIds(), orgId, propId);
+	}
+
+	@Test
+	void findAll_withEmptyFilter_returnsEmptyList() {
+		ScopedAccessFilter filter = new ScopedAccessFilter(Set.of(), Set.of(), Set.of());
+
+		List<UnitResponse> result = service.findAll(filter, UUID.randomUUID(), null);
+
+		assertThat(result).isEmpty();
+		verify(unitRepository, never()).findByAccessFilter(any(), any(), any(), any(), any());
+	}
 
 	@Test
 	void deleteById_deletesAndPublishesEventForAffectedUsers() {

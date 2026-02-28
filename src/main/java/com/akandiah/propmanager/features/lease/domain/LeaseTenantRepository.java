@@ -61,4 +61,18 @@ public interface LeaseTenantRepository extends JpaRepository<LeaseTenant, UUID> 
 			AND p.organization IS NOT NULL
 			""")
 	List<LeaseTenant> findActiveByUserIdWithLeaseUnitPropOrg(@Param("userId") UUID userId);
+
+	/**
+	 * Returns the unit IDs for all active or under-review leases that the given
+	 * tenant is attached to. Used by {@code PermissionGuard.hasTenantAccess} to
+	 * resolve a tenant to their unit(s) for hierarchy-aware access checks.
+	 */
+	@Query("""
+			SELECT l.unit.id FROM LeaseTenant lt
+			JOIN lt.lease l
+			WHERE lt.tenant.id = :tenantId
+			AND l.status IN (com.akandiah.propmanager.features.lease.domain.LeaseStatus.ACTIVE,
+			                 com.akandiah.propmanager.features.lease.domain.LeaseStatus.REVIEW)
+			""")
+	List<UUID> findUnitIdsByTenantId(@Param("tenantId") UUID tenantId);
 }

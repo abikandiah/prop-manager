@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.AccessListUtil.ScopedAccessFilter;
 import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
@@ -41,6 +42,13 @@ public class UnitService {
 
 	public List<UnitResponse> findAll() {
 		return unitRepository.findAll().stream()
+				.map(UnitResponse::from)
+				.toList();
+	}
+
+	public List<UnitResponse> findAll(ScopedAccessFilter filter, UUID orgId, UUID propId) {
+		if (filter.isEmpty()) return List.of();
+		return unitRepository.findByAccessFilter(filter.orgIds(), filter.propIds(), filter.unitIds(), orgId, propId).stream()
 				.map(UnitResponse::from)
 				.toList();
 	}

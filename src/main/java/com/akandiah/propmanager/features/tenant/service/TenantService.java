@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.AccessListUtil.ScopedAccessFilter;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.tenant.api.dto.TenantResponse;
 import com.akandiah.propmanager.features.tenant.api.dto.UpdateTenantRequest;
@@ -26,8 +27,26 @@ public class TenantService {
 
 	// ───────────────────────── Queries ─────────────────────────
 
+	/** Returns all tenants (admin use only — no scope filtering). */
 	public List<TenantResponse> findAll() {
 		return tenantRepository.findAll().stream()
+				.map(TenantResponse::from)
+				.toList();
+	}
+
+	/**
+	 * Returns tenants visible to the caller based on their scoped lease access.
+	 * Returns an empty list immediately when the filter is empty (caller has no
+	 * lease-read permissions), avoiding an unnecessary full-table scan.
+	 *
+	 * @param filter     the caller's authorized org/prop/unit scope
+	 * @param activeOnly when true, only tenants on ACTIVE or REVIEW leases are returned
+	 */
+	public List<TenantResponse> findAll(ScopedAccessFilter filter, boolean activeOnly) {
+		if (filter.isEmpty()) return List.of();
+		return tenantRepository
+				.findByAccessFilter(filter.orgIds(), filter.propIds(), filter.unitIds(), activeOnly)
+				.stream()
 				.map(TenantResponse::from)
 				.toList();
 	}

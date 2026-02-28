@@ -25,6 +25,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import com.akandiah.propmanager.common.permission.Actions;
 import com.akandiah.propmanager.common.permission.PermissionDomains;
 import com.akandiah.propmanager.common.permission.ResourceType;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +35,8 @@ class PermissionGuardTest {
 	private HierarchyAwareAuthorizationService authorizationService;
 	@Mock
 	private LeaseRepository leaseRepository;
+	@Mock
+	private LeaseTenantRepository leaseTenantRepository;
 
 	private PermissionGuard guard;
 
@@ -44,7 +47,7 @@ class PermissionGuardTest {
 
 	@BeforeEach
 	void setUp() {
-		guard = new PermissionGuard(authorizationService, leaseRepository);
+		guard = new PermissionGuard(authorizationService, leaseRepository, leaseTenantRepository);
 		// Set up a non-admin security context and a request with an empty access list
 		SecurityContextHolder.getContext().setAuthentication(
 				new TestingAuthenticationToken("user", null, List.of()));
@@ -57,6 +60,55 @@ class PermissionGuardTest {
 	void tearDown() {
 		SecurityContextHolder.clearContext();
 		RequestContextHolder.resetRequestAttributes();
+	}
+
+	// ─────────────────── hasTenantAccess ───────────────────
+
+	private static final UUID TENANT_ID = UUID.randomUUID();
+
+	@Test
+	void hasTenantAccess_returnsTrueForGlobalAdmin() {
+		SecurityContextHolder.getContext().setAuthentication(
+				new TestingAuthenticationToken("admin", null,
+						List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
+		boolean result = guard.hasTenantAccess(Actions.READ, PermissionDomains.LEASES, TENANT_ID, ORG_ID);
+
+		assertThat(result).isTrue();
+	}
+
+	@Test
+	void hasTenantAccess_returnsFalseWhenTenantHasNoActiveLeases() {
+		when(leaseTenantRepository.findUnitIdsByTenantId(TENANT_ID)).thenReturn(List.of());
+
+		boolean result = guard.hasTenantAccess(Actions.READ, PermissionDomains.LEASES, TENANT_ID, ORG_ID);
+
+		assertThat(result).isFalse();
+	}
+
+	@Test
+	void hasTenantAccess_returnsTrueWhenCallerHasAccessToTenantUnit() {
+		when(leaseTenantRepository.findUnitIdsByTenantId(TENANT_ID)).thenReturn(List.of(UNIT_ID));
+		when(authorizationService.allow(any(), eq(Actions.READ), eq(PermissionDomains.LEASES),
+				eq(ResourceType.UNIT), eq(UNIT_ID), eq(ORG_ID))).thenReturn(true);
+
+		boolean result = guard.hasTenantAccess(Actions.READ, PermissionDomains.LEASES, TENANT_ID, ORG_ID);
+
+		assertThat(result).isTrue();
+		verify(authorizationService).allow(any(), eq(Actions.READ), eq(PermissionDomains.LEASES),
+				eq(ResourceType.UNIT), eq(UNIT_ID), eq(ORG_ID));
+	}
+
+	@Test
+	void hasTenantAccess_returnsFalseWhenCallerLacksAccessToAllTenantUnits() {
+		UUID unit2 = UUID.randomUUID();
+		when(leaseTenantRepository.findUnitIdsByTenantId(TENANT_ID)).thenReturn(List.of(UNIT_ID, unit2));
+		when(authorizationService.allow(any(), eq(Actions.READ), eq(PermissionDomains.LEASES),
+				eq(ResourceType.UNIT), any(), eq(ORG_ID))).thenReturn(false);
+
+		boolean result = guard.hasTenantAccess(Actions.READ, PermissionDomains.LEASES, TENANT_ID, ORG_ID);
+
+		assertThat(result).isFalse();
 	}
 
 	// ─────────────────── hasAssetAccess ───────────────────
