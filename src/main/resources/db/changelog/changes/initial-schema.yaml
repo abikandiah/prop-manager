@@ -1013,9 +1013,9 @@ databaseChangeLog:
             columnNames: user_id, notification_type, channel
             constraintName: uk_user_notification_preferences
 
-        # membership_templates
+        # permission_policies
         - createTable:
-            tableName: membership_templates
+            tableName: permission_policies
             columns:
               - column:
                   name: id
@@ -1029,6 +1029,12 @@ databaseChangeLog:
               - column:
                   name: name
                   type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: permissions
+                  type: jsonb
+                  defaultValue: '{}'
                   constraints:
                     nullable: false
               - column:
@@ -1049,59 +1055,22 @@ databaseChangeLog:
                     nullable: false
             constraints:
               - uniqueConstraint:
-                  tableName: membership_templates
+                  tableName: permission_policies
                   columnNames: org_id, name
-                  constraintName: uk_membership_templates_org_name
+                  constraintName: uk_permission_policies_org_name
         - addForeignKeyConstraint:
-            baseTableName: membership_templates
+            baseTableName: permission_policies
             baseColumnNames: org_id
-            constraintName: fk_membership_templates_org
+            constraintName: fk_permission_policies_org
             referencedTableName: organizations
             referencedColumnNames: id
             onDelete: SET NULL
         - createIndex:
-            indexName: idx_membership_templates_org_id
-            tableName: membership_templates
+            indexName: idx_permission_policies_org_id
+            tableName: permission_policies
             columns:
               - column:
                   name: org_id
-
-        # membership_template_items
-        - createTable:
-            tableName: membership_template_items
-            columns:
-              - column:
-                  name: template_id
-                  type: uuid
-                  constraints:
-                    nullable: false
-              - column:
-                  name: item_order
-                  type: integer
-                  constraints:
-                    nullable: false
-              - column:
-                  name: scope_type
-                  type: varchar(32)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: permissions
-                  type: jsonb
-                  defaultValue: '{}'
-                  constraints:
-                    nullable: false
-        - addPrimaryKey:
-            tableName: membership_template_items
-            columnNames: template_id, item_order
-            constraintName: pk_membership_template_items
-        - addForeignKeyConstraint:
-            baseTableName: membership_template_items
-            baseColumnNames: template_id
-            constraintName: fk_membership_template_items_template
-            referencedTableName: membership_templates
-            referencedColumnNames: id
-            onDelete: CASCADE
 
         # memberships
         - createTable:
@@ -1123,9 +1092,6 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: invite_id
-                  type: uuid
-              - column:
-                  name: membership_template_id
                   type: uuid
               - column:
                   name: version
@@ -1166,13 +1132,6 @@ databaseChangeLog:
             constraintName: fk_memberships_invite
             referencedTableName: invite
             referencedColumnNames: id
-        - addForeignKeyConstraint:
-            baseTableName: memberships
-            baseColumnNames: membership_template_id
-            constraintName: fk_memberships_membership_template
-            referencedTableName: membership_templates
-            referencedColumnNames: id
-            onDelete: SET NULL
         - createIndex:
             indexName: idx_memberships_user_id
             tableName: memberships
@@ -1192,9 +1151,9 @@ databaseChangeLog:
               - column:
                   name: invite_id
 
-        # member_scopes
+        # policy_assignments
         - createTable:
-            tableName: member_scopes
+            tableName: policy_assignments
             columns:
               - column:
                   name: id
@@ -1208,21 +1167,21 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
-                  name: scope_type
+                  name: resource_type
                   type: varchar(32)
                   constraints:
                     nullable: false
               - column:
-                  name: scope_id
+                  name: resource_id
                   type: uuid
                   constraints:
                     nullable: false
               - column:
-                  name: permissions
+                  name: policy_id
+                  type: uuid
+              - column:
+                  name: overrides
                   type: jsonb
-                  defaultValueComputed: "'{}'::jsonb"
-                  constraints:
-                    nullable: false
               - column:
                   name: version
                   type: int
@@ -1241,26 +1200,39 @@ databaseChangeLog:
                     nullable: false
             constraints:
               - uniqueConstraint:
-                  tableName: member_scopes
-                  columnNames: membership_id, scope_type, scope_id
-                  constraintName: uk_member_scopes_membership_scope
+                  tableName: policy_assignments
+                  columnNames: membership_id, resource_type, resource_id
+                  constraintName: uk_policy_assignments_membership_resource
         - addForeignKeyConstraint:
-            baseTableName: member_scopes
+            baseTableName: policy_assignments
             baseColumnNames: membership_id
-            constraintName: fk_member_scopes_membership
+            constraintName: fk_policy_assignments_membership
             referencedTableName: memberships
             referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: policy_assignments
+            baseColumnNames: policy_id
+            constraintName: fk_policy_assignments_policy
+            referencedTableName: permission_policies
+            referencedColumnNames: id
+            onDelete: SET NULL
         - createIndex:
-            indexName: idx_member_scopes_membership_id
-            tableName: member_scopes
+            indexName: idx_policy_assignments_membership_id
+            tableName: policy_assignments
             columns:
               - column:
                   name: membership_id
         - createIndex:
-            indexName: idx_member_scopes_scope
-            tableName: member_scopes
+            indexName: idx_policy_assignments_resource
+            tableName: policy_assignments
             columns:
               - column:
-                  name: scope_type
+                  name: resource_type
               - column:
-                  name: scope_id
+                  name: resource_id
+        - createIndex:
+            indexName: idx_policy_assignments_policy_id
+            tableName: policy_assignments
+            columns:
+              - column:
+                  name: policy_id

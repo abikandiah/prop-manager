@@ -20,12 +20,10 @@ import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.config.CacheConfig;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
-import com.akandiah.propmanager.features.membership.domain.MemberScope;
-import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignment;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignmentRepository;
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
-import com.akandiah.propmanager.features.membership.domain.MembershipTemplate;
-import com.akandiah.propmanager.features.membership.domain.MembershipTemplateItem;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
@@ -35,33 +33,20 @@ import lombok.RequiredArgsConstructor;
 /**
  * Builds the "access" list from three sources:
  * <ol>
- * <li>Membership template items (live resolution) + MemberScope rows (additive
- * custom permissions)</li>
- * <li>Property ownership (Prop.ownerId → full CRUD on all domains at PROPERTY
- * scope)</li>
- * <li>Active lease tenancy (LeaseTenant → READ on leases domain at UNIT
- * scope)</li>
+ * <li>PolicyAssignment rows — each assignment resolves effective permissions from
+ * its overrides (if present) or its linked PermissionPolicy</li>
+ * <li>Property ownership (Prop.ownerId → full CRUD on all domains at PROPERTY scope)</li>
+ * <li>Active lease tenancy (LeaseTenant → READ on leases domain at UNIT scope)</li>
  * </ol>
  *
- * <h3>Template resolution algorithm</h3>
- * For each membership that has a {@code membershipTemplate}:
- * <ul>
- * <li>ORG items → always emit an AccessEntry at (ORG, orgId)</li>
- * <li>PROPERTY items → emit one AccessEntry per MemberScope binding row of
- * scopeType=PROPERTY</li>
- * <li>UNIT items → emit one AccessEntry per MemberScope binding row of
- * scopeType=UNIT</li>
- * </ul>
- * All MemberScope rows with non-empty permissions are also emitted (additive).
- * Entries with the same (orgId, scopeType, scopeId) are merged by ORing
- * bitmasks.
+ * Entries with the same (orgId, resourceType, resourceId) are merged by ORing bitmasks.
  */
 @Service
 @RequiredArgsConstructor
 public class JwtHydrationService {
 
 	private final MembershipRepository membershipRepository;
-	private final MemberScopeRepository memberScopeRepository;
+	private final PolicyAssignmentRepository policyAssignmentRepository;
 	private final PropRepository propRepository;
 	private final LeaseTenantRepository leaseTenantRepository;
 
@@ -108,69 +93,45 @@ public class JwtHydrationService {
 	}
 
 	private void hydrateMemberships(UUID userId, List<AccessEntry> access) {
-		// Fetches memberships with user, org, and template (single query via JOIN
-		// FETCH)
-		List<Membership> memberships = membershipRepository.findByUserIdWithUserOrgAndTemplate(userId);
+		List<Membership> memberships = membershipRepository.findByUserIdWithUserAndOrgForHydration(userId);
 		if (memberships.isEmpty()) {
 			return;
 		}
 
 		List<UUID> membershipIds = memberships.stream().map(Membership::getId).toList();
-		Map<UUID, List<MemberScope>> scopesByMembership = memberScopeRepository
-				.findByMembershipIdIn(membershipIds)
-				.stream()
-				.collect(Collectors.groupingBy(s -> s.getMembership().getId()));
+		Map<UUID, UUID> orgByMembership = memberships.stream()
+				.collect(Collectors.toMap(Membership::getId, m -> m.getOrganization().getId()));
 
-		for (Membership m : memberships) {
-			UUID orgId = m.getOrganization().getId();
-			List<MemberScope> scopes = scopesByMembership.getOrDefault(m.getId(), List.of());
+		// Eager-load assignments with their policy in one query
+		List<PolicyAssignment> allAssignments = policyAssignmentRepository
+				.findByMembershipIdInWithPolicy(membershipIds);
 
-			// --- Template-based permissions ---
-			MembershipTemplate template = m.getMembershipTemplate();
-			if (template != null) {
-				for (MembershipTemplateItem item : template.getItems()) {
-					Map<String, Integer> masks = permissionsToMasks(item.getPermissions());
-					if (masks.isEmpty()) {
-						continue;
-					}
-					switch (item.getScopeType()) {
-						case ORG ->
-							// ORG items always activate — no binding row needed
-							access.add(new AccessEntry(orgId, ResourceType.ORG, orgId, masks));
-						case PROPERTY ->
-							// PROPERTY items activate per binding row
-							scopes.stream()
-									.filter(s -> s.getScopeType() == ResourceType.PROPERTY)
-									.forEach(s -> access.add(
-											new AccessEntry(orgId, ResourceType.PROPERTY, s.getScopeId(), masks)));
-						case UNIT ->
-							// UNIT items activate per binding row
-							scopes.stream()
-									.filter(s -> s.getScopeType() == ResourceType.UNIT)
-									.forEach(s -> access.add(
-											new AccessEntry(orgId, ResourceType.UNIT, s.getScopeId(), masks)));
-						case ASSET ->
-							// ASSET items activate per binding row
-							scopes.stream()
-									.filter(s -> s.getScopeType() == ResourceType.ASSET)
-									.forEach(s -> access.add(
-											new AccessEntry(orgId, ResourceType.ASSET, s.getScopeId(), masks)));
-					}
-				}
+		for (PolicyAssignment assignment : allAssignments) {
+			UUID orgId = orgByMembership.get(assignment.getMembership().getId());
+			if (orgId == null) {
+				continue;
 			}
 
-			// --- Explicit / additive scope permissions ---
-			for (MemberScope scope : scopes) {
-				if (scope.getPermissions() == null || scope.getPermissions().isEmpty()) {
-					continue; // pure binding row — no additive contribution
-				}
-				Map<String, Integer> masks = permissionsToMasks(scope.getPermissions());
-				if (masks.isEmpty()) {
-					continue;
-				}
-				UUID scopeId = scope.getScopeType() == ResourceType.ORG ? orgId : scope.getScopeId();
-				access.add(new AccessEntry(orgId, scope.getScopeType(), scopeId, masks));
+			Map<String, String> effectivePermissions;
+			if (assignment.getOverrides() != null && !assignment.getOverrides().isEmpty()) {
+				effectivePermissions = assignment.getOverrides();
+			} else if (assignment.getPolicy() != null
+					&& assignment.getPolicy().getPermissions() != null
+					&& !assignment.getPolicy().getPermissions().isEmpty()) {
+				effectivePermissions = assignment.getPolicy().getPermissions();
+			} else {
+				continue; // skip empty assignments
 			}
+
+			Map<String, Integer> masks = permissionsToMasks(effectivePermissions);
+			if (masks.isEmpty()) {
+				continue;
+			}
+
+			UUID resourceId = assignment.getResourceType() == ResourceType.ORG
+					? orgId
+					: assignment.getResourceId();
+			access.add(new AccessEntry(orgId, assignment.getResourceType(), resourceId, masks));
 		}
 	}
 

@@ -17,7 +17,7 @@ import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
-import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignmentRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
@@ -42,7 +42,7 @@ public class PropService {
 	private final UnitRepository unitRepository;
 	private final AssetRepository assetRepository;
 	private final LeaseRepository leaseRepository;
-	private final MemberScopeRepository memberScopeRepository;
+	private final PolicyAssignmentRepository assignmentRepository;
 	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional(readOnly = true)
@@ -166,15 +166,15 @@ public class PropService {
 		DeleteGuardUtil.requireNoChildren("Prop", id, assetRepository.countByProp_Id(id), "asset(s)", "Delete those first.");
 		DeleteGuardUtil.requireNoChildren("Prop", id, leaseRepository.countByProperty_Id(id), "lease(s)", "Delete those first.");
 
-		// Collect userIds from member scopes before deleting them
+		// Collect userIds from affected assignments before deleting them
 		Set<UUID> affectedUserIds = new HashSet<>();
-		memberScopeRepository.findByScopeTypeAndScopeId(ResourceType.PROPERTY, id)
-				.forEach(scope -> {
-					if (scope.getMembership().getUser() != null) {
-						affectedUserIds.add(scope.getMembership().getUser().getId());
+		assignmentRepository.findByResourceTypeAndResourceId(ResourceType.PROPERTY, id)
+				.forEach(a -> {
+					if (a.getMembership().getUser() != null) {
+						affectedUserIds.add(a.getMembership().getUser().getId());
 					}
 				});
-		memberScopeRepository.deleteByScopeTypeAndScopeId(ResourceType.PROPERTY, id);
+		assignmentRepository.deleteByResourceTypeAndResourceId(ResourceType.PROPERTY, id);
 		UUID ownerId = prop.getOwnerId();
 		if (ownerId != null) {
 			affectedUserIds.add(ownerId);

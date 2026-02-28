@@ -8,7 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,15 +32,14 @@ import com.akandiah.propmanager.common.exception.InvalidPermissionStringExceptio
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.Actions;
 import com.akandiah.propmanager.common.permission.ResourceType;
-import com.akandiah.propmanager.features.membership.api.dto.CreateMembershipTemplateRequest;
-import com.akandiah.propmanager.features.membership.api.dto.MembershipTemplateItemView;
-import com.akandiah.propmanager.features.membership.api.dto.MembershipTemplateResponse;
-import com.akandiah.propmanager.features.membership.api.dto.UpdateMembershipTemplateRequest;
+import com.akandiah.propmanager.features.membership.api.dto.CreatePermissionPolicyRequest;
+import com.akandiah.propmanager.features.membership.api.dto.PermissionPolicyResponse;
+import com.akandiah.propmanager.features.membership.api.dto.UpdatePermissionPolicyRequest;
 import com.akandiah.propmanager.features.membership.domain.Membership;
-import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
-import com.akandiah.propmanager.features.membership.domain.MembershipTemplate;
-import com.akandiah.propmanager.features.membership.domain.MembershipTemplateItem;
-import com.akandiah.propmanager.features.membership.domain.MembershipTemplateRepository;
+import com.akandiah.propmanager.features.membership.domain.PermissionPolicy;
+import com.akandiah.propmanager.features.membership.domain.PermissionPolicyRepository;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignment;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignmentRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.security.OrgGuard;
@@ -49,24 +48,24 @@ import com.akandiah.propmanager.security.PermissionGuard;
 import jakarta.persistence.OptimisticLockException;
 
 @ExtendWith(MockitoExtension.class)
-class MembershipTemplateServiceTest {
+class PermissionPolicyServiceTest {
 
-	@Mock private MembershipTemplateRepository repository;
+	@Mock private PermissionPolicyRepository repository;
 	@Mock private OrganizationRepository organizationRepository;
-	@Mock private MembershipRepository membershipRepository;
+	@Mock private PolicyAssignmentRepository assignmentRepository;
 	@Mock private OrgGuard orgGuard;
 	@Mock private PermissionGuard permissionGuard;
 	@Mock private ApplicationEventPublisher eventPublisher;
 
-	private MembershipTemplateService service;
+	private PermissionPolicyService service;
 
 	@BeforeEach
 	void setUp() {
 		SecurityContextHolder.getContext().setAuthentication(
 				new UsernamePasswordAuthenticationToken("admin", null,
 						List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
-		service = new MembershipTemplateService(
-				repository, organizationRepository, membershipRepository,
+		service = new PermissionPolicyService(
+				repository, organizationRepository, assignmentRepository,
 				orgGuard, permissionGuard, eventPublisher);
 	}
 
@@ -86,17 +85,17 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldListByOrg() {
 		UUID orgId = UUID.randomUUID();
-		MembershipTemplate system = template(null, 0, null, "System Full", orgItem(Map.of("l", "rcud")));
-		MembershipTemplate orgTpl = template(null, 0, orgId, "Org Template", propItem(Map.of("l", "ru")));
+		PermissionPolicy system = policy(null, 0, null, "System Full", Map.of("l", "rcud"));
+		PermissionPolicy orgPolicy = policy(null, 0, orgId, "Org Policy", Map.of("l", "ru"));
 
-		when(repository.findByOrgIsNullOrOrg_IdOrderByNameAsc(orgId)).thenReturn(List.of(system, orgTpl));
+		when(repository.findByOrgIsNullOrOrg_IdOrderByNameAsc(orgId)).thenReturn(List.of(system, orgPolicy));
 
-		List<MembershipTemplateResponse> result = service.listByOrg(orgId);
+		List<PermissionPolicyResponse> result = service.listByOrg(orgId);
 
 		assertThat(result).hasSize(2);
 		assertThat(result.get(0).name()).isEqualTo("System Full");
 		assertThat(result.get(0).orgId()).isNull();
-		assertThat(result.get(1).name()).isEqualTo("Org Template");
+		assertThat(result.get(1).name()).isEqualTo("Org Policy");
 		assertThat(result.get(1).orgId()).isEqualTo(orgId);
 	}
 
@@ -105,15 +104,14 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldFindById() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate t = template(id, 0, null, "Test", orgItem(Map.of("l", "r")));
-		when(repository.findById(id)).thenReturn(Optional.of(t));
+		PermissionPolicy p = policy(id, 0, null, "Test", Map.of("l", "r"));
+		when(repository.findById(id)).thenReturn(Optional.of(p));
 
-		MembershipTemplateResponse response = service.findById(id);
+		PermissionPolicyResponse response = service.findById(id);
 
 		assertThat(response.id()).isEqualTo(id);
 		assertThat(response.name()).isEqualTo("Test");
-		assertThat(response.items()).hasSize(1);
-		assertThat(response.items().get(0).scopeType()).isEqualTo(ResourceType.ORG);
+		assertThat(response.permissions()).containsEntry("l", "r");
 	}
 
 	@Test
@@ -123,45 +121,42 @@ class MembershipTemplateServiceTest {
 
 		assertThatThrownBy(() -> service.findById(id))
 				.isInstanceOf(ResourceNotFoundException.class)
-				.hasMessageContaining("MembershipTemplate");
+				.hasMessageContaining("PermissionPolicy");
 	}
 
 	// --- create ---
 
 	@Test
-	void shouldCreateSystemTemplate() {
-		List<MembershipTemplateItemView> items = List.of(
-				new MembershipTemplateItemView(ResourceType.ORG, Map.of("l", "rcud", "m", "r")));
-		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest(null, "Full Access", null, items);
+	void shouldCreateSystemPolicy() {
+		Map<String, String> perms = Map.of("l", "rcud", "m", "r");
+		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "Full Access", null, perms);
 
-		when(repository.save(any(MembershipTemplate.class))).thenAnswer(inv -> inv.getArgument(0));
+		when(repository.save(any(PermissionPolicy.class))).thenAnswer(inv -> inv.getArgument(0));
 
-		MembershipTemplateResponse response = service.create(req);
+		PermissionPolicyResponse response = service.create(req);
 
-		ArgumentCaptor<MembershipTemplate> captor = ArgumentCaptor.forClass(MembershipTemplate.class);
+		ArgumentCaptor<PermissionPolicy> captor = ArgumentCaptor.forClass(PermissionPolicy.class);
 		verify(repository).save(captor.capture());
-		MembershipTemplate captured = captor.getValue();
+		PermissionPolicy captured = captor.getValue();
 		assertThat(captured.getOrg()).isNull();
 		assertThat(captured.getName()).isEqualTo("Full Access");
-		assertThat(captured.getItems()).hasSize(1);
-		assertThat(captured.getItems().get(0).getScopeType()).isEqualTo(ResourceType.ORG);
+		assertThat(captured.getPermissions()).isEqualTo(perms);
 		assertThat(response.name()).isEqualTo("Full Access");
 	}
 
 	@Test
-	void shouldCreateOrgScopedTemplate() {
+	void shouldCreateOrgScopedPolicy() {
 		UUID orgId = UUID.randomUUID();
 		Organization org = Organization.builder().id(orgId).name("Acme").build();
-		List<MembershipTemplateItemView> items = List.of(
-				new MembershipTemplateItemView(ResourceType.PROPERTY, Map.of("l", "cru")));
-		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest(null, "Prop Manager", orgId, items);
+		Map<String, String> perms = Map.of("l", "cru");
+		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "Prop Manager", orgId, perms);
 
 		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-		MembershipTemplateResponse response = service.create(req);
+		PermissionPolicyResponse response = service.create(req);
 
-		ArgumentCaptor<MembershipTemplate> captor = ArgumentCaptor.forClass(MembershipTemplate.class);
+		ArgumentCaptor<PermissionPolicy> captor = ArgumentCaptor.forClass(PermissionPolicy.class);
 		verify(repository).save(captor.capture());
 		assertThat(captor.getValue().getOrg().getId()).isEqualTo(orgId);
 		assertThat(response.orgId()).isEqualTo(orgId);
@@ -169,9 +164,8 @@ class MembershipTemplateServiceTest {
 
 	@Test
 	void shouldThrowWhenCreatingWithInvalidPermissions() {
-		List<MembershipTemplateItemView> items = List.of(
-				new MembershipTemplateItemView(ResourceType.ORG, Map.of("x", "r"))); // unknown domain
-		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest(null, "Bad", null, items);
+		Map<String, String> perms = Map.of("x", "r"); // unknown domain key
+		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "Bad", null, perms);
 
 		assertThatThrownBy(() -> service.create(req))
 				.isInstanceOf(InvalidPermissionStringException.class);
@@ -180,11 +174,10 @@ class MembershipTemplateServiceTest {
 	}
 
 	@Test
-	void create_systemTemplate_deniesNonAdmin() {
+	void create_systemPolicy_deniesNonAdmin() {
 		setUserContext();
-		List<MembershipTemplateItemView> items = List.of(
-				new MembershipTemplateItemView(ResourceType.ORG, Map.of("l", "r")));
-		CreateMembershipTemplateRequest req = new CreateMembershipTemplateRequest(null, "System", null, items);
+		Map<String, String> perms = Map.of("l", "r");
+		CreatePermissionPolicyRequest req = new CreatePermissionPolicyRequest(null, "System", null, perms);
 
 		assertThatThrownBy(() -> service.create(req))
 				.isInstanceOf(AccessDeniedException.class);
@@ -195,41 +188,41 @@ class MembershipTemplateServiceTest {
 	// --- update ---
 
 	@Test
-	void shouldUpdateTemplateNameAndItems() {
+	void shouldUpdatePolicyNameAndPermissions() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(id, 1, null, "Old", orgItem(Map.of("l", "r")));
-		List<MembershipTemplateItemView> newItems = List.of(
-				new MembershipTemplateItemView(ResourceType.ORG, Map.of("l", "rcud")));
-		UpdateMembershipTemplateRequest req = new UpdateMembershipTemplateRequest("New Name", newItems, 1);
+		PermissionPolicy existing = policy(id, 1, null, "Old", Map.of("l", "r"));
+		Map<String, String> newPerms = Map.of("l", "rcud");
+		UpdatePermissionPolicyRequest req = new UpdatePermissionPolicyRequest("New Name", newPerms, 1);
 
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-		when(membershipRepository.findByMembershipTemplateIdAndUserIsNotNull(id)).thenReturn(List.of());
+		when(assignmentRepository.findByPolicyId(id)).thenReturn(List.of());
 
-		MembershipTemplateResponse response = service.update(id, req);
+		PermissionPolicyResponse response = service.update(id, req);
 
 		assertThat(response.name()).isEqualTo("New Name");
-		assertThat(response.items()).hasSize(1);
-		assertThat(response.items().get(0).permissions()).isEqualTo(Map.of("l", "rcud"));
+		assertThat(response.permissions()).isEqualTo(newPerms);
 	}
 
 	@Test
 	void update_evictsCacheForLinkedMemberships() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(id, 0, null, "T", orgItem(Map.of("l", "r")));
+		PermissionPolicy existing = policy(id, 0, null, "T", Map.of("l", "r"));
 
 		com.akandiah.propmanager.features.user.domain.User user = TestDataFactory.user().build();
 		Membership linkedMembership = Membership.builder()
 				.id(UUID.randomUUID()).user(user).build();
+		PolicyAssignment assignment = PolicyAssignment.builder()
+				.id(UUID.randomUUID()).membership(linkedMembership)
+				.resourceType(ResourceType.ORG).resourceId(UUID.randomUUID())
+				.policy(existing).build();
 
-		List<MembershipTemplateItemView> newItems = List.of(
-				new MembershipTemplateItemView(ResourceType.ORG, Map.of("l", "rcud")));
-		UpdateMembershipTemplateRequest req = new UpdateMembershipTemplateRequest(null, newItems, 0);
+		Map<String, String> newPerms = Map.of("l", "rcud");
+		UpdatePermissionPolicyRequest req = new UpdatePermissionPolicyRequest(null, newPerms, 0);
 
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-		when(membershipRepository.findByMembershipTemplateIdAndUserIsNotNull(id))
-				.thenReturn(List.of(linkedMembership));
+		when(assignmentRepository.findByPolicyId(id)).thenReturn(List.of(assignment));
 
 		service.update(id, req);
 
@@ -240,8 +233,8 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldThrowOnVersionMismatch() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(id, 2, null, "T", orgItem(Map.of("l", "r")));
-		UpdateMembershipTemplateRequest req = new UpdateMembershipTemplateRequest("T", null, 1);
+		PermissionPolicy existing = policy(id, 2, null, "T", Map.of("l", "r"));
+		UpdatePermissionPolicyRequest req = new UpdatePermissionPolicyRequest("T", null, 1);
 
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
 
@@ -252,33 +245,33 @@ class MembershipTemplateServiceTest {
 	}
 
 	@Test
-	void update_orgTemplate_allowsOrgAdmin() {
+	void update_orgPolicy_allowsOrgAdmin() {
 		setUserContext();
 		UUID orgId = UUID.randomUUID();
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(id, 0, orgId, "T", orgItem(Map.of("l", "r")));
+		PermissionPolicy existing = policy(id, 0, orgId, "T", Map.of("l", "r"));
 
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
 		when(permissionGuard.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(true);
 		when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-		MembershipTemplateResponse response = service.update(id,
-				new UpdateMembershipTemplateRequest("New", null, 0));
+		PermissionPolicyResponse response = service.update(id,
+				new UpdatePermissionPolicyRequest("New", null, 0));
 
 		assertThat(response.name()).isEqualTo("New");
 	}
 
 	@Test
-	void update_orgTemplate_deniesRegularMember() {
+	void update_orgPolicy_deniesRegularMember() {
 		setUserContext();
 		UUID orgId = UUID.randomUUID();
 		UUID id = UUID.randomUUID();
-		MembershipTemplate existing = template(id, 0, orgId, "T", orgItem(Map.of("l", "r")));
+		PermissionPolicy existing = policy(id, 0, orgId, "T", Map.of("l", "r"));
 
 		when(repository.findById(id)).thenReturn(Optional.of(existing));
 		when(permissionGuard.hasAccess(Actions.UPDATE, "o", ResourceType.ORG, orgId, orgId)).thenReturn(false);
 
-		assertThatThrownBy(() -> service.update(id, new UpdateMembershipTemplateRequest("T", null, 0)))
+		assertThatThrownBy(() -> service.update(id, new UpdatePermissionPolicyRequest("T", null, 0)))
 				.isInstanceOf(AccessDeniedException.class);
 
 		verify(repository, never()).save(any());
@@ -289,13 +282,13 @@ class MembershipTemplateServiceTest {
 	@Test
 	void shouldDeleteById() {
 		UUID id = UUID.randomUUID();
-		MembershipTemplate t = template(id, 0, null, "T", orgItem(Map.of("l", "r")));
-		when(repository.findById(id)).thenReturn(Optional.of(t));
-		when(membershipRepository.findByMembershipTemplateIdAndUserIsNotNull(id)).thenReturn(List.of());
+		PermissionPolicy p = policy(id, 0, null, "T", Map.of("l", "r"));
+		when(repository.findById(id)).thenReturn(Optional.of(p));
+		when(assignmentRepository.findByPolicyId(id)).thenReturn(List.of());
 
 		service.deleteById(id);
 
-		verify(repository).delete(t);
+		verify(repository).delete(p);
 	}
 
 	@Test
@@ -305,17 +298,17 @@ class MembershipTemplateServiceTest {
 
 		assertThatThrownBy(() -> service.deleteById(id))
 				.isInstanceOf(ResourceNotFoundException.class)
-				.hasMessageContaining("MembershipTemplate");
+				.hasMessageContaining("PermissionPolicy");
 
 		verify(repository, never()).delete(any());
 	}
 
 	@Test
-	void delete_systemTemplate_deniesNonAdmin() {
+	void delete_systemPolicy_deniesNonAdmin() {
 		setUserContext();
 		UUID id = UUID.randomUUID();
-		MembershipTemplate t = template(id, 0, null, "T", orgItem(Map.of("l", "r")));
-		when(repository.findById(id)).thenReturn(Optional.of(t));
+		PermissionPolicy p = policy(id, 0, null, "T", Map.of("l", "r"));
+		when(repository.findById(id)).thenReturn(Optional.of(p));
 
 		assertThatThrownBy(() -> service.deleteById(id))
 				.isInstanceOf(AccessDeniedException.class);
@@ -325,32 +318,19 @@ class MembershipTemplateServiceTest {
 
 	// --- helpers ---
 
-	private static MembershipTemplate template(UUID id, int version, UUID orgId, String name, MembershipTemplateItem... items) {
+	private static PermissionPolicy policy(UUID id, int version, UUID orgId, String name,
+			Map<String, String> permissions) {
 		Organization org = orgId != null
 				? Organization.builder().id(orgId).name("Org").build()
 				: null;
-		return MembershipTemplate.builder()
+		return PermissionPolicy.builder()
 				.id(id)
 				.org(org)
 				.name(name)
-				.items(new ArrayList<>(List.of(items)))
+				.permissions(new HashMap<>(permissions))
 				.version(version)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
-				.build();
-	}
-
-	private static MembershipTemplateItem orgItem(Map<String, String> permissions) {
-		return MembershipTemplateItem.builder()
-				.scopeType(ResourceType.ORG)
-				.permissions(permissions)
-				.build();
-	}
-
-	private static MembershipTemplateItem propItem(Map<String, String> permissions) {
-		return MembershipTemplateItem.builder()
-				.scopeType(ResourceType.PROPERTY)
-				.permissions(permissions)
 				.build();
 	}
 }

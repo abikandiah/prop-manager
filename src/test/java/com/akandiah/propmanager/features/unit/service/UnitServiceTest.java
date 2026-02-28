@@ -26,8 +26,8 @@ import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
-import com.akandiah.propmanager.features.membership.domain.MemberScope;
-import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignment;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignmentRepository;
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.unit.api.dto.UnitResponse;
 import com.akandiah.propmanager.features.unit.domain.Unit;
@@ -40,7 +40,7 @@ class UnitServiceTest {
 	@Mock
 	private UnitRepository unitRepository;
 	@Mock
-	private MemberScopeRepository memberScopeRepository;
+	private PolicyAssignmentRepository assignmentRepository;
 	@Mock
 	private AssetRepository assetRepository;
 	@Mock
@@ -84,17 +84,17 @@ class UnitServiceTest {
 		UUID userId = UUID.randomUUID();
 		User user = TestDataFactory.user().id(userId).build();
 		Membership membership = Membership.builder().user(user).build();
-		MemberScope scope = MemberScope.builder().membership(membership).build();
+		PolicyAssignment assignment = PolicyAssignment.builder().membership(membership).build();
 
 		when(unitRepository.existsById(unitId)).thenReturn(true);
 		when(assetRepository.countByUnit_Id(unitId)).thenReturn(0L);
 		when(leaseRepository.countByUnit_Id(unitId)).thenReturn(0L);
-		when(memberScopeRepository.findByScopeTypeAndScopeId(ResourceType.UNIT, unitId))
-				.thenReturn(List.of(scope));
+		when(assignmentRepository.findByResourceTypeAndResourceId(ResourceType.UNIT, unitId))
+				.thenReturn(List.of(assignment));
 
 		service.deleteById(unitId);
 
-		verify(memberScopeRepository).deleteByScopeTypeAndScopeId(ResourceType.UNIT, unitId);
+		verify(assignmentRepository).deleteByResourceTypeAndResourceId(ResourceType.UNIT, unitId);
 		verify(unitRepository).deleteById(unitId);
 
 		ArgumentCaptor<PermissionsChangedEvent> eventCaptor = ArgumentCaptor.forClass(PermissionsChangedEvent.class);
@@ -109,12 +109,12 @@ class UnitServiceTest {
 		when(unitRepository.existsById(unitId)).thenReturn(true);
 		when(assetRepository.countByUnit_Id(unitId)).thenReturn(0L);
 		when(leaseRepository.countByUnit_Id(unitId)).thenReturn(0L);
-		when(memberScopeRepository.findByScopeTypeAndScopeId(ResourceType.UNIT, unitId))
+		when(assignmentRepository.findByResourceTypeAndResourceId(ResourceType.UNIT, unitId))
 				.thenReturn(List.of());
 
 		service.deleteById(unitId);
 
-		verify(memberScopeRepository).deleteByScopeTypeAndScopeId(ResourceType.UNIT, unitId);
+		verify(assignmentRepository).deleteByResourceTypeAndResourceId(ResourceType.UNIT, unitId);
 		verify(unitRepository).deleteById(unitId);
 		verify(eventPublisher, never()).publishEvent(any(PermissionsChangedEvent.class));
 	}

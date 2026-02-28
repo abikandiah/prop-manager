@@ -12,7 +12,7 @@ import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
-import com.akandiah.propmanager.features.membership.domain.MemberScope;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignment;
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
@@ -836,59 +836,59 @@ public final class TestDataFactory {
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
-	// MemberScope Builders
+	// PolicyAssignment Builders
 	// ═══════════════════════════════════════════════════════════════════════
 
-	public static MemberScopeBuilder memberScope() {
-		return new MemberScopeBuilder();
+	public static PolicyAssignmentBuilder policyAssignment() {
+		return new PolicyAssignmentBuilder();
 	}
 
-	public static class MemberScopeBuilder {
+	public static class PolicyAssignmentBuilder {
 		private UUID id = UUID.randomUUID();
 		private Membership membership;
-		private ResourceType scopeType = ResourceType.ORG;
-		private UUID scopeId = UUID.randomUUID();
-		private Map<String, String> permissions = new HashMap<>();
+		private ResourceType resourceType = ResourceType.ORG;
+		private UUID resourceId = UUID.randomUUID();
+		private Map<String, String> overrides = new HashMap<>();
 		private Integer version = 0;
 
-		public MemberScopeBuilder id(UUID id) {
+		public PolicyAssignmentBuilder id(UUID id) {
 			this.id = id;
 			return this;
 		}
 
-		public MemberScopeBuilder membership(Membership membership) {
+		public PolicyAssignmentBuilder membership(Membership membership) {
 			this.membership = membership;
 			return this;
 		}
 
-		public MemberScopeBuilder scopeType(ResourceType scopeType) {
-			this.scopeType = scopeType;
+		public PolicyAssignmentBuilder resourceType(ResourceType resourceType) {
+			this.resourceType = resourceType;
 			return this;
 		}
 
-		public MemberScopeBuilder scopeId(UUID scopeId) {
-			this.scopeId = scopeId;
+		public PolicyAssignmentBuilder resourceId(UUID resourceId) {
+			this.resourceId = resourceId;
 			return this;
 		}
 
-		public MemberScopeBuilder permissions(Map<String, String> permissions) {
-			this.permissions = permissions;
+		public PolicyAssignmentBuilder overrides(Map<String, String> overrides) {
+			this.overrides = overrides;
 			return this;
 		}
 
-		public MemberScopeBuilder version(Integer version) {
+		public PolicyAssignmentBuilder version(Integer version) {
 			this.version = version;
 			return this;
 		}
 
-		public MemberScope build() {
+		public PolicyAssignment build() {
 			Membership ms = this.membership != null ? this.membership : TestDataFactory.membership().build();
-			return MemberScope.builder()
+			return PolicyAssignment.builder()
 					.id(id)
 					.membership(ms)
-					.scopeType(scopeType)
-					.scopeId(scopeId)
-					.permissions(permissions)
+					.resourceType(resourceType)
+					.resourceId(resourceId)
+					.overrides(overrides)
 					.version(version)
 					.build();
 		}

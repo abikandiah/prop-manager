@@ -28,7 +28,7 @@ import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilte
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
-import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignmentRepository;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.api.dto.CreatePropRequest;
 import com.akandiah.propmanager.features.prop.api.dto.PropResponse;
@@ -69,7 +69,7 @@ class PropServiceTest {
 	private OrganizationRepository organizationRepository;
 
 	@Mock
-	private MemberScopeRepository memberScopeRepository;
+	private PolicyAssignmentRepository assignmentRepository;
 
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
@@ -80,7 +80,7 @@ class PropServiceTest {
 	void setUp() {
 		propService = new PropService(propRepository, addressRepository,
 				organizationRepository, unitRepository, assetRepository, leaseRepository,
-				memberScopeRepository, eventPublisher);
+				assignmentRepository, eventPublisher);
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════

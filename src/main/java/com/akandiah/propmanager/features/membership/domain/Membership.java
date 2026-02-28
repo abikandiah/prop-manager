@@ -50,14 +50,4 @@ public class Membership extends BaseEntity {
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "invite_id")
 	private Invite invite;
-
-	/**
-	 * Optional role blueprint. When set, permissions are resolved live from the
-	 * template
-	 * at JWT hydration time. {@link MemberScope} binding rows activate
-	 * PROPERTY/UNIT items.
-	 */
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "membership_template_id")
-	private MembershipTemplate membershipTemplate;
 }

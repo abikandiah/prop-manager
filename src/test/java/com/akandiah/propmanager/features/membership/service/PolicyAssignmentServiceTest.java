@@ -25,13 +25,15 @@ import com.akandiah.propmanager.TestDataFactory;
 import com.akandiah.propmanager.common.exception.InvalidPermissionStringException;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.ResourceType;
+import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
-import com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest;
-import com.akandiah.propmanager.features.membership.api.dto.UpdateMemberScopeRequest;
-import com.akandiah.propmanager.features.membership.domain.MemberScope;
-import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
+import com.akandiah.propmanager.features.membership.api.dto.CreatePolicyAssignmentRequest;
+import com.akandiah.propmanager.features.membership.api.dto.UpdatePolicyAssignmentRequest;
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
+import com.akandiah.propmanager.features.membership.domain.PermissionPolicyRepository;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignment;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignmentRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
@@ -40,99 +42,110 @@ import com.akandiah.propmanager.features.user.domain.User;
 import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
-class MemberScopeServiceTest {
+class PolicyAssignmentServiceTest {
 
-	@Mock private MemberScopeRepository memberScopeRepository;
+	@Mock private PolicyAssignmentRepository assignmentRepository;
 	@Mock private MembershipRepository membershipRepository;
+	@Mock private PermissionPolicyRepository policyRepository;
 	@Mock private PropRepository propRepository;
 	@Mock private UnitRepository unitRepository;
+	@Mock private AssetRepository assetRepository;
 	@Mock private ApplicationEventPublisher eventPublisher;
 
 	@InjectMocks
-	private MemberScopeService service;
+	private PolicyAssignmentService service;
 
 	// ─── create() ───────────────────────────────────────────────────────
 
 	@Test
-	void create_setsPermissionsWhenProvided() {
+	void create_setsOverridesWhenProvided() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID resourceId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
-		Map<String, String> perms = Map.of("l", "rcud");
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.PROPERTY, scopeId, perms);
+		Map<String, String> overrides = Map.of("l", "rcud");
+		CreatePolicyAssignmentRequest req = new CreatePolicyAssignmentRequest(
+				null, ResourceType.PROPERTY, resourceId, null, overrides);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
-		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
+		when(propRepository.existsByIdAndOrganization_Id(resourceId, membership.getOrganization().getId()))
 				.thenReturn(true);
-		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+		when(assignmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 		var result = service.create(membershipId, req);
 
-		ArgumentCaptor<MemberScope> captor = ArgumentCaptor.forClass(MemberScope.class);
-		verify(memberScopeRepository).save(captor.capture());
-		assertThat(captor.getValue().getPermissions()).isEqualTo(perms);
-		assertThat(result.permissions()).isEqualTo(perms);
+		ArgumentCaptor<PolicyAssignment> captor = ArgumentCaptor.forClass(PolicyAssignment.class);
+		verify(assignmentRepository).save(captor.capture());
+		assertThat(captor.getValue().getOverrides()).isEqualTo(overrides);
+		assertThat(result.overrides()).isEqualTo(overrides);
 	}
 
 	@Test
-	void create_usesEmptyPermissionsWhenNullProvided() {
+	void create_withPolicyIdAndNoOverrides() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID resourceId = UUID.randomUUID();
+		UUID policyId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.PROPERTY, scopeId, null);
+		CreatePolicyAssignmentRequest req = new CreatePolicyAssignmentRequest(
+				null, ResourceType.PROPERTY, resourceId, policyId, null);
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
-		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
+		when(propRepository.existsByIdAndOrganization_Id(resourceId, membership.getOrganization().getId()))
 				.thenReturn(true);
-		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+		com.akandiah.propmanager.features.membership.domain.PermissionPolicy policy =
+				com.akandiah.propmanager.features.membership.domain.PermissionPolicy.builder()
+						.id(policyId).name("Policy").build();
+		when(policyRepository.findById(policyId)).thenReturn(Optional.of(policy));
+		when(assignmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 		var result = service.create(membershipId, req);
 
-		ArgumentCaptor<MemberScope> captor = ArgumentCaptor.forClass(MemberScope.class);
-		verify(memberScopeRepository).save(captor.capture());
-		assertThat(captor.getValue().getPermissions()).isEmpty();
-		assertThat(result.permissions()).isEmpty();
+		ArgumentCaptor<PolicyAssignment> captor = ArgumentCaptor.forClass(PolicyAssignment.class);
+		verify(assignmentRepository).save(captor.capture());
+		assertThat(captor.getValue().getPolicy()).isNotNull();
+		assertThat(result.policyId()).isEqualTo(policyId);
 	}
 
 	@Test
-	void create_throwsWhenPermissionsInvalid() {
+	void create_throwsWhenOverridesInvalid() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID resourceId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(
-				null, ResourceType.PROPERTY, scopeId, Map.of("l", "x")); // invalid letter
+		CreatePolicyAssignmentRequest req = new CreatePolicyAssignmentRequest(
+				null, ResourceType.PROPERTY, resourceId, null, Map.of("l", "x")); // invalid letter
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
-		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
+		when(propRepository.existsByIdAndOrganization_Id(resourceId, membership.getOrganization().getId()))
 				.thenReturn(true);
 
 		assertThatThrownBy(() -> service.create(membershipId, req))
 				.isInstanceOf(InvalidPermissionStringException.class);
 	}
 
-	// ─── create() — scope type validation ───────────────────────────────
+	// ─── create() — resource type validation ────────────────────────────
 
 	@Test
-	void create_validatesOrgScopeMatchesOrgId() {
+	void create_validatesOrgResourceMatchesOrgId() {
 		UUID membershipId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID orgId = membership.getOrganization().getId();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.ORG, orgId, Map.of());
+		CreatePolicyAssignmentRequest req = new CreatePolicyAssignmentRequest(
+				null, ResourceType.ORG, orgId, null, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
-		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+		when(assignmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 		var result = service.create(membershipId, req);
 
-		assertThat(result.scopeType()).isEqualTo(ResourceType.ORG);
+		assertThat(result.resourceType()).isEqualTo(ResourceType.ORG);
 	}
 
 	@Test
-	void create_throwsWhenOrgScopeIdDoesNotMatchOrg() {
+	void create_throwsWhenOrgResourceIdDoesNotMatchOrg() {
 		UUID membershipId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID wrongOrgId = UUID.randomUUID();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.ORG, wrongOrgId, Map.of());
+		CreatePolicyAssignmentRequest req = new CreatePolicyAssignmentRequest(
+				null, ResourceType.ORG, wrongOrgId, null, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 
@@ -141,20 +154,21 @@ class MemberScopeServiceTest {
 	}
 
 	@Test
-	void create_validatesUnitScopeBelongsToOrg() {
+	void create_validatesUnitResourceBelongsToOrg() {
 		UUID membershipId = UUID.randomUUID();
 		UUID unitId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID orgId = membership.getOrganization().getId();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.UNIT, unitId, Map.of());
+		CreatePolicyAssignmentRequest req = new CreatePolicyAssignmentRequest(
+				null, ResourceType.UNIT, unitId, null, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(unitRepository.existsByIdAndProp_Organization_Id(unitId, orgId)).thenReturn(true);
-		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+		when(assignmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 		var result = service.create(membershipId, req);
 
-		assertThat(result.scopeType()).isEqualTo(ResourceType.UNIT);
+		assertThat(result.resourceType()).isEqualTo(ResourceType.UNIT);
 	}
 
 	@Test
@@ -163,7 +177,8 @@ class MemberScopeServiceTest {
 		UUID unitId = UUID.randomUUID();
 		Membership membership = membershipWithUser(membershipId);
 		UUID orgId = membership.getOrganization().getId();
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.UNIT, unitId, Map.of());
+		CreatePolicyAssignmentRequest req = new CreatePolicyAssignmentRequest(
+				null, ResourceType.UNIT, unitId, null, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
 		when(unitRepository.existsByIdAndProp_Organization_Id(unitId, orgId)).thenReturn(false);
@@ -172,106 +187,107 @@ class MemberScopeServiceTest {
 				.isInstanceOf(ResourceNotFoundException.class);
 	}
 
-	// ─── create() — null user (pending invite / binding row) ────────────
+	// ─── create() — null user (pending invite) ──────────────────────────
 
 	@Test
 	void create_succeedsWithNullUserAndSkipsEvent() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID resourceId = UUID.randomUUID();
 		Membership membership = membershipWithoutUser(membershipId);
-		CreateMemberScopeRequest req = new CreateMemberScopeRequest(null, ResourceType.PROPERTY, scopeId, Map.of());
+		CreatePolicyAssignmentRequest req = new CreatePolicyAssignmentRequest(
+				null, ResourceType.PROPERTY, resourceId, null, Map.of());
 
 		when(membershipRepository.findById(membershipId)).thenReturn(Optional.of(membership));
-		when(propRepository.existsByIdAndOrganization_Id(scopeId, membership.getOrganization().getId()))
+		when(propRepository.existsByIdAndOrganization_Id(resourceId, membership.getOrganization().getId()))
 				.thenReturn(true);
-		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+		when(assignmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
 		service.create(membershipId, req);
 
-		verify(memberScopeRepository).save(any());
+		verify(assignmentRepository).save(any());
 		verify(eventPublisher, never()).publishEvent(any(PermissionsChangedEvent.class));
 	}
 
 	// ─── update() ───────────────────────────────────────────────────────
 
 	@Test
-	void update_updatesPermissionsAndPublishesEvent() {
+	void update_updatesOverridesAndPublishesEvent() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID assignmentId = UUID.randomUUID();
 		User user = TestDataFactory.user().build();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
 				.id(membershipId).user(user).organization(org).build();
-		MemberScope scope = MemberScope.builder()
-				.id(scopeId).membership(membership)
-				.scopeType(ResourceType.PROPERTY).scopeId(UUID.randomUUID())
-				.permissions(Map.of("l", "r")).build();
-		Map<String, String> newPerms = Map.of("l", "rcud");
-		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(newPerms, 0);
+		PolicyAssignment assignment = PolicyAssignment.builder()
+				.id(assignmentId).membership(membership)
+				.resourceType(ResourceType.PROPERTY).resourceId(UUID.randomUUID())
+				.overrides(Map.of("l", "r")).version(0).build();
+		Map<String, String> newOverrides = Map.of("l", "rcud");
+		UpdatePolicyAssignmentRequest req = new UpdatePolicyAssignmentRequest(null, newOverrides, 0);
 
-		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
-				.thenReturn(Optional.of(scope));
-		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+		when(assignmentRepository.findByIdAndMembershipId(assignmentId, membershipId))
+				.thenReturn(Optional.of(assignment));
+		when(assignmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-		var result = service.update(membershipId, scopeId, req);
+		var result = service.update(membershipId, assignmentId, req);
 
-		assertThat(result.permissions()).isEqualTo(newPerms);
+		assertThat(result.overrides()).isEqualTo(newOverrides);
 		verify(eventPublisher).publishEvent(any(PermissionsChangedEvent.class));
 	}
 
 	@Test
 	void update_throwsOnVersionMismatch() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID assignmentId = UUID.randomUUID();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
 				.id(membershipId).organization(org).build();
-		MemberScope scope = MemberScope.builder()
-				.id(scopeId).membership(membership)
-				.scopeType(ResourceType.ORG).scopeId(org.getId())
-				.permissions(Map.of()).version(2).build();
-		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of(), 0);
+		PolicyAssignment assignment = PolicyAssignment.builder()
+				.id(assignmentId).membership(membership)
+				.resourceType(ResourceType.ORG).resourceId(org.getId())
+				.version(2).build();
+		UpdatePolicyAssignmentRequest req = new UpdatePolicyAssignmentRequest(null, Map.of(), 0);
 
-		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
-				.thenReturn(Optional.of(scope));
+		when(assignmentRepository.findByIdAndMembershipId(assignmentId, membershipId))
+				.thenReturn(Optional.of(assignment));
 
-		assertThatThrownBy(() -> service.update(membershipId, scopeId, req))
+		assertThatThrownBy(() -> service.update(membershipId, assignmentId, req))
 				.isInstanceOf(OptimisticLockException.class);
 	}
 
 	@Test
 	void update_skipsEventWhenUserIsNull() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID assignmentId = UUID.randomUUID();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
 				.id(membershipId).user(null).organization(org).build();
-		MemberScope scope = MemberScope.builder()
-				.id(scopeId).membership(membership)
-				.scopeType(ResourceType.ORG).scopeId(org.getId())
-				.permissions(Map.of()).build();
-		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of("l", "r"), 0);
+		PolicyAssignment assignment = PolicyAssignment.builder()
+				.id(assignmentId).membership(membership)
+				.resourceType(ResourceType.ORG).resourceId(org.getId())
+				.version(0).build();
+		UpdatePolicyAssignmentRequest req = new UpdatePolicyAssignmentRequest(null, Map.of("l", "r"), 0);
 
-		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
-				.thenReturn(Optional.of(scope));
-		when(memberScopeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+		when(assignmentRepository.findByIdAndMembershipId(assignmentId, membershipId))
+				.thenReturn(Optional.of(assignment));
+		when(assignmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-		service.update(membershipId, scopeId, req);
+		service.update(membershipId, assignmentId, req);
 
-		verify(memberScopeRepository).save(any());
+		verify(assignmentRepository).save(any());
 		verify(eventPublisher, never()).publishEvent(any(PermissionsChangedEvent.class));
 	}
 
 	@Test
-	void update_throwsWhenScopeNotFound() {
+	void update_throwsWhenAssignmentNotFound() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
-		UpdateMemberScopeRequest req = new UpdateMemberScopeRequest(Map.of(), 0);
+		UUID assignmentId = UUID.randomUUID();
+		UpdatePolicyAssignmentRequest req = new UpdatePolicyAssignmentRequest(null, Map.of(), 0);
 
-		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
+		when(assignmentRepository.findByIdAndMembershipId(assignmentId, membershipId))
 				.thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.update(membershipId, scopeId, req))
+		assertThatThrownBy(() -> service.update(membershipId, assignmentId, req))
 				.isInstanceOf(ResourceNotFoundException.class);
 	}
 
@@ -280,22 +296,22 @@ class MemberScopeServiceTest {
 	@Test
 	void deleteById_deletesAndPublishesEventForActiveUser() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID assignmentId = UUID.randomUUID();
 		User user = TestDataFactory.user().build();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
 				.id(membershipId).user(user).organization(org).build();
-		MemberScope scope = MemberScope.builder()
-				.id(scopeId).membership(membership)
-				.scopeType(ResourceType.ORG).scopeId(org.getId())
-				.permissions(Map.of()).build();
+		PolicyAssignment assignment = PolicyAssignment.builder()
+				.id(assignmentId).membership(membership)
+				.resourceType(ResourceType.ORG).resourceId(org.getId())
+				.build();
 
-		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
-				.thenReturn(Optional.of(scope));
+		when(assignmentRepository.findByIdAndMembershipId(assignmentId, membershipId))
+				.thenReturn(Optional.of(assignment));
 
-		service.deleteById(membershipId, scopeId);
+		service.deleteById(membershipId, assignmentId);
 
-		verify(memberScopeRepository).deleteById(scopeId);
+		verify(assignmentRepository).deleteById(assignmentId);
 		ArgumentCaptor<PermissionsChangedEvent> captor = ArgumentCaptor.forClass(PermissionsChangedEvent.class);
 		verify(eventPublisher).publishEvent(captor.capture());
 		assertThat(captor.getValue().affectedUserIds()).isEqualTo(Set.of(user.getId()));
@@ -304,33 +320,33 @@ class MemberScopeServiceTest {
 	@Test
 	void deleteById_skipsEventWhenUserIsNull() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID assignmentId = UUID.randomUUID();
 		Organization org = TestDataFactory.organization().build();
 		Membership membership = Membership.builder()
 				.id(membershipId).user(null).organization(org).build();
-		MemberScope scope = MemberScope.builder()
-				.id(scopeId).membership(membership)
-				.scopeType(ResourceType.ORG).scopeId(org.getId())
-				.permissions(Map.of()).build();
+		PolicyAssignment assignment = PolicyAssignment.builder()
+				.id(assignmentId).membership(membership)
+				.resourceType(ResourceType.ORG).resourceId(org.getId())
+				.build();
 
-		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
-				.thenReturn(Optional.of(scope));
+		when(assignmentRepository.findByIdAndMembershipId(assignmentId, membershipId))
+				.thenReturn(Optional.of(assignment));
 
-		service.deleteById(membershipId, scopeId);
+		service.deleteById(membershipId, assignmentId);
 
-		verify(memberScopeRepository).deleteById(scopeId);
+		verify(assignmentRepository).deleteById(assignmentId);
 		verify(eventPublisher, never()).publishEvent(any(PermissionsChangedEvent.class));
 	}
 
 	@Test
-	void deleteById_throwsWhenScopeNotFound() {
+	void deleteById_throwsWhenAssignmentNotFound() {
 		UUID membershipId = UUID.randomUUID();
-		UUID scopeId = UUID.randomUUID();
+		UUID assignmentId = UUID.randomUUID();
 
-		when(memberScopeRepository.findByIdAndMembershipId(scopeId, membershipId))
+		when(assignmentRepository.findByIdAndMembershipId(assignmentId, membershipId))
 				.thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.deleteById(membershipId, scopeId))
+		assertThatThrownBy(() -> service.deleteById(membershipId, assignmentId))
 				.isInstanceOf(ResourceNotFoundException.class);
 	}
 

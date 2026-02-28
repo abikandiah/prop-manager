@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
-import com.akandiah.propmanager.features.membership.service.MemberScopeService;
+import com.akandiah.propmanager.features.membership.service.PolicyAssignmentService;
 import com.akandiah.propmanager.features.membership.service.MembershipService;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
@@ -199,7 +199,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	private final UnitRepository unitRepository;
 	private final OrganizationRepository organizationRepository;
 	private final MembershipService membershipService;
-	private final MemberScopeService memberScopeService;
+	private final PolicyAssignmentService policyAssignmentService;
 	private final MembershipRepository membershipRepository;
 
 	public DefaultDevDataInitializer(
@@ -209,7 +209,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 			UnitRepository unitRepository,
 			OrganizationRepository organizationRepository,
 			MembershipService membershipService,
-			MemberScopeService memberScopeService,
+			PolicyAssignmentService policyAssignmentService,
 			MembershipRepository membershipRepository) {
 		this.userService = userService;
 		this.propRepository = propRepository;
@@ -217,7 +217,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 		this.unitRepository = unitRepository;
 		this.organizationRepository = organizationRepository;
 		this.membershipService = membershipService;
-		this.memberScopeService = memberScopeService;
+		this.policyAssignmentService = policyAssignmentService;
 		this.membershipRepository = membershipRepository;
 	}
 
@@ -268,10 +268,11 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 		var membership = membershipService.create(org.getId(),
 				new com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest(null, user.getId()));
 
-		memberScopeService.create(membership.id(), new com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest(
+		policyAssignmentService.create(membership.id(), new com.akandiah.propmanager.features.membership.api.dto.CreatePolicyAssignmentRequest(
 				null,
 				com.akandiah.propmanager.common.permission.ResourceType.ORG,
 				org.getId(),
+				null,
 				java.util.Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud", "o", "rcud", "p", "rcud")));
 	}
 

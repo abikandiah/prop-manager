@@ -44,15 +44,8 @@ public interface MembershipRepository extends JpaRepository<Membership, UUID> {
 	Optional<Membership> findByIdWithOrganizationAndUser(UUID id);
 
 	/**
-	 * Loads memberships with user, org, and template for JWT hydration.
-	 * Used by JwtHydrationService to resolve template-based permissions.
+	 * Loads memberships with user and org for JWT hydration.
 	 */
-	@Query("SELECT m FROM Membership m JOIN FETCH m.user JOIN FETCH m.organization LEFT JOIN FETCH m.membershipTemplate WHERE m.user.id = :userId")
-	List<Membership> findByUserIdWithUserOrgAndTemplate(UUID userId);
-
-	/**
-	 * Finds all active memberships (user is not null) linked to the given template.
-	 * Used to evict the permissions cache when a template is modified.
-	 */
-	List<Membership> findByMembershipTemplateIdAndUserIsNotNull(UUID membershipTemplateId);
+	@Query("SELECT m FROM Membership m JOIN FETCH m.user JOIN FETCH m.organization WHERE m.user.id = :userId")
+	List<Membership> findByUserIdWithUserAndOrgForHydration(UUID userId);
 }

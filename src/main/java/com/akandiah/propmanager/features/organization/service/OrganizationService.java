@@ -11,15 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
-import com.akandiah.propmanager.features.membership.api.dto.CreateMemberScopeRequest;
 import com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest;
+import com.akandiah.propmanager.features.membership.api.dto.CreatePolicyAssignmentRequest;
 import com.akandiah.propmanager.features.organization.api.dto.CreateOrganizationRequest;
 import com.akandiah.propmanager.features.membership.api.dto.MembershipResponse;
 import com.akandiah.propmanager.features.organization.api.dto.OrganizationResponse;
 import com.akandiah.propmanager.features.organization.api.dto.UpdateOrganizationRequest;
 import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
-import com.akandiah.propmanager.features.membership.service.MemberScopeService;
+import com.akandiah.propmanager.features.membership.service.PolicyAssignmentService;
 import com.akandiah.propmanager.features.membership.service.MembershipService;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationCreatedEvent;
@@ -36,7 +36,7 @@ public class OrganizationService {
 	private final OrganizationRepository repository;
 	private final MembershipRepository membershipRepository;
 	private final MembershipService membershipService;
-	private final MemberScopeService memberScopeService;
+	private final PolicyAssignmentService policyAssignmentService;
 	private final PropRepository propRepository;
 	private final ApplicationEventPublisher eventPublisher;
 
@@ -79,10 +79,11 @@ public class OrganizationService {
 		// Auto-enroll creator with full ORG-scoped permissions (server generates IDs for internal records)
 		MembershipResponse membership = membershipService.create(org.getId(),
 				new CreateMembershipRequest(null, creatorUserId));
-		memberScopeService.create(membership.id(), new CreateMemberScopeRequest(
+		policyAssignmentService.create(membership.id(), new CreatePolicyAssignmentRequest(
 				null,
 				ResourceType.ORG,
 				org.getId(),
+				null,
 				Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud", "o", "rcud", "p", "rcud")));
 
 		eventPublisher.publishEvent(new OrganizationCreatedEvent(org.getId()));

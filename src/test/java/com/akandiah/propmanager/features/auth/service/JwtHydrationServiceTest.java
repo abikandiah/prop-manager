@@ -23,10 +23,10 @@ import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRole;
-import com.akandiah.propmanager.features.membership.domain.MemberScope;
-import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
 import com.akandiah.propmanager.features.membership.domain.Membership;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignment;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignmentRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.prop.domain.Prop;
@@ -43,7 +43,7 @@ class JwtHydrationServiceTest {
 	@Mock
 	private MembershipRepository membershipRepository;
 	@Mock
-	private MemberScopeRepository memberScopeRepository;
+	private PolicyAssignmentRepository assignmentRepository;
 	@Mock
 	private PropRepository propRepository;
 	@Mock
@@ -53,17 +53,17 @@ class JwtHydrationServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new JwtHydrationService(membershipRepository, memberScopeRepository,
+		service = new JwtHydrationService(membershipRepository, assignmentRepository,
 				propRepository, leaseTenantRepository);
 	}
 
 	@Nested
-	class MemberScopeHydration {
+	class PolicyAssignmentHydration {
 
 		@Test
 		void returnsEmptyWhenNoMemberships() {
 			UUID userId = UUID.randomUUID();
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -73,13 +73,13 @@ class JwtHydrationServiceTest {
 		}
 
 		@Test
-		void returnsEmptyWhenMembershipsHaveNoScopes() {
+		void returnsEmptyWhenMembershipsHaveNoAssignments() {
 			UUID userId = UUID.randomUUID();
 			UUID orgId = UUID.randomUUID();
 			UUID membershipId = UUID.randomUUID();
 			Membership m = membership(membershipId, org(orgId));
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
-			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of(m));
+			when(assignmentRepository.findByMembershipIdInWithPolicy(List.of(membershipId))).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -89,15 +89,17 @@ class JwtHydrationServiceTest {
 		}
 
 		@Test
-		void orgScopedEntryUsesOrgIdAsScopeId() {
+		void orgScopedAssignmentUsesOrgIdAsResourceId() {
 			UUID userId = UUID.randomUUID();
 			UUID orgId = UUID.randomUUID();
 			UUID membershipId = UUID.randomUUID();
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
-			MemberScope scope = memberScope(m, ResourceType.ORG, orgId, Map.of("l", "cr", "m", "r"));
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
-			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of(scope));
+			PolicyAssignment assignment = policyAssignment(m, ResourceType.ORG, orgId,
+					Map.of("l", "cr", "m", "r"));
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of(m));
+			when(assignmentRepository.findByMembershipIdInWithPolicy(List.of(membershipId)))
+					.thenReturn(List.of(assignment));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -113,16 +115,18 @@ class JwtHydrationServiceTest {
 		}
 
 		@Test
-		void propertyScopedEntryUsesScopeId() {
+		void propertyScopedAssignmentUsesResourceId() {
 			UUID userId = UUID.randomUUID();
 			UUID orgId = UUID.randomUUID();
 			UUID membershipId = UUID.randomUUID();
 			UUID propId = UUID.randomUUID();
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
-			MemberScope scope = memberScope(m, ResourceType.PROPERTY, propId, Map.of("l", "rcud"));
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
-			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of(scope));
+			PolicyAssignment assignment = policyAssignment(m, ResourceType.PROPERTY, propId,
+					Map.of("l", "rcud"));
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of(m));
+			when(assignmentRepository.findByMembershipIdInWithPolicy(List.of(membershipId)))
+					.thenReturn(List.of(assignment));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -136,7 +140,7 @@ class JwtHydrationServiceTest {
 		}
 
 		@Test
-		void twoScopesProduceTwoEntries() {
+		void twoAssignmentsProduceTwoEntries() {
 			UUID userId = UUID.randomUUID();
 			UUID orgId = UUID.randomUUID();
 			UUID membershipId = UUID.randomUUID();
@@ -144,11 +148,11 @@ class JwtHydrationServiceTest {
 			UUID propId2 = UUID.randomUUID();
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
-			MemberScope scope1 = memberScope(m, ResourceType.PROPERTY, propId1, Map.of("l", "r"));
-			MemberScope scope2 = memberScope(m, ResourceType.PROPERTY, propId2, Map.of("m", "cru"));
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
-			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId)))
-					.thenReturn(List.of(scope1, scope2));
+			PolicyAssignment a1 = policyAssignment(m, ResourceType.PROPERTY, propId1, Map.of("l", "r"));
+			PolicyAssignment a2 = policyAssignment(m, ResourceType.PROPERTY, propId2, Map.of("m", "cru"));
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of(m));
+			when(assignmentRepository.findByMembershipIdInWithPolicy(List.of(membershipId)))
+					.thenReturn(List.of(a1, a2));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -168,7 +172,7 @@ class JwtHydrationServiceTest {
 			UUID propId = UUID.randomUUID();
 			Organization org = org(orgId);
 			Prop prop = prop(propId, org, userId);
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of(prop));
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -193,7 +197,7 @@ class JwtHydrationServiceTest {
 			Organization org = org(orgId);
 			Prop prop1 = prop(UUID.randomUUID(), org, userId);
 			Prop prop2 = prop(UUID.randomUUID(), org, userId);
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of(prop1, prop2));
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -218,7 +222,7 @@ class JwtHydrationServiceTest {
 			Unit unit = unit(unitId, prop);
 			Lease lease = lease(unit, prop, LeaseStatus.ACTIVE);
 			LeaseTenant lt = leaseTenant(lease, userId);
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of(lt));
 
@@ -244,7 +248,7 @@ class JwtHydrationServiceTest {
 			Unit unit = unit(UUID.randomUUID(), prop);
 			Lease lease = lease(unit, prop, LeaseStatus.REVIEW);
 			LeaseTenant lt = leaseTenant(lease, userId);
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of());
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of());
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of());
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of(lt));
 
@@ -285,17 +289,19 @@ class JwtHydrationServiceTest {
 		}
 
 		@Test
-		void ownerAndMemberScopeMergedForSameProperty() {
+		void ownerAndAssignmentMergedForSameProperty() {
 			UUID userId = UUID.randomUUID();
 			UUID orgId = UUID.randomUUID();
 			UUID propId = UUID.randomUUID();
 			UUID membershipId = UUID.randomUUID();
 			Organization org = org(orgId);
 			Membership m = membership(membershipId, org);
-			MemberScope scope = memberScope(m, ResourceType.PROPERTY, propId, Map.of("l", "r"));
+			PolicyAssignment assignment = policyAssignment(m, ResourceType.PROPERTY, propId,
+					Map.of("l", "r"));
 			Prop prop = prop(propId, org, userId);
-			when(membershipRepository.findByUserIdWithUserOrgAndTemplate(userId)).thenReturn(List.of(m));
-			when(memberScopeRepository.findByMembershipIdIn(List.of(membershipId))).thenReturn(List.of(scope));
+			when(membershipRepository.findByUserIdWithUserAndOrgForHydration(userId)).thenReturn(List.of(m));
+			when(assignmentRepository.findByMembershipIdInWithPolicy(List.of(membershipId)))
+					.thenReturn(List.of(assignment));
 			when(propRepository.findByOwnerIdWithOrganization(userId)).thenReturn(List.of(prop));
 			when(leaseTenantRepository.findActiveByUserIdWithLeaseUnitPropOrg(userId)).thenReturn(List.of());
 
@@ -337,6 +343,8 @@ class JwtHydrationServiceTest {
 				.id(UUID.randomUUID())
 				.name("User")
 				.email("u@example.com")
+				.createdAt(Instant.now())
+				.updatedAt(Instant.now())
 				.build();
 		return Membership.builder()
 				.id(id)
@@ -347,14 +355,14 @@ class JwtHydrationServiceTest {
 				.build();
 	}
 
-	private static MemberScope memberScope(Membership membership, ResourceType scopeType, UUID scopeId,
-			Map<String, String> permissions) {
-		return MemberScope.builder()
+	private static PolicyAssignment policyAssignment(Membership membership, ResourceType resourceType,
+			UUID resourceId, Map<String, String> overrides) {
+		return PolicyAssignment.builder()
 				.id(UUID.randomUUID())
 				.membership(membership)
-				.scopeType(scopeType)
-				.scopeId(scopeId)
-				.permissions(permissions)
+				.resourceType(resourceType)
+				.resourceId(resourceId)
+				.overrides(overrides)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();
@@ -367,7 +375,6 @@ class JwtHydrationServiceTest {
 				.propertyType(PropertyType.SINGLE_FAMILY_HOME)
 				.organization(org)
 				.ownerId(ownerId)
-				.version(0)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();
@@ -378,8 +385,7 @@ class JwtHydrationServiceTest {
 				.id(id)
 				.prop(prop)
 				.unitNumber("101")
-				.status(UnitStatus.VACANT)
-				.version(0)
+				.status(UnitStatus.OCCUPIED)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();
@@ -391,11 +397,6 @@ class JwtHydrationServiceTest {
 				.unit(unit)
 				.property(prop)
 				.status(status)
-				.startDate(java.time.LocalDate.now())
-				.endDate(java.time.LocalDate.now().plusYears(1))
-				.rentAmount(java.math.BigDecimal.valueOf(1500))
-				.rentDueDay(1)
-				.version(0)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();
@@ -404,13 +405,14 @@ class JwtHydrationServiceTest {
 	private static LeaseTenant leaseTenant(Lease lease, UUID userId) {
 		User user = User.builder()
 				.id(userId)
-				.name("Tenant User")
-				.email("tenant@example.com")
+				.name("Tenant")
+				.email("t@example.com")
+				.createdAt(Instant.now())
+				.updatedAt(Instant.now())
 				.build();
 		Tenant tenant = Tenant.builder()
 				.id(UUID.randomUUID())
 				.user(user)
-				.version(0)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();
@@ -419,7 +421,6 @@ class JwtHydrationServiceTest {
 				.lease(lease)
 				.tenant(tenant)
 				.role(LeaseTenantRole.PRIMARY)
-				.version(0)
 				.createdAt(Instant.now())
 				.updatedAt(Instant.now())
 				.build();

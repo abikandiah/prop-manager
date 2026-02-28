@@ -17,7 +17,7 @@ import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
-import com.akandiah.propmanager.features.membership.domain.MemberScopeRepository;
+import com.akandiah.propmanager.features.membership.domain.PolicyAssignmentRepository;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.api.dto.CreateUnitRequest;
@@ -37,7 +37,7 @@ public class UnitService {
 	private final PropRepository propRepository;
 	private final AssetRepository assetRepository;
 	private final LeaseRepository leaseRepository;
-	private final MemberScopeRepository memberScopeRepository;
+	private final PolicyAssignmentRepository assignmentRepository;
 	private final ApplicationEventPublisher eventPublisher;
 
 	public List<UnitResponse> findAll() {
@@ -149,16 +149,16 @@ public class UnitService {
 		DeleteGuardUtil.requireNoChildren("Unit", id, assetRepository.countByUnit_Id(id), "asset(s)", "Delete those first.");
 		DeleteGuardUtil.requireNoChildren("Unit", id, leaseRepository.countByUnit_Id(id), "lease(s)", "Delete those first.");
 
-		// Collect userIds from member scopes before deleting them
+		// Collect userIds from affected assignments before deleting them
 		Set<UUID> affectedUserIds = new HashSet<>();
-		memberScopeRepository.findByScopeTypeAndScopeId(ResourceType.UNIT, id)
-				.forEach(scope -> {
-					if (scope.getMembership().getUser() != null) {
-						affectedUserIds.add(scope.getMembership().getUser().getId());
+		assignmentRepository.findByResourceTypeAndResourceId(ResourceType.UNIT, id)
+				.forEach(a -> {
+					if (a.getMembership().getUser() != null) {
+						affectedUserIds.add(a.getMembership().getUser().getId());
 					}
 				});
 
-		memberScopeRepository.deleteByScopeTypeAndScopeId(ResourceType.UNIT, id);
+		assignmentRepository.deleteByResourceTypeAndResourceId(ResourceType.UNIT, id);
 		unitRepository.deleteById(id);
 
 		if (!affectedUserIds.isEmpty()) {
