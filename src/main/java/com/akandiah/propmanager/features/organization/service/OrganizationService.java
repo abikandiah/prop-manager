@@ -1,7 +1,6 @@
 package com.akandiah.propmanager.features.organization.service;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -21,6 +20,7 @@ import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.membership.service.PolicyAssignmentService;
 import com.akandiah.propmanager.features.membership.service.MembershipService;
+import com.akandiah.propmanager.features.membership.service.SystemPermissionPolicyInitializer;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationCreatedEvent;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
@@ -76,15 +76,15 @@ public class OrganizationService {
 				.build();
 		org = repository.save(org);
 
-		// Auto-enroll creator with full ORG-scoped permissions (server generates IDs for internal records)
+		// Auto-enroll creator as Org Owner (server generates IDs for internal records)
 		MembershipResponse membership = membershipService.create(org.getId(),
 				new CreateMembershipRequest(null, creatorUserId));
 		policyAssignmentService.create(membership.id(), new CreatePolicyAssignmentRequest(
 				null,
 				ResourceType.ORG,
 				org.getId(),
-				null,
-				Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud", "o", "rcud", "p", "rcud")));
+				SystemPermissionPolicyInitializer.ORG_OWNER_ID,
+				null));
 
 		eventPublisher.publishEvent(new OrganizationCreatedEvent(org.getId()));
 		return OrganizationResponse.from(org);

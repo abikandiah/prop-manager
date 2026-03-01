@@ -1236,3 +1236,18 @@ databaseChangeLog:
             columns:
               - column:
                   name: policy_id
+
+  - changeSet:
+      id: "policy-assignments-policy-fk-restrict"
+      author: "prop-manager"
+      changes:
+        - dropForeignKeyConstraint:
+            baseTableName: policy_assignments
+            constraintName: fk_policy_assignments_policy
+        - addForeignKeyConstraint:
+            baseTableName: policy_assignments
+            baseColumnNames: policy_id
+            constraintName: fk_policy_assignments_policy
+            referencedTableName: permission_policies
+            referencedColumnNames: id
+            onDelete: RESTRICT

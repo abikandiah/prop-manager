@@ -2,7 +2,6 @@ package com.akandiah.propmanager.features.lease.api.dto;
 
 import java.math.BigDecimal;
 import java.util.Map;
-import java.util.UUID;
 
 import com.akandiah.propmanager.features.lease.domain.LateFeeType;
 

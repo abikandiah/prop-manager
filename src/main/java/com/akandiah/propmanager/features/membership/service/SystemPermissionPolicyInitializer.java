@@ -24,10 +24,12 @@ public class SystemPermissionPolicyInitializer implements ApplicationRunner {
 	private static final Logger log = LoggerFactory.getLogger(SystemPermissionPolicyInitializer.class);
 
 	// Stable hardcoded UUIDs — never change these once deployed
-	static final UUID PROPERTY_MANAGER_ID = UUID.fromString("00000000-0000-7000-8000-000000000001");
-	static final UUID ORG_ADMIN_ID = UUID.fromString("00000000-0000-7000-8000-000000000002");
-	static final UUID MAINTENANCE_ID = UUID.fromString("00000000-0000-7000-8000-000000000003");
-	static final UUID VIEWER_ID = UUID.fromString("00000000-0000-7000-8000-000000000004");
+	public static final UUID PROPERTY_MANAGER_ID = UUID.fromString("00000000-0000-7000-8000-000000000001");
+	public static final UUID ORG_ADMIN_ID = UUID.fromString("00000000-0000-7000-8000-000000000002");
+	public static final UUID MAINTENANCE_ID = UUID.fromString("00000000-0000-7000-8000-000000000003");
+	public static final UUID VIEWER_ID = UUID.fromString("00000000-0000-7000-8000-000000000004");
+	/** Full CRUD across all domains — assigned to the user who creates an organization. */
+	public static final UUID ORG_OWNER_ID = UUID.fromString("00000000-0000-7000-8000-000000000005");
 
 	private record SystemPolicyDefinition(UUID id, String name, Map<String, String> permissions) {}
 
@@ -51,6 +53,11 @@ public class SystemPermissionPolicyInitializer implements ApplicationRunner {
 			VIEWER_ID,
 			"Viewer",
 			Map.of("o", "r", "p", "r", "l", "r", "m", "r", "f", "r", "t", "r")
+		),
+		new SystemPolicyDefinition(
+			ORG_OWNER_ID,
+			"Org Owner",
+			Map.of("o", "rcud", "p", "rcud", "l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud")
 		)
 	);
 

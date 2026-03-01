@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteAcceptedEvent;
@@ -52,8 +54,24 @@ public class MembershipService {
 	private final ApplicationEventPublisher eventPublisher;
 
 	public List<MembershipResponse> findByOrganizationId(UUID organizationId) {
-		return membershipRepository.findByOrganizationIdWithUserAndOrg(organizationId).stream()
-				.map(MembershipResponse::from)
+		List<Membership> memberships = membershipRepository.findByOrganizationIdWithUserAndOrg(organizationId);
+		if (memberships.isEmpty()) {
+			return List.of();
+		}
+
+		// Batch-fetch org-level policy assignments — one extra query, not N+1.
+		List<UUID> membershipIds = memberships.stream().map(Membership::getId).toList();
+		Map<UUID, String> orgPolicyByMembership = policyAssignmentRepository
+				.findByMembershipIdInAndResourceTypeWithPolicy(membershipIds, ResourceType.ORG)
+				.stream()
+				.filter(pa -> pa.getPolicy() != null)
+				.collect(Collectors.toMap(
+						pa -> pa.getMembership().getId(),
+						pa -> pa.getPolicy().getName(),
+						(a, b) -> a));
+
+		return memberships.stream()
+				.map(m -> MembershipResponse.from(m, orgPolicyByMembership.get(m.getId())))
 				.toList();
 	}
 

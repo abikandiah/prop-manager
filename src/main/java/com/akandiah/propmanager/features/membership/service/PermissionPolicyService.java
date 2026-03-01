@@ -16,6 +16,7 @@ import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.Actions;
 import com.akandiah.propmanager.common.permission.PermissionStringValidator;
 import com.akandiah.propmanager.common.permission.ResourceType;
+import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.common.util.SecurityUtils;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
@@ -130,6 +131,10 @@ public class PermissionPolicyService {
 		}
 
 		requireDeleteAccess(policy, orgId);
+
+		long assignmentCount = assignmentRepository.countByPolicyId(id);
+		DeleteGuardUtil.requireNoChildren("PermissionPolicy", id, assignmentCount, "active assignment(s)",
+				"reassign or remove those first");
 
 		evictLinkedMemberships(id);
 		repository.delete(policy);

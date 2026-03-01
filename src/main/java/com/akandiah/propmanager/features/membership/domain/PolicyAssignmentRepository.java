@@ -23,6 +23,8 @@ public interface PolicyAssignmentRepository extends JpaRepository<PolicyAssignme
 
 	List<PolicyAssignment> findByPolicyId(UUID policyId);
 
+	long countByPolicyId(UUID policyId);
+
 	@Modifying
 	void deleteByMembershipId(UUID membershipId);
 
@@ -41,4 +43,12 @@ public interface PolicyAssignmentRepository extends JpaRepository<PolicyAssignme
 	 */
 	@Query("SELECT pa FROM PolicyAssignment pa LEFT JOIN FETCH pa.policy WHERE pa.membership.id IN :membershipIds")
 	List<PolicyAssignment> findByMembershipIdInWithPolicy(Collection<UUID> membershipIds);
+
+	/**
+	 * Loads assignments for a specific resource type, with their policy eagerly fetched.
+	 * Used to batch-load org-level policy names for the membership list view.
+	 */
+	@Query("SELECT pa FROM PolicyAssignment pa LEFT JOIN FETCH pa.policy WHERE pa.membership.id IN :membershipIds AND pa.resourceType = :resourceType")
+	List<PolicyAssignment> findByMembershipIdInAndResourceTypeWithPolicy(Collection<UUID> membershipIds,
+			ResourceType resourceType);
 }
