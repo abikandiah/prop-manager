@@ -4,6 +4,8 @@ import static com.akandiah.propmanager.TestDataFactory.lease;
 import static com.akandiah.propmanager.TestDataFactory.leaseTemplate;
 import static com.akandiah.propmanager.TestDataFactory.prop;
 import static com.akandiah.propmanager.TestDataFactory.unit;
+
+import com.akandiah.propmanager.TestDataFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -188,9 +190,11 @@ class LeaseServiceTest {
 		UUID templateId = UUID.randomUUID();
 		UUID unitId = UUID.randomUUID();
 		UUID propertyId = UUID.randomUUID();
+		UUID orgId = UUID.randomUUID();
 
 		LeaseTemplate template = leaseTemplate()
 				.id(templateId)
+				.org(TestDataFactory.organization().id(orgId).build())
 				.name("Standard Lease")
 				.versionTag("v1.0")
 				.defaultLateFeeType(LateFeeType.FLAT_FEE)
@@ -236,7 +240,7 @@ class LeaseServiceTest {
 					.build();
 		});
 
-		LeaseResponse response = leaseService.create(request);
+		LeaseResponse response = leaseService.create(request, orgId);
 
 		assertThat(response.status()).isEqualTo(LeaseStatus.DRAFT);
 		assertThat(response.rentAmount()).isEqualByComparingTo("2000.00");
@@ -256,9 +260,11 @@ class LeaseServiceTest {
 		UUID templateId = UUID.randomUUID();
 		UUID unitId = UUID.randomUUID();
 		UUID propertyId = UUID.randomUUID();
+		UUID orgId = UUID.randomUUID();
 
 		LeaseTemplate template = leaseTemplate()
 				.id(templateId)
+				.org(TestDataFactory.organization().id(orgId).build())
 				.defaultLateFeeType(LateFeeType.FLAT_FEE)
 				.defaultLateFeeAmount(new BigDecimal("50.00"))
 				.defaultNoticePeriodDays(60)
@@ -289,7 +295,7 @@ class LeaseServiceTest {
 		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		ArgumentCaptor<Lease> leaseCaptor = ArgumentCaptor.forClass(Lease.class);
-		leaseService.create(request);
+		leaseService.create(request, orgId);
 
 		verify(leaseRepository).save(leaseCaptor.capture());
 		Lease savedLease = leaseCaptor.getValue();
@@ -300,8 +306,30 @@ class LeaseServiceTest {
 	}
 
 	@Test
+	void shouldRejectCrossOrgTemplateOnCreate() {
+		UUID templateId = UUID.randomUUID();
+		UUID orgId = UUID.randomUUID();
+		UUID differentOrgId = UUID.randomUUID();
+
+		LeaseTemplate template = leaseTemplate()
+				.id(templateId)
+				.org(TestDataFactory.organization().id(differentOrgId).build())
+				.build();
+		CreateLeaseRequest request = lease()
+				.leaseTemplate(template)
+				.buildCreateRequest();
+
+		when(templateService.getEntity(templateId)).thenReturn(template);
+
+		assertThatThrownBy(() -> leaseService.create(request, orgId))
+				.isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+				.hasMessageContaining("does not belong to the specified organization");
+	}
+
+	@Test
 	void shouldThrowResourceNotFoundExceptionWhenTemplateNotFound() {
 		UUID templateId = UUID.randomUUID();
+		UUID orgId = UUID.randomUUID();
 		CreateLeaseRequest request = lease()
 				.leaseTemplate(leaseTemplate().id(templateId).build())
 				.buildCreateRequest();
@@ -309,7 +337,7 @@ class LeaseServiceTest {
 		when(templateService.getEntity(templateId)).thenThrow(
 				new ResourceNotFoundException("LeaseTemplate", templateId));
 
-		assertThatThrownBy(() -> leaseService.create(request))
+		assertThatThrownBy(() -> leaseService.create(request, orgId))
 				.isInstanceOf(ResourceNotFoundException.class)
 				.hasMessageContaining("LeaseTemplate");
 	}
@@ -318,8 +346,9 @@ class LeaseServiceTest {
 	void shouldThrowResourceNotFoundExceptionWhenUnitNotFound() {
 		UUID templateId = UUID.randomUUID();
 		UUID unitId = UUID.randomUUID();
+		UUID orgId = UUID.randomUUID();
 
-		LeaseTemplate template = leaseTemplate().id(templateId).build();
+		LeaseTemplate template = leaseTemplate().id(templateId).org(TestDataFactory.organization().id(orgId).build()).build();
 		CreateLeaseRequest request = lease()
 				.leaseTemplate(template)
 				.unit(unit().id(unitId).build())
@@ -328,7 +357,7 @@ class LeaseServiceTest {
 		when(templateService.getEntity(templateId)).thenReturn(template);
 		when(unitRepository.findById(unitId)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> leaseService.create(request))
+		assertThatThrownBy(() -> leaseService.create(request, orgId))
 				.isInstanceOf(ResourceNotFoundException.class)
 				.hasMessageContaining("Unit");
 	}
@@ -338,8 +367,9 @@ class LeaseServiceTest {
 		UUID templateId = UUID.randomUUID();
 		UUID unitId = UUID.randomUUID();
 		UUID propertyId = UUID.randomUUID();
+		UUID orgId = UUID.randomUUID();
 
-		LeaseTemplate template = leaseTemplate().id(templateId).build();
+		LeaseTemplate template = leaseTemplate().id(templateId).org(TestDataFactory.organization().id(orgId).build()).build();
 		Unit leaseUnit = unit().id(unitId).build();
 		CreateLeaseRequest request = lease()
 				.leaseTemplate(template)
@@ -351,7 +381,7 @@ class LeaseServiceTest {
 		when(unitRepository.findById(unitId)).thenReturn(Optional.of(leaseUnit));
 		when(propRepository.findById(propertyId)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> leaseService.create(request))
+		assertThatThrownBy(() -> leaseService.create(request, orgId))
 				.isInstanceOf(ResourceNotFoundException.class)
 				.hasMessageContaining("Prop");
 	}
@@ -607,11 +637,13 @@ class LeaseServiceTest {
 		UUID templateId = UUID.randomUUID();
 		UUID unitId = UUID.randomUUID();
 		UUID propertyId = UUID.randomUUID();
+		UUID orgId = UUID.randomUUID();
 
 		Map<String, String> requestParams = Map.of("special_clause", "Pet allowed");
 
 		LeaseTemplate template = leaseTemplate()
 				.id(templateId)
+				.org(TestDataFactory.organization().id(orgId).build())
 				.templateMarkdown("Template content")
 				.templateParameters(Map.of("landlord", "John Doe"))
 				.build();
@@ -631,7 +663,7 @@ class LeaseServiceTest {
 		when(leaseRepository.save(any(Lease.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		ArgumentCaptor<Lease> leaseCaptor = ArgumentCaptor.forClass(Lease.class);
-		leaseService.create(request);
+		leaseService.create(request, orgId);
 
 		verify(leaseRepository).save(leaseCaptor.capture());
 		// Template params stored on lease for stamping on activate; renderer not called

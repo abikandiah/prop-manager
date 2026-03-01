@@ -494,6 +494,7 @@ public final class TestDataFactory {
 
 	public static class LeaseTemplateBuilder {
 		private UUID id;
+		private Organization org;
 		private String name = "Standard Residential Lease";
 		private String versionTag = "v1.0";
 		private Integer version = 0;
@@ -512,6 +513,11 @@ public final class TestDataFactory {
 
 		public LeaseTemplateBuilder id(UUID id) {
 			this.id = id;
+			return this;
+		}
+
+		public LeaseTemplateBuilder org(Organization org) {
+			this.org = org;
 			return this;
 		}
 
@@ -563,6 +569,7 @@ public final class TestDataFactory {
 		public LeaseTemplate build() {
 			return LeaseTemplate.builder()
 					.id(id)
+					.org(org)
 					.name(name)
 					.versionTag(versionTag)
 					.version(version)

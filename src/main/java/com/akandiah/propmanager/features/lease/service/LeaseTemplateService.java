@@ -56,9 +56,12 @@ public class LeaseTemplateService {
 	}
 
 	@Transactional(readOnly = true)
-	public LeaseTemplateResponse findById(UUID id) {
+	public LeaseTemplateResponse findById(UUID id, UUID orgId) {
 		LeaseTemplate template = repository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("LeaseTemplate", id));
+		if (template.getOrg() == null || !template.getOrg().getId().equals(orgId)) {
+			throw new AccessDeniedException("Template does not belong to the specified organization");
+		}
 		return LeaseTemplateResponse.from(template);
 	}
 

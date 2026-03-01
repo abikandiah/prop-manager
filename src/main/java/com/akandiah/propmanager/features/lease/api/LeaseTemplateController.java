@@ -38,6 +38,7 @@ public class LeaseTemplateController {
 	}
 
 	@GetMapping
+	@PreAuthorize("@permissionGuard.hasOrgAccess('READ', 'LEASES', #orgId)")
 	@Operation(summary = "List lease templates for an org", description = "Filter with ?active=true for active-only, or ?search= for name search")
 	public ResponseEntity<List<LeaseTemplateResponse>> list(
 			@RequestParam UUID orgId,
@@ -50,9 +51,10 @@ public class LeaseTemplateController {
 	}
 
 	@GetMapping("/{id}")
+	@PreAuthorize("@permissionGuard.hasOrgAccess('READ', 'LEASES', #orgId)")
 	@Operation(summary = "Get lease template by ID")
-	public ResponseEntity<LeaseTemplateResponse> getById(@PathVariable UUID id) {
-		return ResponseEntity.ok(service.findById(id));
+	public ResponseEntity<LeaseTemplateResponse> getById(@PathVariable UUID id, @RequestParam UUID orgId) {
+		return ResponseEntity.ok(service.findById(id, orgId));
 	}
 
 	@PostMapping

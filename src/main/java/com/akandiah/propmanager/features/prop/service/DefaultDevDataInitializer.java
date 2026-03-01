@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.membership.service.PolicyAssignmentService;
 import com.akandiah.propmanager.features.membership.service.MembershipService;
 import com.akandiah.propmanager.features.organization.domain.Organization;
+import com.akandiah.propmanager.features.organization.domain.OrganizationCreatedEvent;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
 import com.akandiah.propmanager.features.prop.domain.Address;
 import com.akandiah.propmanager.features.prop.domain.AddressRepository;
@@ -201,6 +203,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	private final MembershipService membershipService;
 	private final PolicyAssignmentService policyAssignmentService;
 	private final MembershipRepository membershipRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public DefaultDevDataInitializer(
 			UserService userService,
@@ -210,7 +213,8 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 			OrganizationRepository organizationRepository,
 			MembershipService membershipService,
 			PolicyAssignmentService policyAssignmentService,
-			MembershipRepository membershipRepository) {
+			MembershipRepository membershipRepository,
+			ApplicationEventPublisher eventPublisher) {
 		this.userService = userService;
 		this.propRepository = propRepository;
 		this.addressRepository = addressRepository;
@@ -219,6 +223,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 		this.membershipService = membershipService;
 		this.policyAssignmentService = policyAssignmentService;
 		this.membershipRepository = membershipRepository;
+		this.eventPublisher = eventPublisher;
 	}
 
 	// -------------------------------------------------------------------------
@@ -290,8 +295,13 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	private Organization resolveDevOrganization() {
 		return organizationRepository.findAll().stream()
 				.findFirst()
-				.orElseGet(() -> organizationRepository.save(
-						Organization.builder().name("Dev Organization").build()));
+				.orElseGet(() -> {
+					Organization org = organizationRepository.save(
+							Organization.builder().name("Dev Organization").build());
+					log.info("[Data Init] Created dev organization '{}', publishing event", org.getName());
+					eventPublisher.publishEvent(new OrganizationCreatedEvent(org.getId()));
+					return org;
+				});
 	}
 
 	/** Creates a prop from a blueprint and generates all its units. Returns the unit count. */

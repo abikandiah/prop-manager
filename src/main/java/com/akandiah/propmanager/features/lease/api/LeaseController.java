@@ -82,7 +82,7 @@ public class LeaseController {
 	@Operation(summary = "Stamp a new lease from a template", description = "Creates a DRAFT lease with template defaults applied; markdown is rendered on activate")
 	public ResponseEntity<LeaseResponse> create(@Valid @RequestBody CreateLeaseRequest request,
 			@RequestParam UUID orgId) {
-		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));
+		return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request, orgId));
 	}
 
 	// ───────────────────────── Edit (DRAFT only) ─────────────────────────

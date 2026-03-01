@@ -99,12 +99,15 @@ public class LeaseService {
 	 * Template markdown is rendered into executedContentMarkdown on activate, not here.
 	 */
 	@Transactional
-	public LeaseResponse create(CreateLeaseRequest request) {
+	public LeaseResponse create(CreateLeaseRequest request, UUID orgId) {
 		if (!request.startDate().isBefore(request.endDate())) {
 			throw new IllegalArgumentException("Start date must be before end date.");
 		}
 
 		LeaseTemplate template = templateService.getEntity(request.leaseTemplateId());
+		if (template.getOrg() == null || !template.getOrg().getId().equals(orgId)) {
+			throw new AccessDeniedException("Lease template does not belong to the specified organization");
+		}
 		if (!template.getActive()) {
 			throw new IllegalArgumentException("Lease template is not active and cannot be used for new leases.");
 		}
