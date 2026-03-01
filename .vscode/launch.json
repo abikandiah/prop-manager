@@ -3,6 +3,14 @@
   "configurations": [
     {
       "type": "java",
+      "name": "Attach to Backend (5005)",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 5005,
+      "projectName": "prop-manager"
+    },
+    {
+      "type": "java",
       "name": "Spring: Dev (Local)",
       "request": "launch",
       "mainClass": "com.akandiah.propmanager.PropManagerApplication",

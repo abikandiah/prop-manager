@@ -21,6 +21,9 @@ public interface MembershipRepository extends JpaRepository<Membership, UUID> {
 
 	Optional<Membership> findByIdAndOrganizationId(UUID id, UUID organizationId);
 
+	@Query("SELECT m FROM Membership m LEFT JOIN FETCH m.user JOIN FETCH m.organization LEFT JOIN FETCH m.invite WHERE m.id = :id AND m.organization.id = :organizationId")
+	Optional<Membership> findByIdAndOrganizationIdWithUserAndOrg(UUID id, UUID organizationId);
+
 	@Query("SELECT m FROM Membership m JOIN FETCH m.organization WHERE m.user.id = :userId")
 	List<Membership> findByUserIdWithOrganization(UUID userId);
 

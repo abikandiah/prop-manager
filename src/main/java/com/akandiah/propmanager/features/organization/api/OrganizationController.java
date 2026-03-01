@@ -88,9 +88,18 @@ public class OrganizationController {
 
 	@GetMapping("/{id}/members")
 	@Operation(summary = "List members of the organization")
-	@PreAuthorize("hasRole('ADMIN') or @orgGuard.isMember(#id, authentication)")
+	@PreAuthorize("hasRole('ADMIN') or @permissionGuard.hasOrgAccess('READ', 'ORG', #id)")
 	public ResponseEntity<List<MembershipResponse>> listMembers(@PathVariable UUID id) {
 		return ResponseEntity.ok(membershipService.findByOrganizationId(id));
+	}
+
+	@GetMapping("/{id}/members/{membershipId}")
+	@Operation(summary = "Get a member by organization and membership ID")
+	@PreAuthorize("hasRole('ADMIN') or @permissionGuard.hasOrgAccess('READ', 'ORG', #id)")
+	public ResponseEntity<MembershipResponse> getMemberById(
+			@PathVariable UUID id,
+			@PathVariable UUID membershipId) {
+		return ResponseEntity.ok(membershipService.findById(id, membershipId));
 	}
 
 	@PostMapping("/{id}/members/invites")

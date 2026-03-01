@@ -69,6 +69,12 @@ public class MembershipService {
 		return MembershipResponse.from(m);
 	}
 
+	public MembershipResponse findById(UUID organizationId, UUID id) {
+		Membership m = membershipRepository.findByIdAndOrganizationIdWithUserAndOrg(id, organizationId)
+				.orElseThrow(() -> new ResourceNotFoundException("Membership", id));
+		return MembershipResponse.from(m);
+	}
+
 	@Transactional
 	public MembershipResponse create(UUID organizationId, CreateMembershipRequest request) {
 		MembershipResponse membership = doCreate(organizationId, request.userId(), request.id());
