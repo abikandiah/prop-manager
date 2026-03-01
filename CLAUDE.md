@@ -352,38 +352,16 @@ DeleteGuardUtil.requireNoChildren("Prop", id, unitCount, "units", "delete");
 
 ### Liquibase Migrations
 
-Add a new YAML file in `src/main/resources/db/changelog/changes/` and reference it in `db.changelog-master.yaml`:
+> **The app has not yet launched — there is no live production database.**
+> **Always modify `initial-schema.yaml` directly. Never create new changelog files.**
 
-```yaml
-# changes/002-add-lease-table.yaml
-databaseChangeLog:
-  - changeSet:
-      id: 002-add-lease-table
-      author: dev
-      changes:
-        - createTable:
-            tableName: leases
-            columns:
-              - column:
-                  name: id
-                  type: uuid
-                  constraints:
-                    primaryKey: true
-              - column:
-                  name: version
-                  type: int
-                  defaultValueNumeric: 0
-                  constraints:
-                    nullable: false
-              - column:
-                  name: created_at
-                  type: timestamp with time zone
-              - column:
-                  name: updated_at
-                  type: timestamp with time zone
+All schema changes go in:
+
+```
+src/main/resources/db/changelog/changes/initial-schema.yaml
 ```
 
-**Naming**: `{NNN}-{description}.yaml` (sequential number, kebab-case description).
+The master changelog (`db.changelog-master.yaml`) includes only this one file and must not be changed. Do not add new `changeSet` blocks — instead, edit the existing tables/indexes/constraints inside the single `initial-schema-v1` changeSet.
 
 ---
 
@@ -486,5 +464,5 @@ Controller `@PreAuthorize` rules are covered at the service layer via `@ExtendWi
 4. **DTOs**: `api/dto/` — `Create{Name}Request`, `Update{Name}Request` (with `version`), `{Name}Response` (with `from(Entity)`)
 5. **Service**: `service/{Entity}Service.java` — `findAll`, `findById`, `create`, `update`, `deleteById`; use `ResourceNotFoundException`, `OptimisticLockingUtil`, `DeleteGuardUtil`
 6. **Controller**: `api/{Entity}Controller.java` — `@Tag`, `@Operation` on each method, `@Valid` on all request bodies, `@PatchMapping` for updates
-7. **Liquibase**: Add `db/changelog/changes/{NNN}-add-{name}-table.yaml` for prod schema; reference in `db.changelog-master.yaml`
+7. **Liquibase**: Add the new table (and its indexes/FKs) directly to `db/changelog/changes/initial-schema.yaml` — do **not** create new files or new changeSets
 8. **Tests**: Mirror package structure in `src/test/java`; unit test service with `@ExtendWith(MockitoExtension.class)`. Do **not** write controller tests — `@WebMvcTest` is not used in this project.

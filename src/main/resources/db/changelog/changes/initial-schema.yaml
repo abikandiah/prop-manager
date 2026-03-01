@@ -819,13 +819,11 @@ databaseChangeLog:
                   type: timestamptz
                   constraints:
                     nullable: false
-                  defaultValueComputed: now()
               - column:
                   name: updated_at
                   type: timestamptz
                   constraints:
                     nullable: false
-                  defaultValueComputed: now()
         - addForeignKeyConstraint:
             baseTableName: lease_tenants
             baseColumnNames: lease_id
@@ -1215,7 +1213,7 @@ databaseChangeLog:
             constraintName: fk_policy_assignments_policy
             referencedTableName: permission_policies
             referencedColumnNames: id
-            onDelete: SET NULL
+            onDelete: RESTRICT
         - createIndex:
             indexName: idx_policy_assignments_membership_id
             tableName: policy_assignments
@@ -1236,18 +1234,3 @@ databaseChangeLog:
             columns:
               - column:
                   name: policy_id
-
-  - changeSet:
-      id: "policy-assignments-policy-fk-restrict"
-      author: "prop-manager"
-      changes:
-        - dropForeignKeyConstraint:
-            baseTableName: policy_assignments
-            constraintName: fk_policy_assignments_policy
-        - addForeignKeyConstraint:
-            baseTableName: policy_assignments
-            baseColumnNames: policy_id
-            constraintName: fk_policy_assignments_policy
-            referencedTableName: permission_policies
-            referencedColumnNames: id
-            onDelete: RESTRICT
