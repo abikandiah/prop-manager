@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import com.akandiah.propmanager.features.membership.domain.PermissionPolicyRepos
  * An admin can delete a seeded policy and restart the service to re-seed it.
  */
 @Component
+@Order(1)
 public class SystemPermissionPolicyInitializer implements ApplicationRunner {
 
 	private static final Logger log = LoggerFactory.getLogger(SystemPermissionPolicyInitializer.class);

@@ -9,12 +9,17 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.common.permission.ResourceType;
+import com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest;
+import com.akandiah.propmanager.features.membership.api.dto.CreatePolicyAssignmentRequest;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
-import com.akandiah.propmanager.features.membership.service.PolicyAssignmentService;
 import com.akandiah.propmanager.features.membership.service.MembershipService;
+import com.akandiah.propmanager.features.membership.service.PolicyAssignmentService;
+import com.akandiah.propmanager.features.membership.service.SystemPermissionPolicyInitializer;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationCreatedEvent;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
@@ -43,6 +48,7 @@ import com.akandiah.propmanager.features.user.service.UserService;
  */
 @Component
 @Profile("dev")
+@Order(2)
 public class DefaultDevDataInitializer implements ApplicationRunner {
 
 	private static final Logger log = LoggerFactory.getLogger(DefaultDevDataInitializer.class);
@@ -271,14 +277,14 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 
 		log.info("[Data Init] Seeding admin membership for dev user in organization '{}'", org.getName());
 		var membership = membershipService.create(org.getId(),
-				new com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest(null, user.getId()));
+				new CreateMembershipRequest(null, user.getId()));
 
-		policyAssignmentService.create(membership.id(), new com.akandiah.propmanager.features.membership.api.dto.CreatePolicyAssignmentRequest(
+		policyAssignmentService.create(membership.id(), new CreatePolicyAssignmentRequest(
 				null,
-				com.akandiah.propmanager.common.permission.ResourceType.ORG,
+				ResourceType.ORG,
 				org.getId(),
-				null,
-				java.util.Map.of("l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud", "o", "rcud", "p", "rcud")));
+				SystemPermissionPolicyInitializer.ORG_OWNER_ID,
+				null));
 	}
 
 	/**
