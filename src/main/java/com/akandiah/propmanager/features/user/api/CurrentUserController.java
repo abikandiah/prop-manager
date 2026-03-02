@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,10 +17,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.akandiah.propmanager.common.permission.AccessEntry;
+import com.akandiah.propmanager.common.util.SecurityUtils;
 import com.akandiah.propmanager.features.organization.api.dto.UserOrganizationResponse;
 import com.akandiah.propmanager.features.organization.service.OrganizationService;
 import com.akandiah.propmanager.features.user.api.dto.LogoutResponse;
 import com.akandiah.propmanager.features.user.api.dto.PatchMeRequest;
+import com.akandiah.propmanager.features.user.api.dto.UiRole;
 import com.akandiah.propmanager.features.user.api.dto.UserInfoResponse;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.service.UserService;
@@ -56,9 +60,12 @@ public class CurrentUserController {
 		User dbUser = userService.getOrCreateUser(issuer, sub, name, email);
 
 		List<UserOrganizationResponse> organizations = organizationService.findAllSimplified(dbUser.getId());
+		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
+		List<String> authorities = auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
+		List<UiRole> uiRoles = userService.deriveRoles(authorities, access);
 
 		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, dbUser.getTermsAccepted(),
-				organizations);
+				organizations, uiRoles, access);
 	}
 
 	@PatchMapping("/me")
@@ -79,9 +86,12 @@ public class CurrentUserController {
 		}
 
 		List<UserOrganizationResponse> organizations = organizationService.findAllSimplified(dbUser.getId());
+		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
+		List<String> authorities = auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
+		List<UiRole> uiRoles = userService.deriveRoles(authorities, access);
 
 		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, dbUser.getTermsAccepted(),
-				organizations);
+				organizations, uiRoles, access);
 	}
 
 	@PostMapping("/logout")

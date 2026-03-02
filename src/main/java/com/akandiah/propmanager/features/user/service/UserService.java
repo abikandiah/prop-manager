@@ -1,13 +1,22 @@
 package com.akandiah.propmanager.features.user.service;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.common.permission.AccessEntry;
+import com.akandiah.propmanager.common.permission.Actions;
+import com.akandiah.propmanager.common.permission.PermissionDomains;
+import com.akandiah.propmanager.common.permission.ResourceType;
+import com.akandiah.propmanager.features.user.api.dto.UiRole;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.domain.UserIdentity;
 import com.akandiah.propmanager.features.user.domain.UserIdentityRepository;
@@ -17,11 +26,7 @@ import com.akandiah.propmanager.features.user.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * User and identity resolution. Accounts are keyed by email; multiple OIDC
- * identities (issuer + sub) can link to the same user so that signing in with
- * Google and then Meta (same email) uses one account.
- */
+/** User and identity resolution. Multiple OIDC identities (issuer+sub) can link to one account via email. */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -33,19 +38,12 @@ public class UserService {
 	private final UserIdentityRepository userIdentityRepository;
 	private final ApplicationEventPublisher eventPublisher;
 
-	/**
-	 * Resolves the user for the given OIDC identity (issuer + subject).
-	 */
 	@Transactional(readOnly = true)
 	private Optional<User> findUserByIdentity(String issuer, String sub) {
 		return userIdentityRepository.findByIssuerAndSubWithUser(normalizeIssuer(issuer), sub)
 				.map(UserIdentity::getUser);
 	}
 
-	/**
-	 * Resolves the current user from the JWT. Uses issuer and subject; if issuer
-	 * is missing (e.g. legacy or test tokens), uses a fallback so lookup still works.
-	 */
 	@Transactional(readOnly = true)
 	public Optional<User> findUserFromJwt(Jwt jwt) {
 		String issuer = normalizeIssuer(getIssuerString(jwt));
@@ -56,10 +54,7 @@ public class UserService {
 		return findUserByIdentity(issuer, sub);
 	}
 
-	/**
-	 * Issuer string from JWT. Prefers {@link Jwt#getIssuer()} (spec-correct); falls back to
-	 * {@code iss} claim as string when conversion to URL fails (e.g. some dev decoders).
-	 */
+	/** Prefers {@link Jwt#getIssuer()}; falls back to {@code iss} claim string when URL conversion fails. */
 	public static String getIssuerString(Jwt jwt) {
 		try {
 			if (jwt.getIssuer() != null) {
@@ -75,10 +70,7 @@ public class UserService {
 		return (issuer != null && !issuer.isBlank()) ? issuer : ISSUER_LEGACY_OR_MISSING;
 	}
 
-	/**
-	 * Gets the current user by identity, or auto-creates one with terms_accepted = false.
-	 * Updates name/email and last_logged_in_at when the user already exists.
-	 */
+	/** Resolves user by identity; links to existing account by email; auto-creates if new. */
 	@Transactional
 	public User getOrCreateUser(String issuer, String sub, String name, String email) {
 		String normIssuer = normalizeIssuer(issuer);
@@ -135,5 +127,47 @@ public class UserService {
 	public User updateTermsAccepted(User user, boolean termsAccepted) {
 		user.setTermsAccepted(termsAccepted);
 		return userRepository.save(user);
+	}
+
+	/** Derives UI roles from authorities + access list. UI hints only — not security enforcement. */
+	public List<UiRole> deriveRoles(List<String> authorities, List<AccessEntry> access) {
+		Set<UiRole> roles = new HashSet<>();
+
+		if (authorities.contains("ROLE_ADMIN")) {
+			roles.add(UiRole.ADMIN);
+		}
+
+		for (AccessEntry entry : access) {
+			// Org admin/owner: has write authority over the organisation itself
+			if (entry.scopeType() == ResourceType.ORG) {
+				if (hasAction(entry, PermissionDomains.ORGANIZATION, Actions.UPDATE) ||
+						hasAction(entry, PermissionDomains.ORGANIZATION, Actions.DELETE)) {
+					roles.add(UiRole.ADMIN);
+				}
+			}
+			// Manager: operational access to properties (ORG or PROPERTY scope)
+			// Property owners land here via PROPERTY-scope entries — not ADMIN
+			if (entry.scopeType() == ResourceType.ORG || entry.scopeType() == ResourceType.PROPERTY) {
+				if (hasAction(entry, PermissionDomains.PORTFOLIO, Actions.READ)) {
+					roles.add(UiRole.MANAGER);
+				}
+			}
+			// Tenant: lease-level read access at unit scope
+			if (entry.scopeType() == ResourceType.UNIT) {
+				if (hasAction(entry, PermissionDomains.LEASES, Actions.READ)) {
+					roles.add(UiRole.TENANT);
+				}
+			}
+		}
+
+		if (roles.isEmpty()) {
+			roles.add(UiRole.OTHER);
+		}
+		return new ArrayList<>(roles);
+	}
+
+	private boolean hasAction(AccessEntry entry, String domain, int action) {
+		int mask = entry.permissions().getOrDefault(domain, 0);
+		return (mask & action) != 0;
 	}
 }

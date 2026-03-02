@@ -3,6 +3,7 @@ package com.akandiah.propmanager.features.user.api.dto;
 import java.util.List;
 import java.util.UUID;
 
+import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.features.organization.api.dto.UserOrganizationResponse;
 
 /**
@@ -14,5 +15,7 @@ public record UserInfoResponse(
 		String name,
 		String email,
 		boolean termsAccepted,
-		List<UserOrganizationResponse> organizations) {
+		List<UserOrganizationResponse> organizations,
+		List<UiRole> uiRoles,
+		List<AccessEntry> access) {
 }
