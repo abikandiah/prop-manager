@@ -8,19 +8,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
 import com.akandiah.propmanager.common.util.OptimisticLockingUtil;
 import com.akandiah.propmanager.features.membership.api.dto.CreateMembershipRequest;
 import com.akandiah.propmanager.features.membership.api.dto.CreatePolicyAssignmentRequest;
-import com.akandiah.propmanager.features.organization.api.dto.CreateOrganizationRequest;
 import com.akandiah.propmanager.features.membership.api.dto.MembershipResponse;
+import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
+import com.akandiah.propmanager.features.membership.service.MembershipService;
+import com.akandiah.propmanager.features.membership.service.PolicyAssignmentService;
+import com.akandiah.propmanager.features.membership.service.SystemPermissionPolicyInitializer;
+import com.akandiah.propmanager.features.organization.api.dto.CreateOrganizationRequest;
 import com.akandiah.propmanager.features.organization.api.dto.OrganizationResponse;
 import com.akandiah.propmanager.features.organization.api.dto.UpdateOrganizationRequest;
-import com.akandiah.propmanager.common.permission.ResourceType;
-import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
-import com.akandiah.propmanager.features.membership.service.PolicyAssignmentService;
-import com.akandiah.propmanager.features.membership.service.MembershipService;
-import com.akandiah.propmanager.features.membership.service.SystemPermissionPolicyInitializer;
+import com.akandiah.propmanager.features.organization.api.dto.UserOrganizationResponse;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationCreatedEvent;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
@@ -49,7 +50,17 @@ public class OrganizationService {
 				.toList();
 	}
 
+	/**
+	 * Returns a simplified list of organizations for the current user's profile.
+	 */
+	public List<UserOrganizationResponse> findAllSimplified(UUID currentUserId) {
+		return membershipRepository.findByUserIdWithOrganization(currentUserId).stream()
+				.map(m -> UserOrganizationResponse.from(m.getOrganization()))
+				.toList();
+	}
+
 	/** Returns all organizations — for system-level ADMIN use only. */
+
 	public List<OrganizationResponse> findAllForAdmin() {
 		return repository.findAll().stream()
 				.map(OrganizationResponse::from)

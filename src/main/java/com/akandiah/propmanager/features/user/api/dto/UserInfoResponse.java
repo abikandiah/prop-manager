@@ -3,7 +3,7 @@ package com.akandiah.propmanager.features.user.api.dto;
 import java.util.List;
 import java.util.UUID;
 
-import com.akandiah.propmanager.features.organization.api.dto.OrganizationResponse;
+import com.akandiah.propmanager.features.organization.api.dto.UserOrganizationResponse;
 
 /**
  * Current user info for frontend auth verification and display.
@@ -13,7 +13,6 @@ public record UserInfoResponse(
 		UUID id,
 		String name,
 		String email,
-		List<String> roles,
 		boolean termsAccepted,
-		List<OrganizationResponse> organizations) {
+		List<UserOrganizationResponse> organizations) {
 }

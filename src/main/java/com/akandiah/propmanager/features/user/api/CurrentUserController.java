@@ -2,11 +2,10 @@ package com.akandiah.propmanager.features.user.api;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,12 +16,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.akandiah.propmanager.features.organization.api.dto.UserOrganizationResponse;
+import com.akandiah.propmanager.features.organization.service.OrganizationService;
+import com.akandiah.propmanager.features.user.api.dto.LogoutResponse;
 import com.akandiah.propmanager.features.user.api.dto.PatchMeRequest;
 import com.akandiah.propmanager.features.user.api.dto.UserInfoResponse;
-import com.akandiah.propmanager.features.user.api.dto.LogoutResponse;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.service.UserService;
-import com.akandiah.propmanager.features.organization.service.OrganizationService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -55,13 +55,9 @@ public class CurrentUserController {
 
 		User dbUser = userService.getOrCreateUser(issuer, sub, name, email);
 
-		List<String> roles = auth.getAuthorities().stream()
-				.map(GrantedAuthority::getAuthority)
-				.toList();
+		List<UserOrganizationResponse> organizations = organizationService.findAllSimplified(dbUser.getId());
 
-		var organizations = organizationService.findAll(dbUser.getId());
-
-		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, roles, dbUser.getTermsAccepted(),
+		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, dbUser.getTermsAccepted(),
 				organizations);
 	}
 
@@ -82,13 +78,9 @@ public class CurrentUserController {
 			dbUser = userService.updateTermsAccepted(dbUser, true);
 		}
 
-		List<String> roles = auth.getAuthorities().stream()
-				.map(GrantedAuthority::getAuthority)
-				.toList();
+		List<UserOrganizationResponse> organizations = organizationService.findAllSimplified(dbUser.getId());
 
-		var organizations = organizationService.findAll(dbUser.getId());
-
-		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, roles, dbUser.getTermsAccepted(),
+		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, dbUser.getTermsAccepted(),
 				organizations);
 	}
 
