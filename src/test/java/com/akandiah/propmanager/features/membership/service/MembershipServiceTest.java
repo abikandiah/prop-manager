@@ -64,6 +64,8 @@ class MembershipServiceTest {
 	private InviteRepository inviteRepository;
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
+	@Mock
+	private SelfLockoutGuard selfLockoutGuard;
 
 	@InjectMocks
 	private MembershipService service;

@@ -56,6 +56,7 @@ class PermissionPolicyServiceTest {
 	@Mock private OrgGuard orgGuard;
 	@Mock private PermissionGuard permissionGuard;
 	@Mock private ApplicationEventPublisher eventPublisher;
+	@Mock private SelfLockoutGuard selfLockoutGuard;
 
 	private PermissionPolicyService service;
 
@@ -66,7 +67,7 @@ class PermissionPolicyServiceTest {
 						List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
 		service = new PermissionPolicyService(
 				repository, organizationRepository, assignmentRepository,
-				orgGuard, permissionGuard, eventPublisher);
+				orgGuard, permissionGuard, eventPublisher, selfLockoutGuard);
 	}
 
 	@AfterEach

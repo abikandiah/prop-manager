@@ -51,6 +51,7 @@ class PolicyAssignmentServiceTest {
 	@Mock private UnitRepository unitRepository;
 	@Mock private AssetRepository assetRepository;
 	@Mock private ApplicationEventPublisher eventPublisher;
+	@Mock private SelfLockoutGuard selfLockoutGuard;
 
 	@InjectMocks
 	private PolicyAssignmentService service;
