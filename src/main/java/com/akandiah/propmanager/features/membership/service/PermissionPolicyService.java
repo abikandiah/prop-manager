@@ -45,6 +45,7 @@ public class PermissionPolicyService {
 	private final OrgGuard orgGuard;
 	private final PermissionGuard permissionGuard;
 	private final ApplicationEventPublisher eventPublisher;
+	private final SelfLockoutGuard selfLockoutGuard;
 
 	public List<PermissionPolicyResponse> listByOrg(UUID orgId) {
 		return repository.findByOrgIsNullOrOrg_IdOrderByNameAsc(orgId).stream()
@@ -110,6 +111,10 @@ public class PermissionPolicyService {
 			PermissionStringValidator.validate(request.permissions());
 			policy.setPermissions(request.permissions());
 			permissionsChanged = true;
+		}
+
+		if (permissionsChanged) {
+			selfLockoutGuard.requireNoSelfLockoutOnPolicyUpdate(id, request.permissions(), orgId);
 		}
 
 		policy = repository.save(policy);

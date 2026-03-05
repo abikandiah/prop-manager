@@ -104,6 +104,13 @@ public class GlobalExceptionHandler {
 				errors, null);
 	}
 
+	/** 422: User attempting to remove their own last org-level access */
+	@ExceptionHandler(SelfLockoutException.class)
+	public ResponseEntity<ProblemDetail> handleSelfLockout(SelfLockoutException ex, HttpServletRequest request) {
+		return problem(STATUS_UNPROCESSABLE_ENTITY, "Cannot Remove Own Access", ex.getMessage(),
+				request.getRequestURI(), null, null);
+	}
+
 	/** 422: Cannot delete because entity has child records */
 	@ExceptionHandler(HasChildrenException.class)
 	public ResponseEntity<ProblemDetail> handleHasChildren(HasChildrenException ex, HttpServletRequest request) {

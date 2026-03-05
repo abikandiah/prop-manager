@@ -54,9 +54,10 @@ public class SecurityConfig {
 						.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> {
 					// 1. Infrastructure & Health
-					auth.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+					auth.requestMatchers("/actuator", "/actuator/health", "/actuator/health/**").permitAll()
 							.requestMatchers("/actuator/metrics", "/actuator/metrics/**").hasRole("ADMIN")
 							.requestMatchers("/actuator/prometheus", "/actuator/prometheus/**").hasRole("ADMIN")
+							.requestMatchers("/actuator/**").hasRole("ADMIN")
 							.requestMatchers("/error").permitAll();
 
 					// 2. Swagger / OpenAPI (Standard paths)

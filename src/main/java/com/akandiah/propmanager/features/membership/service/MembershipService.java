@@ -52,6 +52,7 @@ public class MembershipService {
 	private final InviteService inviteService;
 	private final InviteRepository inviteRepository;
 	private final ApplicationEventPublisher eventPublisher;
+	private final SelfLockoutGuard selfLockoutGuard;
 
 	public List<MembershipResponse> findByOrganizationId(UUID organizationId) {
 		List<Membership> memberships = membershipRepository.findByOrganizationIdWithUserAndOrg(organizationId);
@@ -221,6 +222,8 @@ public class MembershipService {
 	}
 
 	private void doDelete(Membership m) {
+		selfLockoutGuard.requireNoSelfLockoutOnMembershipDeletion(m);
+
 		UUID userId = m.getUser() != null ? m.getUser().getId() : null;
 
 		if (m.getInvite() != null && m.getInvite().getStatus() == InviteStatus.PENDING) {

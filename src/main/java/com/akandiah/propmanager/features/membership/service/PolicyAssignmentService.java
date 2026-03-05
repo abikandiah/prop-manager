@@ -40,6 +40,7 @@ public class PolicyAssignmentService {
 	private final UnitRepository unitRepository;
 	private final AssetRepository assetRepository;
 	private final ApplicationEventPublisher eventPublisher;
+	private final SelfLockoutGuard selfLockoutGuard;
 
 	public List<PolicyAssignmentResponse> findByMembershipId(UUID membershipId) {
 		return assignmentRepository.findByMembershipId(membershipId).stream()
@@ -109,19 +110,22 @@ public class PolicyAssignmentService {
 		OptimisticLockingUtil.requireVersionMatch("PolicyAssignment", assignmentId,
 				assignment.getVersion(), request.version());
 
+		UUID orgId = assignment.getMembership().getOrganization().getId();
+
+		PermissionPolicy newPolicy = null;
 		if (request.policyId() != null) {
-			PermissionPolicy policy = policyRepository.findById(request.policyId())
+			newPolicy = policyRepository.findById(request.policyId())
 					.orElseThrow(() -> new ResourceNotFoundException("PermissionPolicy", request.policyId()));
-			UUID orgId = assignment.getMembership().getOrganization().getId();
-			validatePolicyBelongsToOrg(policy, orgId);
-			assignment.setPolicy(policy);
-		} else {
-			assignment.setPolicy(null);
+			validatePolicyBelongsToOrg(newPolicy, orgId);
 		}
 
 		if (request.overrides() != null) {
 			PermissionStringValidator.validate(request.overrides());
 		}
+
+		selfLockoutGuard.requireNoSelfLockout(assignment, request.overrides(), newPolicy);
+
+		assignment.setPolicy(newPolicy);
 		assignment.setOverrides(request.overrides());
 
 		assignment = assignmentRepository.save(assignment);
@@ -136,6 +140,7 @@ public class PolicyAssignmentService {
 	public void deleteById(UUID membershipId, UUID assignmentId) {
 		PolicyAssignment assignment = assignmentRepository.findByIdAndMembershipId(assignmentId, membershipId)
 				.orElseThrow(() -> new ResourceNotFoundException("PolicyAssignment", assignmentId));
+		selfLockoutGuard.requireNoSelfLockout(assignment, null, null);
 		UUID userId = assignment.getMembership().getUser() != null
 				? assignment.getMembership().getUser().getId()
 				: null;
