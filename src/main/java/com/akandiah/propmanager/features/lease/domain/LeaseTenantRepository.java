@@ -2,6 +2,7 @@ package com.akandiah.propmanager.features.lease.domain;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -43,7 +44,7 @@ public interface LeaseTenantRepository extends JpaRepository<LeaseTenant, UUID> 
 	 * needed for permission hydration: tenant → user, lease → unit → prop → organization.
 	 * Only returns rows where:
 	 * - tenant is non-null (invite accepted)
-	 * - lease status is ACTIVE or REVIEW (terminated/expired leases grant no access)
+	 * - lease status is in {@link LeaseStatus#ACTIVE_STATUSES}
 	 * - prop has an organization (org-less props are excluded)
 	 */
 	@Query("""
@@ -56,23 +57,31 @@ public interface LeaseTenantRepository extends JpaRepository<LeaseTenant, UUID> 
 			JOIN FETCH p.organization org
 			WHERE u.id = :userId
 			AND lt.tenant IS NOT NULL
-			AND l.status IN (com.akandiah.propmanager.features.lease.domain.LeaseStatus.ACTIVE,
-			                 com.akandiah.propmanager.features.lease.domain.LeaseStatus.REVIEW)
+			AND l.status IN :activeStatuses
 			AND p.organization IS NOT NULL
 			""")
-	List<LeaseTenant> findActiveByUserIdWithLeaseUnitPropOrg(@Param("userId") UUID userId);
+	List<LeaseTenant> findActiveByUserIdWithLeaseUnitPropOrg(@Param("userId") UUID userId,
+			@Param("activeStatuses") Set<LeaseStatus> activeStatuses);
+
+	default List<LeaseTenant> findActiveByUserIdWithLeaseUnitPropOrg(UUID userId) {
+		return findActiveByUserIdWithLeaseUnitPropOrg(userId, LeaseStatus.ACTIVE_STATUSES);
+	}
 
 	/**
-	 * Returns the unit IDs for all active or under-review leases that the given
-	 * tenant is attached to. Used by {@code PermissionGuard.hasTenantAccess} to
-	 * resolve a tenant to their unit(s) for hierarchy-aware access checks.
+	 * Returns the unit IDs for all leases in {@link LeaseStatus#ACTIVE_STATUSES} that the given
+	 * tenant is attached to. Used by {@code PermissionGuard.hasTenantAccess} to resolve a tenant
+	 * to their unit(s) for hierarchy-aware access checks.
 	 */
 	@Query("""
 			SELECT l.unit.id FROM LeaseTenant lt
 			JOIN lt.lease l
 			WHERE lt.tenant.id = :tenantId
-			AND l.status IN (com.akandiah.propmanager.features.lease.domain.LeaseStatus.ACTIVE,
-			                 com.akandiah.propmanager.features.lease.domain.LeaseStatus.REVIEW)
+			AND l.status IN :activeStatuses
 			""")
-	List<UUID> findUnitIdsByTenantId(@Param("tenantId") UUID tenantId);
+	List<UUID> findUnitIdsByTenantId(@Param("tenantId") UUID tenantId,
+			@Param("activeStatuses") Set<LeaseStatus> activeStatuses);
+
+	default List<UUID> findUnitIdsByTenantId(UUID tenantId) {
+		return findUnitIdsByTenantId(tenantId, LeaseStatus.ACTIVE_STATUSES);
+	}
 }

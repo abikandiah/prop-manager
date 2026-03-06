@@ -1,5 +1,7 @@
 package com.akandiah.propmanager.features.lease.domain;
 
+import java.util.Set;
+
 public enum LeaseStatus {
 	DRAFT,
 	REVIEW,
@@ -7,5 +9,8 @@ public enum LeaseStatus {
 	ACTIVE,
 	EXPIRED,
 	TERMINATED,
-	EVICTED
+	EVICTED;
+
+	/** Statuses that grant a tenant active access rights. */
+	public static final Set<LeaseStatus> ACTIVE_STATUSES = Set.of(DRAFT, REVIEW, SIGNED, ACTIVE);
 }

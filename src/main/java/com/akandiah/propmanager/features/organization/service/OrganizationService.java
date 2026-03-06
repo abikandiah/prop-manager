@@ -42,11 +42,11 @@ public class OrganizationService {
 	private final ApplicationEventPublisher eventPublisher;
 
 	/**
-	 * Returns only the organizations the given user is a member of (data-isolated).
+	 * Returns only the organizations the given user is a member, owner, or tenant of (data-isolated).
 	 */
 	public List<OrganizationResponse> findAll(UUID currentUserId) {
-		return membershipRepository.findByUserIdWithOrganization(currentUserId).stream()
-				.map(m -> OrganizationResponse.from(m.getOrganization()))
+		return repository.findAllByUserId(currentUserId).stream()
+				.map(OrganizationResponse::from)
 				.toList();
 	}
 
@@ -54,8 +54,8 @@ public class OrganizationService {
 	 * Returns a simplified list of organizations for the current user's profile.
 	 */
 	public List<UserOrganizationResponse> findAllSimplified(UUID currentUserId) {
-		return membershipRepository.findByUserIdWithOrganization(currentUserId).stream()
-				.map(m -> UserOrganizationResponse.from(m.getOrganization()))
+		return repository.findAllByUserId(currentUserId).stream()
+				.map(UserOrganizationResponse::from)
 				.toList();
 	}
 
