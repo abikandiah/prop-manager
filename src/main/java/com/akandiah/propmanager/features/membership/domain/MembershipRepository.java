@@ -6,6 +6,9 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.akandiah.propmanager.features.user.domain.User;
 
 public interface MembershipRepository extends JpaRepository<Membership, UUID> {
 
@@ -51,4 +54,8 @@ public interface MembershipRepository extends JpaRepository<Membership, UUID> {
 	 */
 	@Query("SELECT m FROM Membership m JOIN FETCH m.user JOIN FETCH m.organization WHERE m.user.id = :userId")
 	List<Membership> findByUserIdWithUserAndOrgForHydration(UUID userId);
+
+	/** Returns all users who are members of the given org (excludes pending invite slots with no user). */
+	@Query("SELECT m.user FROM Membership m WHERE m.organization.id = :orgId AND m.user IS NOT NULL")
+	List<User> findUsersByOrganizationId(@Param("orgId") UUID orgId);
 }

@@ -19,6 +19,11 @@ public enum NotificationTemplate {
 	LEASE_CREATED("Lease Agreement Ready for Review", "lease-created"),
 	LEASE_SIGNED("Lease Agreement Signed", "lease-signed"),
 	LEASE_EXPIRING_SOON("Lease Expiring Soon", "lease-expiring"),
+	LEASE_TENANT_SIGNED("Tenant Has Signed the Lease", "lease-tenant-signed"),
+	LEASE_ALL_SIGNED("All Tenants Have Signed — Ready to Activate", "lease-all-signed"),
+	LEASE_EXPIRED("Lease Has Expired", "lease-expired"),
+	LEASE_TERMINATED("Lease Has Been Terminated", "lease-terminated"),
+	LEASE_EVICTED("Eviction Notice", "lease-evicted"),
 
 	// Tenant notifications
 	PAYMENT_REMINDER("Payment Due Reminder", "payment-reminder"),

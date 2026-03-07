@@ -1,5 +1,6 @@
 package com.akandiah.propmanager.features.lease.service;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,9 @@ import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRole;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantStatus;
+import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEvent;
+import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEventType;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.features.prop.domain.Address;
@@ -41,6 +46,7 @@ import com.akandiah.propmanager.features.notification.domain.NotificationDeliver
 import com.akandiah.propmanager.features.tenant.domain.Tenant;
 import com.akandiah.propmanager.features.tenant.domain.TenantRepository;
 import com.akandiah.propmanager.features.user.domain.User;
+import com.akandiah.propmanager.security.JwtUserResolver;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,11 +63,13 @@ public class LeaseTenantService {
 
 	private final LeaseTenantRepository leaseTenantRepository;
 	private final LeaseRepository leaseRepository;
+	private final LeaseService leaseService;
 	private final InviteService inviteService;
 	private final InviteRepository inviteRepository;
 	private final TenantRepository tenantRepository;
 	private final NotificationDeliveryRepository deliveryRepository;
 	private final ApplicationEventPublisher eventPublisher;
+	private final JwtUserResolver jwtUserResolver;
 
 	// ───────────────────────── Queries ─────────────────────────
 
@@ -139,17 +147,17 @@ public class LeaseTenantService {
 	// ───────────────────────── Remove ─────────────────────────
 
 	/**
-	 * Removes a tenant slot from a DRAFT lease.
-	 * Guards: lease must be DRAFT; tenant must not have signed.
-	 * Also revokes the associated invite if it is still pending.
+	 * Removes a tenant slot from a DRAFT or REVIEW lease.
+	 * Guards: lease must be DRAFT or REVIEW; tenant must not have SIGNED status.
+	 * Auto-reverts to DRAFT if the last tenant is removed from a REVIEW lease.
 	 */
 	@Transactional
 	public void removeTenant(UUID leaseId, UUID leaseTenantId) {
 		Lease lease = leaseRepository.findById(leaseId)
 				.orElseThrow(() -> new ResourceNotFoundException("Lease", leaseId));
 
-		if (lease.getStatus() != LeaseStatus.DRAFT) {
-			throw new IllegalStateException("Tenants can only be removed from DRAFT leases");
+		if (lease.getStatus() != LeaseStatus.DRAFT && lease.getStatus() != LeaseStatus.REVIEW) {
+			throw new IllegalStateException("Tenants can only be removed from DRAFT or REVIEW leases");
 		}
 
 		LeaseTenant leaseTenant = leaseTenantRepository.findById(leaseTenantId)
@@ -159,7 +167,7 @@ public class LeaseTenantService {
 			throw new ResourceNotFoundException("LeaseTenant", leaseTenantId);
 		}
 
-		if (leaseTenant.getSignedDate() != null) {
+		if (leaseTenant.getStatus() == LeaseTenantStatus.SIGNED) {
 			throw new IllegalStateException("Cannot remove a tenant who has already signed the lease");
 		}
 
@@ -168,8 +176,7 @@ public class LeaseTenantService {
 			inviteService.revokeInvite(leaseTenant.getInvite().getId());
 		}
 
-		// Capture userId before deleting (tenant may be null if invite not yet
-		// accepted)
+		// Capture userId before deleting (tenant may be null if invite not yet accepted)
 		UUID tenantUserId = leaseTenant.getTenant() != null
 				? leaseTenant.getTenant().getUser().getId()
 				: null;
@@ -179,7 +186,78 @@ public class LeaseTenantService {
 		if (tenantUserId != null) {
 			eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(tenantUserId)));
 		}
+
+		// Auto-revert if last tenant was just removed from a REVIEW lease
+		if (lease.getStatus() == LeaseStatus.REVIEW) {
+			long remaining = leaseTenantRepository.countByLease_Id(leaseId);
+			if (remaining == 0) {
+				leaseService.revertToDraft(leaseId);
+				log.info("Last tenant removed from REVIEW lease {} — auto-reverted to DRAFT", leaseId);
+			}
+		}
+
 		log.info("Removed LeaseTenant {} from lease {}", leaseTenantId, leaseId);
+	}
+
+	// ───────────────────────── Sign ─────────────────────────
+
+	/**
+	 * Records a tenant's signature on a REVIEW lease.
+	 * If this is the last unsigned tenant, auto-advances the lease to SIGNED.
+	 */
+	@Transactional
+	public LeaseTenantResponse signLease(UUID leaseId, UUID leaseTenantId) {
+		LeaseTenant leaseTenant = leaseTenantRepository.findById(leaseTenantId)
+				.orElseThrow(() -> new ResourceNotFoundException("LeaseTenant", leaseTenantId));
+
+		if (!leaseTenant.getLease().getId().equals(leaseId)) {
+			throw new ResourceNotFoundException("LeaseTenant", leaseTenantId);
+		}
+
+		Lease lease = leaseTenant.getLease();
+
+		if (lease.getStatus() != LeaseStatus.REVIEW) {
+			throw new IllegalStateException("Can only sign a lease that is in REVIEW status");
+		}
+
+		if (leaseTenant.getStatus() == LeaseTenantStatus.INVITED) {
+			throw new IllegalStateException("You must accept the lease invite before signing");
+		}
+
+		// Already signed the current version — nothing to do
+		if (leaseTenant.getStatus() == LeaseTenantStatus.SIGNED
+				&& lease.getVersion().equals(leaseTenant.getAcceptedLeaseVersion())) {
+			throw new IllegalStateException("You have already signed the current version of this lease");
+		}
+
+		// At this point: REGISTERED (first-time sign) or SIGNED with stale version (re-sign after revert)
+
+		// Verify the caller is the tenant linked to this slot
+		User caller = jwtUserResolver.resolve();
+		if (leaseTenant.getTenant() == null
+				|| !leaseTenant.getTenant().getUser().getId().equals(caller.getId())) {
+			throw new AccessDeniedException("You are not authorized to sign this lease slot");
+		}
+
+		leaseTenant.setStatus(LeaseTenantStatus.SIGNED);
+		leaseTenant.setSignedDate(LocalDate.now());
+		leaseTenant.setAcceptedLeaseVersion(lease.getVersion());
+		LeaseTenant saved = leaseTenantRepository.save(leaseTenant);
+
+		// Count tenants that still need to sign for the current lease version.
+		// Status-only check is insufficient: after a revert, all slots are SIGNED but stale.
+		long remaining = leaseTenantRepository.countNotSignedForVersion(leaseId, lease.getVersion());
+
+		if (remaining == 0) {
+			leaseService.advanceToSigned(leaseId);
+			eventPublisher.publishEvent(new LeaseLifecycleEvent(leaseId, LeaseLifecycleEventType.TENANT_ALL_SIGNED));
+		} else {
+			eventPublisher.publishEvent(
+					new LeaseLifecycleEvent(leaseId, LeaseLifecycleEventType.TENANT_SIGNED, caller.getId()));
+		}
+
+		log.info("LeaseTenant {} signed lease {} (remaining unsigned: {})", leaseTenantId, leaseId, remaining);
+		return LeaseTenantResponse.from(saved);
 	}
 
 	// ───────────────────────── Invite acceptance ─────────────────────────
@@ -216,9 +294,11 @@ public class LeaseTenantService {
 		// Resolve the role from attributes (with a safe default)
 		String roleValue = (String) invite.getAttributes().getOrDefault(ATTR_ROLE, LeaseTenantRole.PRIMARY.name());
 
-		// Link and Persist
+		// Link and persist; set REGISTERED status and acceptance timestamp
 		leaseTenant.setTenant(tenant);
 		leaseTenant.setRole(LeaseTenantRole.valueOf(roleValue));
+		leaseTenant.setStatus(LeaseTenantStatus.REGISTERED);
+		leaseTenant.setInviteAcceptedAt(Instant.now());
 		leaseTenantRepository.save(leaseTenant);
 
 		eventPublisher.publishEvent(new PermissionsChangedEvent(Set.of(claimedUser.getId())));

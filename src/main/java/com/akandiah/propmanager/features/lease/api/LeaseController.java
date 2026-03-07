@@ -125,6 +125,13 @@ public class LeaseController {
 		return ResponseEntity.ok(service.terminate(id));
 	}
 
+	@PostMapping("/{id}/evict")
+	@PreAuthorizeLeaseAccess("UPDATE")
+	@Operation(summary = "Evict tenant from an active lease", description = "ACTIVE → EVICTED")
+	public ResponseEntity<LeaseResponse> evict(@PathVariable UUID id, @RequestParam UUID orgId) {
+		return ResponseEntity.ok(service.evict(id));
+	}
+
 	// ───────────────────────── Delete (DRAFT only) ─────────────────────────
 
 	@DeleteMapping("/{id}")

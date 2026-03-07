@@ -22,7 +22,9 @@ import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEvent;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
+import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.domain.UserRegisteredEvent;
 import com.akandiah.propmanager.features.user.domain.UserRepository;
@@ -32,20 +34,15 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Central dispatcher that listens to domain events and delegates delivery
- * to {@link NotificationDeliveryService} and
- * {@link NotificationDeliverySender}.
+ * to {@link NotificationDeliveryService} and {@link NotificationDeliverySender}.
  *
- * <p>
- * Outbox pattern: each handler runs synchronously on the committing thread
+ * <p>Outbox pattern: each handler runs synchronously on the committing thread
  * (AFTER_COMMIT, no @Async). It first commits a PENDING row via
- * {@code deliveryService.createPending()} (REQUIRES_NEW), then enqueues the
- * async
- * send via {@code notificationSender.sendAsync()}. A JVM crash between commit
- * and
+ * {@code deliveryService.createPending()} (REQUIRES_NEW), then enqueues the async
+ * send via {@code notificationSender.sendAsync()}. A JVM crash between commit and
  * enqueue leaves a recoverable PENDING row that the scheduler will pick up.
  *
- * <p>
- * No {@code @Transactional} here — each call to the delivery service opens its
+ * <p>No {@code @Transactional} here — each call to the delivery service opens its
  * own {@code REQUIRES_NEW} transaction, isolating failures per recipient.
  */
 @Component
@@ -58,6 +55,7 @@ public class NotificationDispatcher {
 	private final InviteRepository inviteRepository;
 	private final LeaseRepository leaseRepository;
 	private final LeaseTenantRepository leaseTenantRepository;
+	private final MembershipRepository membershipRepository;
 	private final UserRepository userRepository;
 	private final AppProperties appProperties;
 
@@ -74,7 +72,6 @@ public class NotificationDispatcher {
 			return;
 		}
 
-		// Base context from persisted attributes; augment with computed fields
 		Map<String, Object> context = new HashMap<>(invite.getAttributes() != null ? invite.getAttributes() : Map.of());
 		context.put("inviterName", invite.getInvitedBy().getName());
 		context.put("inviteLink", appProperties.baseUrl() + "/invite/" + invite.getToken());
@@ -82,7 +79,6 @@ public class NotificationDispatcher {
 
 		NotificationType type = NotificationType.INVITE_LEASE;
 
-		// On resend: cancel any active deliveries to prevent duplicate sends
 		if (event.isResend()) {
 			deliveryService.cancelActiveDeliveriesForReference(NotificationReferenceType.INVITE, invite.getId());
 		}
@@ -105,50 +101,52 @@ public class NotificationDispatcher {
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onLeaseLifecycle(LeaseLifecycleEvent event) {
-		Lease lease = leaseRepository.findByIdWithUnitAndProperty(event.leaseId()).orElse(null);
+		Lease lease = leaseRepository.findByIdWithUnitPropertyAndOrg(event.leaseId()).orElse(null);
 		if (lease == null) {
 			log.error("Lease not found for notification dispatch: id={}", event.leaseId());
 			return;
 		}
 
-		NotificationType type = switch (event.type()) {
-			case SUBMITTED_FOR_REVIEW -> NotificationType.LEASE_SUBMITTED_FOR_REVIEW;
-			case ACTIVATED -> NotificationType.LEASE_ACTIVATED;
-			case EXPIRING_SOON -> NotificationType.LEASE_EXPIRING_SOON;
-		};
+		Map<String, Object> ctx = baseContext(lease);
 
-		Map<String, Object> context = Map.of(
-				"propertyName", lease.getProperty().getLegalName(),
-				"unitNumber", lease.getUnit().getUnitNumber(),
-				"startDate", lease.getStartDate(),
-				"endDate", lease.getEndDate(),
-				"eventType", event.type().name());
+		switch (event.type()) {
+			case SUBMITTED_FOR_REVIEW ->
+				notifyTenants(lease, NotificationType.LEASE_SUBMITTED_FOR_REVIEW, ctx);
 
-		List<LeaseTenant> tenants = leaseTenantRepository.findByLease_IdWithTenantUser(event.leaseId());
-		if (tenants.isEmpty()) {
-			log.info("No accepted tenants for lease={}, skipping lifecycle notification type={}", event.leaseId(),
-					type);
-			return;
-		}
-
-		for (LeaseTenant lt : tenants) {
-			User user = lt.getTenant().getUser();
-			try {
-				UUID deliveryId = deliveryService.createPending(
-						user.getId(),
-						user.getEmail(),
-						type,
-						NotificationChannel.EMAIL,
-						lease.getId(),
-						NotificationReferenceType.LEASE,
-						context);
-				if (deliveryId != null) {
-					notificationSender.sendAsync(deliveryId);
+			case TENANT_SIGNED -> {
+				Map<String, Object> signCtx = new HashMap<>(ctx);
+				if (event.subjectId() != null) {
+					userRepository.findById(event.subjectId())
+							.ifPresent(u -> signCtx.put("signingTenantName", u.getName()));
 				}
-			} catch (Exception e) {
-				log.error("Failed to dispatch lease lifecycle notification: leaseId={}, userId={}", lease.getId(),
-						user.getId(), e);
+				// Use version-aware count so stale-SIGNED slots after a revert are counted as pending
+			long remaining = leaseTenantRepository.countNotSignedForVersion(
+						event.leaseId(), lease.getVersion());
+				signCtx.put("remainingSignatures", remaining);
+				notifyManager(lease, NotificationType.LEASE_TENANT_SIGNED, signCtx);
 			}
+
+			case TENANT_ALL_SIGNED ->
+				notifyManager(lease, NotificationType.LEASE_ALL_SIGNED, ctx);
+
+			case ACTIVATED ->
+				notifyTenants(lease, NotificationType.LEASE_ACTIVATED, ctx);
+
+			case EXPIRING_SOON -> {
+				notifyTenants(lease, NotificationType.LEASE_EXPIRING_SOON, ctx);
+				notifyManager(lease, NotificationType.LEASE_EXPIRING_SOON, ctx);
+			}
+
+			case EXPIRED -> {
+				notifyTenants(lease, NotificationType.LEASE_EXPIRED, ctx);
+				notifyManager(lease, NotificationType.LEASE_EXPIRED, ctx);
+			}
+
+			case TERMINATED ->
+				notifyTenants(lease, NotificationType.LEASE_TERMINATED, ctx);
+
+			case EVICTED ->
+				notifyTenants(lease, NotificationType.LEASE_EVICTED, ctx);
 		}
 	}
 
@@ -177,6 +175,76 @@ public class NotificationDispatcher {
 
 		if (deliveryId != null) {
 			notificationSender.sendAsync(deliveryId);
+		}
+	}
+
+	// ─────────────────────────── Helpers ───────────────────────────
+
+	/** Builds the shared context map included in all lease lifecycle notification templates. */
+	private Map<String, Object> baseContext(Lease lease) {
+		Map<String, Object> ctx = new HashMap<>();
+		ctx.put("propertyName", lease.getProperty().getLegalName());
+		ctx.put("unitNumber", lease.getUnit().getUnitNumber());
+		ctx.put("startDate", lease.getStartDate());
+		ctx.put("endDate", lease.getEndDate());
+		ctx.put("eventType", "lease");
+		return ctx;
+	}
+
+	/** Sends a notification to all accepted (REGISTERED or SIGNED) tenants on this lease. */
+	private void notifyTenants(Lease lease, NotificationType type, Map<String, Object> ctx) {
+		List<LeaseTenant> tenants = leaseTenantRepository.findByLease_IdWithTenantUser(lease.getId());
+		if (tenants.isEmpty()) {
+			log.info("No accepted tenants for lease={}, skipping notification type={}", lease.getId(), type);
+			return;
+		}
+
+		for (LeaseTenant lt : tenants) {
+			User user = lt.getTenant().getUser();
+			try {
+				UUID deliveryId = deliveryService.createPending(
+						user.getId(),
+						user.getEmail(),
+						type,
+						NotificationChannel.EMAIL,
+						lease.getId(),
+						NotificationReferenceType.LEASE,
+						ctx);
+				if (deliveryId != null) {
+					notificationSender.sendAsync(deliveryId);
+				}
+			} catch (Exception e) {
+				log.error("Failed to dispatch tenant notification: leaseId={}, userId={}", lease.getId(), user.getId(), e);
+			}
+		}
+	}
+
+	/** Sends a notification to all org members (managers/admins) of the lease's property. */
+	private void notifyManager(Lease lease, NotificationType type, Map<String, Object> ctx) {
+		UUID orgId = lease.getProperty().getOrganization().getId();
+		List<User> managers = membershipRepository.findUsersByOrganizationId(orgId);
+
+		if (managers.isEmpty()) {
+			log.info("No managers found for org={}, skipping manager notification type={}", orgId, type);
+			return;
+		}
+
+		for (User manager : managers) {
+			try {
+				UUID deliveryId = deliveryService.createPending(
+						manager.getId(),
+						manager.getEmail(),
+						type,
+						NotificationChannel.EMAIL,
+						lease.getId(),
+						NotificationReferenceType.LEASE,
+						ctx);
+				if (deliveryId != null) {
+					notificationSender.sendAsync(deliveryId);
+				}
+			} catch (Exception e) {
+				log.error("Failed to dispatch manager notification: leaseId={}, userId={}", lease.getId(), manager.getId(), e);
+			}
 		}
 	}
 }

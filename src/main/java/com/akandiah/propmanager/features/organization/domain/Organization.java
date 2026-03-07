@@ -29,6 +29,12 @@ public class Organization extends BaseEntity {
 	@Column(name = "tax_id", length = 64)
 	private String taxId;
 
+	@Column(name = "phone", length = 32)
+	private String phone;
+
+	@Column(name = "email", length = 255)
+	private String email;
+
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "settings")
 	private Map<String, Object> settings;

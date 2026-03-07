@@ -57,12 +57,23 @@ public class LeaseTenantController {
 
 	@DeleteMapping("/{leaseTenantId}")
 	@PreAuthorize("@inviteAuthService.canCreateLeaseInvite(#leaseId)")
-	@Operation(summary = "Remove a tenant from a DRAFT lease")
+	@Operation(summary = "Remove a tenant from a DRAFT or REVIEW lease",
+			description = "Cannot remove a tenant who has already signed.")
 	public ResponseEntity<Void> remove(
 			@PathVariable UUID leaseId,
 			@PathVariable UUID leaseTenantId) {
 		leaseTenantService.removeTenant(leaseId, leaseTenantId);
 		return ResponseEntity.noContent().build();
+	}
+
+	@PostMapping("/{leaseTenantId}/sign")
+	@PreAuthorize("isAuthenticated()")
+	@Operation(summary = "Tenant signs the lease",
+			description = "Caller must be the tenant linked to this slot; lease must be in REVIEW and tenant must be REGISTERED.")
+	public ResponseEntity<LeaseTenantResponse> sign(
+			@PathVariable UUID leaseId,
+			@PathVariable UUID leaseTenantId) {
+		return ResponseEntity.ok(leaseTenantService.signLease(leaseId, leaseTenantId));
 	}
 
 }

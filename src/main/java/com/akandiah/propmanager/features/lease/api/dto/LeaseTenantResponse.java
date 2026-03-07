@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRole;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantStatus;
@@ -16,13 +17,17 @@ public record LeaseTenantResponse(
 		/** Email address from the originating invite. */
 		String email,
 		LeaseTenantRole role,
-		/** Derived from entity state — not stored in the DB. */
+		/** Persisted status — set at invite creation (INVITED), acceptance (REGISTERED), and signing (SIGNED). */
 		LeaseTenantStatus status,
 		/** Null until the invited user accepts and their tenant profile is linked. */
 		UUID tenantId,
 		UUID inviteId,
 		LocalDate invitedDate,
 		LocalDate signedDate,
+		/** When the tenant accepted the invite. Null until accepted. */
+		Instant inviteAcceptedAt,
+		/** Lease version at time of signing. Used to detect stale signatures after lease edits. */
+		Integer acceptedLeaseVersion,
 		/** Timestamp of the last resend, null if never resent. */
 		Instant lastResentAt,
 		/** Expiry timestamp of the originating invite. */
@@ -42,25 +47,18 @@ public record LeaseTenantResponse(
 
 	/** Build response with the latest email delivery status for the originating invite. */
 	public static LeaseTenantResponse from(LeaseTenant lt, NotificationDelivery latestDelivery) {
-		LeaseTenantStatus status;
-		if (lt.getSignedDate() != null) {
-			status = LeaseTenantStatus.SIGNED;
-		} else if (lt.getTenant() != null) {
-			status = LeaseTenantStatus.REGISTERED;
-		} else {
-			status = LeaseTenantStatus.INVITED;
-		}
-
 		return new LeaseTenantResponse(
 				lt.getId(),
 				lt.getLease().getId(),
 				lt.getInvite().getEmail(),
 				lt.getRole(),
-				status,
+				lt.getStatus(),
 				lt.getTenant() != null ? lt.getTenant().getId() : null,
 				lt.getInvite().getId(),
 				lt.getInvitedDate(),
 				lt.getSignedDate(),
+				lt.getInviteAcceptedAt(),
+				lt.getAcceptedLeaseVersion(),
 				lt.getInvite().getLastResentAt(),
 				lt.getInvite().getExpiresAt(),
 				latestDelivery != null ? latestDelivery.getStatus() : null,

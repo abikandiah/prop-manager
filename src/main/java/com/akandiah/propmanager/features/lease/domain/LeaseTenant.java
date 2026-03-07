@@ -1,5 +1,6 @@
 package com.akandiah.propmanager.features.lease.domain;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 import com.akandiah.propmanager.common.domain.BaseEntity;
@@ -14,6 +15,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -58,4 +60,18 @@ public class LeaseTenant extends BaseEntity {
 	@Setter
 	@Column(name = "signed_date")
 	private LocalDate signedDate;
+
+	@Setter
+	@Column(nullable = false, length = 32)
+	@Enumerated(EnumType.STRING)
+	@Builder.Default
+	private LeaseTenantStatus status = LeaseTenantStatus.INVITED;
+
+	@Setter
+	@Column(name = "invite_accepted_at")
+	private Instant inviteAcceptedAt;
+
+	@Setter
+	@Column(name = "accepted_lease_version")
+	private Integer acceptedLeaseVersion;
 }

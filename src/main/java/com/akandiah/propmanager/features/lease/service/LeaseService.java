@@ -24,11 +24,14 @@ import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEventType;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseTemplate;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantStatus;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
+import com.akandiah.propmanager.features.unit.domain.UnitStatus;
 import com.akandiah.propmanager.security.JwtUserResolver;
 
 import lombok.RequiredArgsConstructor;
@@ -191,12 +194,19 @@ public class LeaseService {
 
 	/**
 	 * Owner sends the draft to the tenant for review.
-	 * Stamps the template markdown into executedContentMarkdown here so participants
+	 * Guard: at least one tenant must be invited.
+	 * Stamps the template markdown into executedContentMarkdown so participants
 	 * can review the rendered lease before signing.
 	 */
 	@Transactional
 	public LeaseResponse submitForReview(UUID id) {
 		Lease lease = getEntity(id);
+
+		long tenantCount = leaseTenantRepository.countByLease_Id(id);
+		if (tenantCount == 0) {
+			throw new IllegalStateException("Cannot submit for review: invite at least one tenant first.");
+		}
+
 		stateMachine.submitForReview(lease);
 		if (lease.getLeaseTemplate() != null) {
 			LeaseTemplate t = lease.getLeaseTemplate();
@@ -210,14 +220,33 @@ public class LeaseService {
 		return LeaseResponse.from(saved);
 	}
 
-	/** Both parties signed — lease becomes active and read-only. */
+	/** All tenants signed — manager activates lease. Requires SIGNED status and all signatures valid. */
 	@Transactional
 	public LeaseResponse activate(UUID id) {
 		Lease lease = getEntity(id);
+
 		if (leaseRepository.existsByUnit_IdAndStatusAndIdNot(lease.getUnit().getId(), LeaseStatus.ACTIVE, id)) {
 			throw new IllegalStateException("Cannot activate: unit already has an active lease.");
 		}
-		stateMachine.activate(lease);
+
+		List<LeaseTenant> tenants = leaseTenantRepository.findByLease_Id(id);
+		if (tenants.isEmpty()) {
+			throw new IllegalStateException("Cannot activate: no tenants on this lease.");
+		}
+		for (LeaseTenant lt : tenants) {
+			if (lt.getStatus() != LeaseTenantStatus.SIGNED) {
+				throw new IllegalStateException(
+						"Cannot activate: " + lt.getInvite().getEmail() + " has not signed.");
+			}
+			if (!lease.getVersion().equals(lt.getAcceptedLeaseVersion())) {
+				throw new IllegalStateException(
+						"Cannot activate: " + lt.getInvite().getEmail()
+						+ " signed a previous version. They must re-sign.");
+			}
+		}
+
+		stateMachine.activate(lease);   // SIGNED → ACTIVE
+		updateUnitStatus(lease.getUnit(), UnitStatus.OCCUPIED);
 		Lease saved = leaseRepository.save(lease);
 		eventPublisher.publishEvent(new LeaseLifecycleEvent(saved.getId(), LeaseLifecycleEventType.ACTIVATED));
 		publishPermissionsChangedForLeaseTenants(id);
@@ -225,7 +254,7 @@ public class LeaseService {
 	}
 
 	/**
-	 * Revert a lease in review back to draft for further edits.
+	 * Revert a lease in REVIEW or SIGNED back to DRAFT for further edits.
 	 * Clears the stamped content so it will be re-stamped on the next submit.
 	 */
 	@Transactional
@@ -236,14 +265,36 @@ public class LeaseService {
 		return LeaseResponse.from(leaseRepository.save(lease));
 	}
 
-	/** Terminate an active lease early. */
+	/** Terminate an active lease early. Updates unit to VACANT and publishes event. */
 	@Transactional
 	public LeaseResponse terminate(UUID id) {
 		Lease lease = getEntity(id);
 		stateMachine.terminate(lease);
-		LeaseResponse response = LeaseResponse.from(leaseRepository.save(lease));
+		updateUnitStatus(lease.getUnit(), UnitStatus.VACANT);
+		Lease saved = leaseRepository.save(lease);
 		publishPermissionsChangedForLeaseTenants(id);
-		return response;
+		eventPublisher.publishEvent(new LeaseLifecycleEvent(id, LeaseLifecycleEventType.TERMINATED));
+		return LeaseResponse.from(saved);
+	}
+
+	/** Evict tenants from an active lease. Updates unit to VACANT and publishes event. */
+	@Transactional
+	public LeaseResponse evict(UUID id) {
+		Lease lease = getEntity(id);
+		stateMachine.evict(lease);
+		updateUnitStatus(lease.getUnit(), UnitStatus.VACANT);
+		Lease saved = leaseRepository.save(lease);
+		publishPermissionsChangedForLeaseTenants(id);
+		eventPublisher.publishEvent(new LeaseLifecycleEvent(id, LeaseLifecycleEventType.EVICTED));
+		return LeaseResponse.from(saved);
+	}
+
+	/** Auto-advances a REVIEW lease to SIGNED after all tenants have signed. Package-private for LeaseTenantService. */
+	@Transactional
+	void advanceToSigned(UUID id) {
+		Lease lease = getEntity(id);
+		stateMachine.advanceToSigned(lease);
+		leaseRepository.save(lease);
 	}
 
 	// ───────────────────────── Delete (DRAFT only) ─────────────────────────
@@ -258,7 +309,12 @@ public class LeaseService {
 
 	// ───────────────────────── Helpers ─────────────────────────
 
-	private void publishPermissionsChangedForLeaseTenants(UUID leaseId) {
+	private void updateUnitStatus(Unit unit, UnitStatus newStatus) {
+		unit.setStatus(newStatus);
+		unitRepository.save(unit);
+	}
+
+	void publishPermissionsChangedForLeaseTenants(UUID leaseId) {
 		Set<UUID> userIds = leaseTenantRepository.findByLease_IdWithTenantUser(leaseId).stream()
 				.map(lt -> lt.getTenant().getUser().getId())
 				.collect(Collectors.toSet());
@@ -267,7 +323,7 @@ public class LeaseService {
 		}
 	}
 
-	private Lease getEntity(UUID id) {
+	Lease getEntity(UUID id) {
 		return leaseRepository.findById(id)
 				.orElseThrow(() -> new ResourceNotFoundException("Lease", id));
 	}

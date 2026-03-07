@@ -19,15 +19,25 @@ public class LeaseStateMachine {
 		lease.setStatus(LeaseStatus.REVIEW);
 	}
 
-	/** REVIEW → ACTIVE */
+	/** REVIEW → SIGNED (auto-triggered when last tenant signs) */
+	void advanceToSigned(Lease lease) {
+		requireStatus(lease, LeaseStatus.REVIEW, "advance to signed");
+		lease.setStatus(LeaseStatus.SIGNED);
+	}
+
+	/** SIGNED → ACTIVE */
 	void activate(Lease lease) {
-		requireStatus(lease, LeaseStatus.REVIEW, "activate");
+		requireStatus(lease, LeaseStatus.SIGNED, "activate");
 		lease.setStatus(LeaseStatus.ACTIVE);
 	}
 
-	/** REVIEW → DRAFT */
+	/** REVIEW or SIGNED → DRAFT */
 	void revertToDraft(Lease lease) {
-		requireStatus(lease, LeaseStatus.REVIEW, "revert to draft");
+		if (lease.getStatus() != LeaseStatus.REVIEW && lease.getStatus() != LeaseStatus.SIGNED) {
+			throw new IllegalStateException(
+					"Cannot revert to draft: lease " + lease.getId()
+							+ " is " + lease.getStatus() + " (expected REVIEW or SIGNED)");
+		}
 		lease.setStatus(LeaseStatus.DRAFT);
 	}
 
@@ -35,6 +45,12 @@ public class LeaseStateMachine {
 	void terminate(Lease lease) {
 		requireStatus(lease, LeaseStatus.ACTIVE, "terminate");
 		lease.setStatus(LeaseStatus.TERMINATED);
+	}
+
+	/** ACTIVE → EVICTED */
+	void evict(Lease lease) {
+		requireStatus(lease, LeaseStatus.ACTIVE, "evict");
+		lease.setStatus(LeaseStatus.EVICTED);
 	}
 
 	// ───────────────────────── Guards ─────────────────────────

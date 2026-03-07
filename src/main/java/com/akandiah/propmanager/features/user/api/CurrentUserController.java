@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.features.user.api;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -59,9 +60,9 @@ public class CurrentUserController {
 
 		User dbUser = userService.getOrCreateUser(issuer, sub, name, email);
 
-		List<UserOrganizationResponse> organizations = organizationService.findAllSimplified(dbUser.getId());
 		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
 		List<String> authorities = auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
+		List<UserOrganizationResponse> organizations = buildOrgResponses(dbUser.getId(), authorities, access);
 		List<UiRole> uiRoles = userService.deriveRoles(authorities, access);
 
 		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, dbUser.getTermsAccepted(),
@@ -85,13 +86,26 @@ public class CurrentUserController {
 			dbUser = userService.updateTermsAccepted(dbUser, true);
 		}
 
-		List<UserOrganizationResponse> organizations = organizationService.findAllSimplified(dbUser.getId());
 		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
 		List<String> authorities = auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
+		List<UserOrganizationResponse> organizations = buildOrgResponses(dbUser.getId(), authorities, access);
 		List<UiRole> uiRoles = userService.deriveRoles(authorities, access);
 
 		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, dbUser.getTermsAccepted(),
 				organizations, uiRoles, access);
+	}
+
+	/** Builds org responses with per-org roles derived from the filtered access list. */
+	private List<UserOrganizationResponse> buildOrgResponses(UUID userId, List<String> authorities, List<AccessEntry> access) {
+		return organizationService.findAllSimplified(userId).stream()
+				.map(org -> {
+					List<AccessEntry> orgAccess = access.stream()
+							.filter(e -> org.getId().equals(e.orgId()))
+							.toList();
+					List<UiRole> orgRoles = userService.deriveRoles(authorities, orgAccess);
+					return UserOrganizationResponse.from(org, orgRoles);
+				})
+				.toList();
 	}
 
 	@PostMapping("/logout")

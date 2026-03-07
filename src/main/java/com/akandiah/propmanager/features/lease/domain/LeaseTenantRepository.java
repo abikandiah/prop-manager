@@ -17,6 +17,21 @@ public interface LeaseTenantRepository extends JpaRepository<LeaseTenant, UUID> 
 
 	long countByLease_Id(UUID leaseId);
 
+	/** Counts tenant slots on a lease that do NOT have the given status. Used to track signature progress. */
+	long countByLease_IdAndStatusNot(UUID leaseId, LeaseTenantStatus status);
+
+	/**
+	 * Counts tenant slots that still need to sign for the given lease version —
+	 * either not yet SIGNED, or SIGNED on a stale version (re-sign required after revert).
+	 */
+	@Query("""
+			SELECT COUNT(lt) FROM LeaseTenant lt
+			WHERE lt.lease.id = :leaseId
+			AND (lt.status != com.akandiah.propmanager.features.lease.domain.LeaseTenantStatus.SIGNED
+			     OR lt.acceptedLeaseVersion != :leaseVersion)
+			""")
+	long countNotSignedForVersion(@Param("leaseId") UUID leaseId, @Param("leaseVersion") Integer leaseVersion);
+
 	Optional<LeaseTenant> findByInvite_Id(UUID inviteId);
 
 	/** Returns true if the user is a tenant on the given lease. */
@@ -84,4 +99,36 @@ public interface LeaseTenantRepository extends JpaRepository<LeaseTenant, UUID> 
 	default List<UUID> findUnitIdsByTenantId(UUID tenantId) {
 		return findUnitIdsByTenantId(tenantId, LeaseStatus.ACTIVE_STATUSES);
 	}
+
+	/**
+	 * Finds active lease-tenant slots for a tenant in a specific org.
+	 * JOIN FETCH loads lease → property → organization and lease → unit to avoid N+1 in TenantPortalService.
+	 */
+	@Query("""
+			SELECT lt FROM LeaseTenant lt
+			JOIN FETCH lt.lease l
+			JOIN FETCH l.property prop
+			JOIN FETCH prop.organization org
+			JOIN FETCH l.unit unit
+			WHERE lt.tenant.id = :tenantId
+			AND l.status IN :statuses
+			AND prop.organization.id = :orgId
+			""")
+	List<LeaseTenant> findByTenantIdAndStatusInAndOrgId(
+			@Param("tenantId") UUID tenantId,
+			@Param("statuses") Set<LeaseStatus> statuses,
+			@Param("orgId") UUID orgId);
+
+	/**
+	 * Fetches all tenant slots for a lease with tenant+user and invite eagerly loaded.
+	 * Used to build co-tenant summaries in TenantPortalService.
+	 */
+	@Query("""
+			SELECT lt FROM LeaseTenant lt
+			LEFT JOIN FETCH lt.tenant t
+			LEFT JOIN FETCH t.user
+			JOIN FETCH lt.invite
+			WHERE lt.lease.id = :leaseId
+			""")
+	List<LeaseTenant> findByLeaseIdWithTenantAndInvite(@Param("leaseId") UUID leaseId);
 }

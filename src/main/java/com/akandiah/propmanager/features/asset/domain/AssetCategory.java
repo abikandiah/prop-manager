@@ -4,5 +4,7 @@ public enum AssetCategory {
 	APPLIANCE,
 	HVAC,
 	PLUMBING,
-	ELECTRICAL
+	ELECTRICAL,
+	STRUCTURAL,
+	OTHER
 }

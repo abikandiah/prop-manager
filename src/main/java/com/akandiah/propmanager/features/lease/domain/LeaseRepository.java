@@ -44,11 +44,24 @@ public interface LeaseRepository extends JpaRepository<Lease, UUID> {
 	List<Lease> findByStatusAndEndDate(LeaseStatus status, LocalDate endDate);
 
 	/**
+	 * Find ACTIVE leases whose endDate has already passed (strictly before the given date).
+	 * Used by the daily expiry job to auto-transition overdue leases to EXPIRED.
+	 */
+	List<Lease> findByStatusAndEndDateBefore(LeaseStatus status, LocalDate date);
+
+	/**
 	 * Fetch lease with unit and property eagerly loaded.
 	 * Used by the NotificationDispatcher on an async thread where no Hibernate session is active.
 	 */
 	@Query("SELECT l FROM Lease l JOIN FETCH l.unit JOIN FETCH l.property WHERE l.id = :id")
 	Optional<Lease> findByIdWithUnitAndProperty(@Param("id") UUID id);
+
+	/**
+	 * Fetch lease with unit, property, and property's organization eagerly loaded.
+	 * Used by the NotificationDispatcher when org context is needed (e.g. manager notifications).
+	 */
+	@Query("SELECT l FROM Lease l JOIN FETCH l.unit JOIN FETCH l.property p JOIN FETCH p.organization WHERE l.id = :id")
+	Optional<Lease> findByIdWithUnitPropertyAndOrg(@Param("id") UUID id);
 
 	/**
 	 * Fetch lease with unit, property and property address eagerly loaded.

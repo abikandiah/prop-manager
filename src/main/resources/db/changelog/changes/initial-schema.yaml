@@ -24,6 +24,12 @@ databaseChangeLog:
                   name: tax_id
                   type: varchar(64)
               - column:
+                  name: phone
+                  type: varchar(32)
+              - column:
+                  name: email
+                  type: varchar(255)
+              - column:
                   name: settings
                   type: jsonb
               - column:
@@ -808,6 +814,18 @@ databaseChangeLog:
               - column:
                   name: signed_date
                   type: date
+              - column:
+                  name: status
+                  type: varchar(32)
+                  defaultValue: INVITED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: invite_accepted_at
+                  type: timestamptz
+              - column:
+                  name: accepted_lease_version
+                  type: int
               - column:
                   name: version
                   type: int

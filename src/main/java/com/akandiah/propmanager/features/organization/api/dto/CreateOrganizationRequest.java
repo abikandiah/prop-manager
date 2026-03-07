@@ -12,5 +12,7 @@ public record CreateOrganizationRequest(
 
 		@NotBlank(message = "Name is required") @Size(max = 255) String name,
 		@Size(max = 64) String taxId,
+		@Size(max = 32) String phone,
+		@Size(max = 255) String email,
 		Map<String, Object> settings) {
 }

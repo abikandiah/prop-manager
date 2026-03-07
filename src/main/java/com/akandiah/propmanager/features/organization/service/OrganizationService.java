@@ -21,7 +21,6 @@ import com.akandiah.propmanager.features.membership.service.SystemPermissionPoli
 import com.akandiah.propmanager.features.organization.api.dto.CreateOrganizationRequest;
 import com.akandiah.propmanager.features.organization.api.dto.OrganizationResponse;
 import com.akandiah.propmanager.features.organization.api.dto.UpdateOrganizationRequest;
-import com.akandiah.propmanager.features.organization.api.dto.UserOrganizationResponse;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.organization.domain.OrganizationCreatedEvent;
 import com.akandiah.propmanager.features.organization.domain.OrganizationRepository;
@@ -51,12 +50,10 @@ public class OrganizationService {
 	}
 
 	/**
-	 * Returns a simplified list of organizations for the current user's profile.
+	 * Returns raw organizations for the current user — caller attaches per-org roles before building DTOs.
 	 */
-	public List<UserOrganizationResponse> findAllSimplified(UUID currentUserId) {
-		return repository.findAllByUserId(currentUserId).stream()
-				.map(UserOrganizationResponse::from)
-				.toList();
+	public List<Organization> findAllSimplified(UUID currentUserId) {
+		return repository.findAllByUserId(currentUserId);
 	}
 
 	/** Returns all organizations — for system-level ADMIN use only. */
@@ -83,6 +80,8 @@ public class OrganizationService {
 				.id(request.id())
 				.name(request.name())
 				.taxId(request.taxId())
+				.phone(request.phone())
+				.email(request.email())
 				.settings(request.settings())
 				.build();
 		org = repository.save(org);
@@ -112,6 +111,12 @@ public class OrganizationService {
 		}
 		if (request.taxId() != null) {
 			org.setTaxId(request.taxId());
+		}
+		if (request.phone() != null) {
+			org.setPhone(request.phone());
+		}
+		if (request.email() != null) {
+			org.setEmail(request.email());
 		}
 		if (request.settings() != null) {
 			org.setSettings(request.settings());
