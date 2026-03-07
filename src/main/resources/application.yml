@@ -43,7 +43,7 @@ app:
     enabled: false
     allowed-origins: []
     allowed-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
-    allowed-headers: "*"
+    allowed-headers: Authorization, Content-Type, X-Request-Id
     exposed-headers: []
     allow-credentials: true
     max-age: 3600
@@ -81,7 +81,9 @@ management:
         include: health, metrics, prometheus
   endpoint:
     health:
-      show-details: when_authorized
+      show-details: never
+      probes:
+        enabled: true
 
 resilience4j:
   ratelimiter:
