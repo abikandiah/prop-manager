@@ -84,7 +84,7 @@ public interface LeaseTenantRepository extends JpaRepository<LeaseTenant, UUID> 
 
 	/**
 	 * Returns the unit IDs for all leases in {@link LeaseStatus#ACTIVE_STATUSES} that the given
-	 * tenant is attached to. Used by {@code PermissionGuard.hasTenantAccess} to resolve a tenant
+	 * tenant is attached to. Used by {@code PermissionGuard} to resolve a tenant
 	 * to their unit(s) for hierarchy-aware access checks.
 	 */
 	@Query("""

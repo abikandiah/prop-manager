@@ -13,7 +13,6 @@ import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
-import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.common.util.SecurityUtils;
@@ -165,24 +164,18 @@ public class InviteAuthorizationService {
 
 	/**
 	 * Check if the current user has the required action on the given target.
-	 * For LEASE: resolves the unit and org, checks via hierarchy-aware auth.
+	 * For LEASE: delegates to ResourceType.LEASE; the resolver walks UNIT → PROPERTY → ORG.
 	 * For MEMBERSHIP: targetId is the org ID, checks org-level organization domain.
 	 */
 	private boolean checkTargetAccess(TargetType targetType, UUID targetId, int requiredAction) {
 		return switch (targetType) {
 			case LEASE -> {
-				Lease lease = leaseRepository.findByIdWithUnitPropAndOrg(targetId).orElse(null);
-				if (lease == null)
-					yield false;
-				UUID unitId = lease.getUnit().getId();
-				UUID orgId = lease.getUnit().getProp().getOrganization() != null
-						? lease.getUnit().getProp().getOrganization().getId()
-						: null;
+				UUID orgId = leaseRepository.findOrgIdById(targetId).orElse(null);
 				if (orgId == null)
 					yield false;
 				List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
 				yield authorizationService.allow(access, requiredAction, PermissionDomains.LEASES,
-						ResourceType.UNIT, unitId, orgId);
+						ResourceType.LEASE, targetId, orgId);
 			}
 			case MEMBERSHIP -> {
 				// targetId is the org ID

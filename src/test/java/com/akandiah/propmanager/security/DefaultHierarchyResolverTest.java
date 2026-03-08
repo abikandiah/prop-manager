@@ -17,6 +17,7 @@ import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.permission.ScopeLevel;
 import com.akandiah.propmanager.features.asset.domain.Asset;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
+import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.organization.domain.Organization;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
@@ -33,6 +34,8 @@ class DefaultHierarchyResolverTest {
 	private PropRepository propRepository;
 	@Mock
 	private AssetRepository assetRepository;
+	@Mock
+	private LeaseRepository leaseRepository;
 
 	private DefaultHierarchyResolver resolver;
 
@@ -43,7 +46,7 @@ class DefaultHierarchyResolverTest {
 
 	@BeforeEach
 	void setUp() {
-		resolver = new DefaultHierarchyResolver(unitRepository, propRepository, assetRepository);
+		resolver = new DefaultHierarchyResolver(unitRepository, propRepository, assetRepository, leaseRepository);
 	}
 
 	@Test

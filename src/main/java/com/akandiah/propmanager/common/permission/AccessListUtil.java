@@ -48,8 +48,9 @@ public final class AccessListUtil {
 			switch (e.scopeType()) {
 				case ORG -> orgIds.add(e.orgId());
 				case PROPERTY -> propIds.add(e.scopeId());
-				case UNIT, ASSET -> {
-				}
+				case UNIT, ASSET -> {} // unit/asset-scoped entries don't broaden prop-level filter
+				case LEASE, TENANT -> throw new IllegalStateException(
+						"Unexpected scope type in AccessEntry: " + e.scopeType());
 			}
 		}
 		return new PropAccessFilter(orgIds, propIds);
@@ -68,8 +69,9 @@ public final class AccessListUtil {
 				case ORG -> orgIds.add(e.orgId());
 				case PROPERTY -> propIds.add(e.scopeId());
 				case UNIT -> unitIds.add(e.scopeId());
-				case ASSET -> {
-				}
+				case ASSET -> {} // asset entries carry no broader scope for filtering
+				case LEASE, TENANT -> throw new IllegalStateException(
+						"Unexpected scope type in AccessEntry: " + e.scopeType());
 			}
 		}
 		return new ScopedAccessFilter(orgIds, propIds, unitIds);

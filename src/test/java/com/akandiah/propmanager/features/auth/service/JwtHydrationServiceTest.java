@@ -187,7 +187,7 @@ class JwtHydrationServiceTest {
 			assertThat(entry.permissions()).containsEntry(PermissionDomains.LEASES, fullCrud);
 			assertThat(entry.permissions()).containsEntry(PermissionDomains.MAINTENANCE, fullCrud);
 			assertThat(entry.permissions()).containsEntry(PermissionDomains.FINANCES, fullCrud);
-			assertThat(entry.permissions()).containsEntry(PermissionDomains.TENANTS, fullCrud);
+			assertThat(entry.permissions()).containsEntry(PermissionDomains.PEOPLE, fullCrud);
 		}
 
 		@Test
@@ -236,7 +236,7 @@ class JwtHydrationServiceTest {
 			assertThat(entry.permissions()).containsEntry(PermissionDomains.LEASES, Actions.READ);
 			assertThat(entry.permissions()).containsEntry(PermissionDomains.MAINTENANCE, Actions.READ);
 			assertThat(entry.permissions()).doesNotContainKey(PermissionDomains.FINANCES);
-			assertThat(entry.permissions()).doesNotContainKey(PermissionDomains.TENANTS);
+			assertThat(entry.permissions()).doesNotContainKey(PermissionDomains.PEOPLE);
 		}
 
 		@Test

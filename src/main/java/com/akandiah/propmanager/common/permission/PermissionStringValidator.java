@@ -44,7 +44,9 @@ public final class PermissionStringValidator {
 			String key = e.getKey();
 			if (!PermissionDomains.VALID_KEYS.contains(key)) {
 				errors.add(new PermissionValidationError("permissions." + key,
-						"Unknown domain key: '" + key + "'. Allowed: l, m, f, t, o, p"));
+						"Unknown domain key: '" + key + "'. Allowed: " +
+						PermissionDomains.VALID_KEYS.stream().sorted()
+								.collect(java.util.stream.Collectors.joining(", "))));
 				continue;
 			}
 			String letters = e.getValue();
@@ -55,7 +57,9 @@ public final class PermissionStringValidator {
 				char c = letters.charAt(i);
 				if (!Actions.VALID_LETTERS.contains(c)) {
 					errors.add(new PermissionValidationError("permissions." + key,
-							"Invalid action letter: '" + c + "'. Allowed: r, c, u, d"));
+							"Invalid action letter: '" + c + "'. Allowed: " +
+							Actions.VALID_LETTERS.stream().map(String::valueOf).sorted()
+									.collect(java.util.stream.Collectors.joining(", "))));
 					break;
 				}
 			}

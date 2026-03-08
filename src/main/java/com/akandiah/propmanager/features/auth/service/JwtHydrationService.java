@@ -61,7 +61,7 @@ public class JwtHydrationService {
 			PermissionDomains.LEASES, FULL_CRUD,
 			PermissionDomains.MAINTENANCE, FULL_CRUD,
 			PermissionDomains.FINANCES, FULL_CRUD,
-			PermissionDomains.TENANTS, FULL_CRUD);
+			PermissionDomains.PEOPLE, FULL_CRUD);
 
 	/** Tenant: read-only on leases and maintenance domains. */
 	private static final Map<String, Integer> TENANT_MASKS = Map.of(

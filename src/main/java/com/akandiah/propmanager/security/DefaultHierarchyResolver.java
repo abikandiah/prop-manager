@@ -11,13 +11,14 @@ import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.permission.ScopeLevel;
 import com.akandiah.propmanager.common.permission.HierarchyResolver;
 import com.akandiah.propmanager.features.asset.domain.AssetRepository;
+import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.prop.domain.PropRepository;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/** Resolves org → property → unit → asset hierarchy. */
+/** Resolves org → property → unit → asset → lease hierarchy. */
 @Component
 @RequiredArgsConstructor
 public class DefaultHierarchyResolver implements HierarchyResolver {
@@ -25,6 +26,7 @@ public class DefaultHierarchyResolver implements HierarchyResolver {
 	private final UnitRepository unitRepository;
 	private final PropRepository propRepository;
 	private final AssetRepository assetRepository;
+	private final LeaseRepository leaseRepository;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -34,6 +36,10 @@ public class DefaultHierarchyResolver implements HierarchyResolver {
 			case PROPERTY -> resolveProperty(resourceId, orgId);
 			case UNIT -> resolveUnit(resourceId, orgId);
 			case ASSET -> resolveAsset(resourceId, orgId);
+			case LEASE -> resolveLease(resourceId, orgId);
+			// TENANT requires multi-unit anyMatch — handled by PermissionGuard before reaching here
+			case TENANT -> throw new UnsupportedOperationException(
+					"TENANT resolution must be handled by PermissionGuard.hasAccess");
 		};
 	}
 
@@ -61,6 +67,13 @@ public class DefaultHierarchyResolver implements HierarchyResolver {
 					chain.add(new ScopeLevel(ResourceType.ORG, resolvedOrgId));
 					return chain;
 				})
+				.orElse(List.of());
+	}
+
+	/** Resolves a lease to its unit chain: [UNIT → PROPERTY → ORG]. */
+	private List<ScopeLevel> resolveLease(UUID leaseId, UUID orgId) {
+		return leaseRepository.findUnitIdById(leaseId)
+				.map(unitId -> resolveUnit(unitId, orgId))
 				.orElse(List.of());
 	}
 

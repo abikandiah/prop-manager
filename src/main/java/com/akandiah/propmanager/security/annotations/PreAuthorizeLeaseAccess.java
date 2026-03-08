@@ -9,13 +9,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * Meta-annotation for lease-level access checks.
- * Uses domain 'LEASES' and resolves the unit via the lease ID.
+ * Uses domain 'LEASES' and resolves the unit chain via the lease ID.
  *
  * <p>Expects {@code #id} (Lease ID) and {@code #orgId} to be present in the SpEL context.
  */
 @Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("@permissionGuard.hasLeaseAccess('{value}', 'LEASES', #id, #orgId)")
+@PreAuthorize("@permissionGuard.hasAccess('{value}', 'LEASES', 'LEASE', #id, #orgId)")
 public @interface PreAuthorizeLeaseAccess {
 	String value() default "READ";
 }

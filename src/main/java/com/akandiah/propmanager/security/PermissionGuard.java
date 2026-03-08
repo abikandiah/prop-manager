@@ -12,7 +12,6 @@ import com.akandiah.propmanager.common.permission.PermissionDomains;
 import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.SecurityUtils;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
-import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 public class PermissionGuard {
 
 	private final HierarchyAwareAuthorizationService authorizationService;
-	private final LeaseRepository leaseRepository;
 	private final LeaseTenantRepository leaseTenantRepository;
 
 	/** Mapping of String names to bitmask values. Used by SpEL overloads. */
@@ -47,7 +45,7 @@ public class PermissionGuard {
 			"LEASES", PermissionDomains.LEASES,
 			"MAINTENANCE", PermissionDomains.MAINTENANCE,
 			"FINANCES", PermissionDomains.FINANCES,
-			"TENANTS", PermissionDomains.TENANTS,
+			"PEOPLE", PermissionDomains.PEOPLE,
 			"ORG", PermissionDomains.ORGANIZATION,
 			"PORTFOLIO", PermissionDomains.PORTFOLIO);
 
@@ -103,14 +101,26 @@ public class PermissionGuard {
 
 	/**
 	 * Main entry point for hierarchy-aware permission checks.
+	 * TENANT is handled via multi-unit anyMatch before hitting the resolver.
 	 */
 	public boolean hasAccess(int requiredAction, String domain, ResourceType resourceType,
 			UUID resourceId, UUID orgId) {
 		if (SecurityUtils.isGlobalAdmin()) {
 			return true;
 		}
+		if (resourceType == ResourceType.TENANT) {
+			return hasTenantAccessInternal(requiredAction, domain, resourceId, orgId);
+		}
 		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
 		return authorizationService.allow(access, requiredAction, domain, resourceType, resourceId, orgId);
+	}
+
+	/** Resolves the tenant's active unit IDs and checks UNIT-level access on any of them. */
+	private boolean hasTenantAccessInternal(int requiredAction, String domain, UUID tenantId, UUID orgId) {
+		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
+		return leaseTenantRepository.findUnitIdsByTenantId(tenantId).stream()
+				.anyMatch(uid -> authorizationService.allow(
+						access, requiredAction, domain, ResourceType.UNIT, uid, orgId));
 	}
 
 	/**
@@ -125,42 +135,6 @@ public class PermissionGuard {
 	 */
 	public boolean hasOrgAccess(int action, String domain, UUID orgId) {
 		return hasAccess(action, domain, ResourceType.ORG, orgId, orgId);
-	}
-
-	/**
-	 * String-based overload for lease permission checks.
-	 */
-	public boolean hasLeaseAccess(String action, String domain, UUID leaseId, UUID orgId) {
-		return hasLeaseAccess(resolveAction(action), resolveDomain(domain), leaseId, orgId);
-	}
-
-	/**
-	 * Resolves the lease's unit, then checks UNIT-level access.
-	 */
-	public boolean hasLeaseAccess(int requiredAction, String domain, UUID leaseId, UUID orgId) {
-		return leaseRepository.findUnitIdById(leaseId)
-				.map(unitId -> hasAccess(requiredAction, domain, ResourceType.UNIT, unitId, orgId))
-				.orElse(false);
-	}
-
-	/**
-	 * String-based overload for tenant permission checks.
-	 */
-	public boolean hasTenantAccess(String action, String domain, UUID tenantId, UUID orgId) {
-		return hasTenantAccess(resolveAction(action), resolveDomain(domain), tenantId, orgId);
-	}
-
-	/**
-	 * Resolves the tenant's active lease unit IDs, then checks UNIT-level access.
-	 */
-	public boolean hasTenantAccess(int requiredAction, String domain, UUID tenantId, UUID orgId) {
-		if (SecurityUtils.isGlobalAdmin()) {
-			return true;
-		}
-		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
-		return leaseTenantRepository.findUnitIdsByTenantId(tenantId).stream()
-				.anyMatch(uid -> authorizationService.allow(
-						access, requiredAction, domain, ResourceType.UNIT, uid, orgId));
 	}
 
 	/**

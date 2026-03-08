@@ -11,6 +11,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.akandiah.propmanager.common.permission.PermissionDomains.*;
+
 import com.akandiah.propmanager.features.membership.domain.PermissionPolicy;
 import com.akandiah.propmanager.features.membership.domain.PermissionPolicyRepository;
 
@@ -39,27 +41,27 @@ public class SystemPermissionPolicyInitializer implements ApplicationRunner {
 		new SystemPolicyDefinition(
 			PROPERTY_MANAGER_ID,
 			"Property Manager",
-			Map.of("o", "r", "p", "rcud", "l", "rcud", "m", "rcud", "f", "r", "t", "rcud")
+			Map.of(ORGANIZATION, "r", PORTFOLIO, "rcud", LEASES, "rcud", MAINTENANCE, "rcud", FINANCES, "r", PEOPLE, "rcud")
 		),
 		new SystemPolicyDefinition(
 			ORG_ADMIN_ID,
 			"Org Admin",
-			Map.of("o", "ru", "p", "rcud", "l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud")
+			Map.of(ORGANIZATION, "ru", PORTFOLIO, "rcud", LEASES, "rcud", MAINTENANCE, "rcud", FINANCES, "rcud", PEOPLE, "rcud")
 		),
 		new SystemPolicyDefinition(
 			MAINTENANCE_ID,
 			"Maintenance",
-			Map.of("m", "ru")
+			Map.of(MAINTENANCE, "ru")
 		),
 		new SystemPolicyDefinition(
 			VIEWER_ID,
 			"Viewer",
-			Map.of("o", "r", "p", "r", "l", "r", "m", "r", "f", "r", "t", "r")
+			Map.of(ORGANIZATION, "r", PORTFOLIO, "r", LEASES, "r", MAINTENANCE, "r", FINANCES, "r", PEOPLE, "r")
 		),
 		new SystemPolicyDefinition(
 			ORG_OWNER_ID,
 			"Org Owner",
-			Map.of("o", "rcud", "p", "rcud", "l", "rcud", "m", "rcud", "f", "rcud", "t", "rcud")
+			Map.of(ORGANIZATION, "rcud", PORTFOLIO, "rcud", LEASES, "rcud", MAINTENANCE, "rcud", FINANCES, "rcud", PEOPLE, "rcud")
 		)
 	);
 

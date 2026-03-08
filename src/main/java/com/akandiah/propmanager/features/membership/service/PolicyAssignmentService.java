@@ -157,6 +157,9 @@ public class PolicyAssignmentService {
 			case UNIT -> unitRepository.existsByIdAndProp_Organization_Id(resourceId, orgId);
 			case ASSET -> assetRepository.existsByIdAndProp_Organization_Id(resourceId, orgId) ||
 					assetRepository.existsByIdAndUnit_Prop_Organization_Id(resourceId, orgId);
+			// LEASE and TENANT are input-only types for authorization resolution, not assignable scope levels
+			case LEASE, TENANT -> throw new IllegalArgumentException(
+					"Cannot assign permissions at scope type: " + resourceType);
 		};
 		if (!valid) {
 			throw new ResourceNotFoundException(resourceType.name(), resourceId);

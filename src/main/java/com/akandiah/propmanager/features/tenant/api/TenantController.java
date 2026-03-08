@@ -55,12 +55,12 @@ public class TenantController {
 			return ResponseEntity.ok(tenantService.findAll());
 		}
 		ScopedAccessFilter filter = AccessListUtil.forScopedResources(
-				AccessListUtil.fromRequest(request), PermissionDomains.TENANTS, Actions.READ);
+				AccessListUtil.fromRequest(request), PermissionDomains.PEOPLE, Actions.READ);
 		return ResponseEntity.ok(tenantService.findAll(filter, activeOnly));
 	}
 
 	@GetMapping("/{id}")
-	@PreAuthorize("@permissionGuard.hasTenantAccess('READ', 'TENANTS', #id, #orgId)")
+	@PreAuthorize("@permissionGuard.hasAccess('READ', 'PEOPLE', 'TENANT', #id, #orgId)")
 	@Operation(summary = "Get tenant by ID",
 			description = "Accessible to property managers and owners with LEASES:READ access on the tenant's unit, property, or organization. Tenant users cannot view other tenants' profiles.")
 	public ResponseEntity<TenantResponse> getById(
