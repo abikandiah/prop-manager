@@ -40,9 +40,9 @@ app:
       max-size: ${CACHE_PERMISSIONS_MAX_SIZE:10000}
       ttl-minutes: ${CACHE_PERMISSIONS_TTL_MINUTES:60}
   cors:
-    enabled: false
+    enabled: true
     allowed-origins: []
-    allowed-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+    allowed-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD
     allowed-headers: Authorization, Content-Type, X-Request-Id
     exposed-headers: []
     allow-credentials: true

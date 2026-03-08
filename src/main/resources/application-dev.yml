@@ -41,8 +41,8 @@ app:
     enabled: ${RATE_LIMIT_ENABLED:false}
   cors:
     enabled: true
-    allowed-origins: http://localhost:3000, http://localhost:8080, http://127.0.0.1:3000, http://127.0.0.1:8080
-    allowed-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+    allowed-origins: http://localhost:3000, http://127.0.0.1:3000
+    allowed-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD
     allowed-headers: Authorization, Content-Type, X-Request-Id
     allow-credentials: true
     max-age: 3600

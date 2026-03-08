@@ -1,6 +1,7 @@
 package com.akandiah.propmanager.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
  * Audit logging configuration bound to {@code app.audit} in application.yml.
@@ -8,11 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "app.audit")
 public record AuditProperties(
-		boolean enabled,
-		boolean includeQueryString,
-		boolean includeClientInfo) {
-
-	public AuditProperties {
-		// defaults applied when not set in yaml
-	}
+		@DefaultValue("true") boolean enabled,
+		@DefaultValue("true") boolean includeQueryString,
+		@DefaultValue("true") boolean includeClientInfo) {
 }

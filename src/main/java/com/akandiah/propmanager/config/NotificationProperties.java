@@ -1,14 +1,11 @@
 package com.akandiah.propmanager.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties(prefix = "app.notification")
 public record NotificationProperties(Email email) {
 
-	public record Email(boolean enabled) {
-
-		public Email {
-			// defaults to true if not set — matches yaml default
-		}
+	public record Email(@DefaultValue("true") boolean enabled) {
 	}
 }
