@@ -14,6 +14,7 @@ public record UserInfoResponse(
 		UUID id,
 		String name,
 		String email,
+		String phoneNumber,
 		boolean termsAccepted,
 		List<UserOrganizationResponse> organizations,
 		List<UiRole> uiRoles,

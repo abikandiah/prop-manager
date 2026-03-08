@@ -61,38 +61,41 @@ public class CurrentUserController {
 		User dbUser = userService.getOrCreateUser(issuer, sub, name, email);
 
 		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
-		List<String> authorities = auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
-		List<UserOrganizationResponse> organizations = buildOrgResponses(dbUser.getId(), authorities, access);
-		List<UiRole> uiRoles = userService.deriveRoles(authorities, access);
-
-		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, dbUser.getTermsAccepted(),
-				organizations, uiRoles, access);
+		return toResponse(dbUser, auth, access);
 	}
 
 	@PatchMapping("/me")
-	@Operation(summary = "Update current user", description = "Update current user profile (e.g. accept terms).")
+	@Operation(summary = "Update current user", description = "Update current user profile (name, phone, terms).")
 	public UserInfoResponse patchMe(
 			@AuthenticationPrincipal Jwt jwt,
 			Authentication auth,
 			@Valid @RequestBody PatchMeRequest request) {
-		String issuer = UserService.getIssuerString(jwt);
-		String sub = jwt.getSubject();
-		String name = jwt.getClaimAsString("name");
-		String email = jwt.getClaimAsString("email");
-
-		User dbUser = userService.getOrCreateUser(issuer, sub, name, email);
+		User dbUser = userService.findUserFromJwt(jwt)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
 		if (request.termsAccepted() != null && request.termsAccepted()) {
 			dbUser = userService.updateTermsAccepted(dbUser, true);
 		}
+		if (request.name() != null || request.phoneNumber() != null) {
+			dbUser = userService.updateProfile(dbUser, request.name(), request.phoneNumber());
+		}
 
 		List<AccessEntry> access = SecurityUtils.getAccessFromRequest();
+		return toResponse(dbUser, auth, access);
+	}
+
+	@PostMapping("/logout")
+	@Operation(summary = "Logout user", description = "Returns an optional logout URL for complete session termination (e.g. OIDC redirect).")
+	public ResponseEntity<LogoutResponse> logout() {
+		return ResponseEntity.ok(new LogoutResponse(logoutUrl));
+	}
+
+	private UserInfoResponse toResponse(User dbUser, Authentication auth, List<AccessEntry> access) {
 		List<String> authorities = auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList();
 		List<UserOrganizationResponse> organizations = buildOrgResponses(dbUser.getId(), authorities, access);
 		List<UiRole> uiRoles = userService.deriveRoles(authorities, access);
-
-		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), email, dbUser.getTermsAccepted(),
-				organizations, uiRoles, access);
+		return new UserInfoResponse(dbUser.getId(), dbUser.getName(), dbUser.getEmail(),
+				dbUser.getPhoneNumber(), dbUser.getTermsAccepted(), organizations, uiRoles, access);
 	}
 
 	/** Builds org responses with per-org roles derived from the filtered access list. */
@@ -106,11 +109,5 @@ public class CurrentUserController {
 					return UserOrganizationResponse.from(org, orgRoles);
 				})
 				.toList();
-	}
-
-	@PostMapping("/logout")
-	@Operation(summary = "Logout user", description = "Returns an optional logout URL for complete session termination (e.g. OIDC redirect).")
-	public ResponseEntity<LogoutResponse> logout() {
-		return ResponseEntity.ok(new LogoutResponse(logoutUrl));
 	}
 }

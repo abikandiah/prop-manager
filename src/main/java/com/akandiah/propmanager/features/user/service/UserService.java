@@ -79,10 +79,18 @@ public class UserService {
 		Optional<User> byIdentity = findUserByIdentity(normIssuer, sub);
 		if (byIdentity.isPresent()) {
 			User user = byIdentity.get();
-			if (name != null) {
+			// Only set name from IdP if the user hasn't set their own
+			if ((user.getName() == null || user.getName().isBlank()) && name != null) {
 				user.setName(name);
 			}
-			if (email != null) {
+			// Sync email from IdP; reject if another account already owns the new email
+			if (email != null && !email.equalsIgnoreCase(user.getEmail())) {
+				userRepository.findByEmail(email).ifPresent(conflict -> {
+					if (!conflict.getId().equals(user.getId())) {
+						throw new IllegalStateException(
+								"Email address is already associated with another account");
+					}
+				});
 				user.setEmail(email);
 			}
 			user.setLastLoggedInAt(now);
@@ -98,7 +106,8 @@ public class UserService {
 					.issuer(normIssuer)
 					.sub(sub)
 					.build());
-			if (name != null) {
+			// Only set name from IdP if the user hasn't set their own
+			if ((user.getName() == null || user.getName().isBlank()) && name != null) {
 				user.setName(name);
 			}
 			user.setLastLoggedInAt(now);
@@ -126,6 +135,18 @@ public class UserService {
 	@Transactional
 	public User updateTermsAccepted(User user, boolean termsAccepted) {
 		user.setTermsAccepted(termsAccepted);
+		return userRepository.save(user);
+	}
+
+	/** Updates the user's name and/or phone number. Null values leave the field unchanged. */
+	@Transactional
+	public User updateProfile(User user, String name, String phoneNumber) {
+		if (name != null && !name.isBlank()) {
+			user.setName(name.trim());
+		}
+		if (phoneNumber != null) {
+			user.setPhoneNumber(phoneNumber.isBlank() ? null : phoneNumber.trim());
+		}
 		return userRepository.save(user);
 	}
 
