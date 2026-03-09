@@ -1252,3 +1252,75 @@ databaseChangeLog:
             columns:
               - column:
                   name: policy_id
+
+        # activity_events
+        - createTable:
+            tableName: activity_events
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: org_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subject_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subject_id
+                  type: uuid
+              - column:
+                  name: actor_id
+                  type: uuid
+              - column:
+                  name: metadata
+                  type: jsonb
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: activity_events
+            baseColumnNames: org_id
+            constraintName: fk_activity_events_org
+            referencedTableName: organizations
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: activity_events
+            baseColumnNames: actor_id
+            constraintName: fk_activity_events_actor
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: SET NULL
+        - createIndex:
+            indexName: idx_activity_events_org_created
+            tableName: activity_events
+            columns:
+              - column:
+                  name: org_id
+              - column:
+                  name: created_at
