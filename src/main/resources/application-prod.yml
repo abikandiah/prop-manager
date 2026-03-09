@@ -11,6 +11,13 @@ spring:
       ddl-auto: validate
   liquibase:
     enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Overrides issuer-uri JWKS resolution — fetches keys from Authentik directly
+          # (avoids a round-trip through the Cloudflare Tunnel for key validation).
+          jwk-set-uri: ${JWKS_URI}
 
 app:
   rate-limit:
@@ -18,10 +25,7 @@ app:
   cors:
     enabled: true
     allowed-origins:
-      - http://localhost
-      - http://localhost:3000
-      - http://127.0.0.1
-      - http://127.0.0.1:3000
+      - ${CORS_ALLOWED_ORIGIN:https://localhost}
     allow-credentials: true
     max-age: 3600
   audit:

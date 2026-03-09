@@ -1,82 +1,80 @@
 # Caddy reverse proxy with Authentik forward auth for public-facing production.
-# UI is PUBLIC (Landing Page). API and Swagger are PROTECTED.
+# The UI is served via Cloudflare Pages and will connect here.
+# CORS is handled entirely by the Spring Boot app — do not add CORS headers here.
 
 {$DOMAIN:localhost} {
-	# 1. PUBLIC: Authentik requirements (must be public for login to work)
-	handle /outpost.goauthentik.io/* {
-		reverse_proxy authentik:9000
-	}
-	handle /if/* {
-		reverse_proxy authentik:9000
-	}
-	handle /application/* {
-		reverse_proxy authentik:9000
-	}
-	handle /api/v3/* {
-		reverse_proxy authentik:9000
-	}
+        # 1. PUBLIC: Authentik requirements (must be public for login to work)
+        handle /outpost.goauthentik.io/* {
+                reverse_proxy authentik:9000
+        }
+        handle /if/* {
+                reverse_proxy authentik:9000
+        }
+        handle /application/* {
+                reverse_proxy authentik:9000
+        }
+        handle /api/v3/* {
+                reverse_proxy authentik:9000
+        }
 
-	# 2. PROTECTED: API and Internal Tools
-	# Handle CORS preflight (OPTIONS) - let it pass to the app
-	@preflight {
-		method OPTIONS
-		path /api/*
-		path /swagger-ui*
-		path /actuator/*
-		path /v3/api-docs*
-	}
-	handle @preflight {
-		reverse_proxy app:8080
-	}
+        # 2. PROTECTED: API and Internal Tools
+        # Handle CORS preflight (OPTIONS) - let it pass to the app
+        @preflight {
+                method OPTIONS
+                path /api/*
+                path /swagger-ui*
+                path /actuator/*
+                path /v3/api-docs*
+        }
+        handle @preflight {
+                reverse_proxy app:8080
+        }
 
-	# Use a matcher to group all paths that require authentication
-	@protected {
-		path /api/*
-		path /swagger-ui*
-		path /actuator/metrics*
-		path /actuator/prometheus*
-		path /v3/api-docs*
-	}
+        # Use a matcher to group all paths that require authentication
+        @protected {
+                path /api/*
+                path /swagger-ui*
+                path /actuator/metrics*
+                path /actuator/prometheus*
+                path /v3/api-docs*
+        }
 
-	# 2.5 PUBLIC: Health check
-	handle /actuator/health* {
-		reverse_proxy app:8080
-	}
+        # 2.5 PUBLIC: Health check
+        handle /actuator/health* {
+                reverse_proxy app:8080
+        }
 
-	handle @protected {
-		# Forward Auth to Authentik
-		forward_auth authentik:9000 {
-			uri /outpost.goauthentik.io/auth/caddy
-			copy_headers X-Authentik-Username X-Authentik-Groups X-Authentik-Email X-Authentik-Name X-Authentik-Uid X-Authentik-Jwt
-			trusted_proxies private_ranges
-		}
+        handle @protected {
+                # Forward Auth to Authentik
+                forward_auth authentik:9000 {
+                        uri /outpost.goauthentik.io/auth/caddy
+                        copy_headers X-Authentik-Username X-Authentik-Groups X-Authentik-Email X-Authentik-Name X-Authentik-Uid X-Authentik-Jwt
+                        trusted_proxies private_ranges
+                }
 
-		# Inside here, the user IS authenticated.
-		handle /api/* {
-			reverse_proxy app:8080 {
-				header_up Authorization "Bearer {header.X-Authentik-Jwt}"
-			}
-		}
+                # Inside here, the user IS authenticated.
+                handle /api/* {
+                        reverse_proxy app:8080 {
+                                header_up Authorization "Bearer {header.X-Authentik-Jwt}"
+                        }
+                }
 
-		# Default handler for @protected (Swagger, Actuator, etc.)
-		handle {
-			reverse_proxy app:8080
-		}
-	}
+                # Default handler for @protected (Swagger, Actuator, etc.)
+                handle {
+                        reverse_proxy app:8080
+                }
+        }
 
-	# 3. PUBLIC: Serve the UI static build files (SPA)
-	# This handles the landing page and all other frontend routes
-	handle {
-		root * /usr/share/caddy
-		file_server
-		try_files {path} /index.html
-	}
+        # 3. Handle Root (Optionally redirect or show a simple health check)
+        handle / {
+                respond "PropMange API Gateway is running." 200
+        }
 
-	# 4. SECURITY HEADERS
-	header {
-		X-Content-Type-Options nosniff
-		X-Frame-Options DENY
-		Referrer-Policy no-referrer-when-downgrade
-		-Server
-	}
+        # 4. SECURITY HEADERS
+        header {
+                X-Content-Type-Options nosniff
+                X-Frame-Options DENY
+                Referrer-Policy no-referrer-when-downgrade
+                -Server
+        }
 }
