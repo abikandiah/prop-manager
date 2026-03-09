@@ -19,6 +19,7 @@ spring:
     password: ${MAIL_PASSWORD:}
     properties:
       mail:
+        from: ${MAIL_FROM:noreply@propmanager.local}
         smtp:
           auth: false
           starttls:
@@ -26,12 +27,6 @@ spring:
             required: false
           ssl:
             enable: false
-    from: ${MAIL_FROM:noreply@propmanager.local}
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: null
 
 app:
   base-url: ${APP_BASE_URL:http://localhost:3000}
