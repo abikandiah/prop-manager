@@ -31,6 +31,8 @@ spring:
           # Overrides issuer-uri JWKS resolution — fetches keys from Authentik directly
           # (avoids a round-trip through the Cloudflare Tunnel for key validation).
           jwk-set-uri: ${JWKS_URI}
+          # Used for 'iss' claim validation (must match the external domain).
+          issuer-uri: ${AUTH_ISSUER_URI}
 
 app:
   rate-limit:
