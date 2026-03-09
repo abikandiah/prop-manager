@@ -20,6 +20,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -60,6 +61,12 @@ public class Lease extends BaseEntity {
 	@Column(nullable = false, length = 32)
 	@Enumerated(EnumType.STRING)
 	private LeaseStatus status;
+
+	/** Incremented only when content is submitted for tenant review — used to track signature validity. */
+	@Setter
+	@Builder.Default
+	@Column(name = "content_version", nullable = false)
+	private Integer contentVersion = 0;
 
 	@Setter
 	@Column(name = "start_date", nullable = false)

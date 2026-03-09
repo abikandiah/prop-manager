@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
+import com.akandiah.propmanager.common.notification.NotificationReferenceType;
 import com.akandiah.propmanager.features.auth.domain.PermissionsChangedEvent;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.Invite;
@@ -29,22 +30,21 @@ import com.akandiah.propmanager.features.invite.service.InviteService;
 import com.akandiah.propmanager.features.lease.api.dto.InviteLeaseTenantRequest;
 import com.akandiah.propmanager.features.lease.api.dto.LeaseTenantResponse;
 import com.akandiah.propmanager.features.lease.domain.Lease;
-import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
-import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
-import com.akandiah.propmanager.features.lease.domain.LeaseTenantRole;
-import com.akandiah.propmanager.features.lease.domain.LeaseTenantStatus;
 import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEvent;
 import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEventType;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
-import com.akandiah.propmanager.features.prop.domain.Address;
-import com.akandiah.propmanager.features.prop.domain.Prop;
-import com.akandiah.propmanager.features.unit.domain.Unit;
-import com.akandiah.propmanager.common.notification.NotificationReferenceType;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantRole;
+import com.akandiah.propmanager.features.lease.domain.LeaseTenantStatus;
 import com.akandiah.propmanager.features.notification.domain.NotificationDelivery;
 import com.akandiah.propmanager.features.notification.domain.NotificationDeliveryRepository;
+import com.akandiah.propmanager.features.prop.domain.Address;
+import com.akandiah.propmanager.features.prop.domain.Prop;
 import com.akandiah.propmanager.features.tenant.domain.Tenant;
 import com.akandiah.propmanager.features.tenant.domain.TenantRepository;
+import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.security.JwtUserResolver;
 
@@ -176,7 +176,8 @@ public class LeaseTenantService {
 			inviteService.revokeInvite(leaseTenant.getInvite().getId());
 		}
 
-		// Capture userId before deleting (tenant may be null if invite not yet accepted)
+		// Capture userId before deleting (tenant may be null if invite not yet
+		// accepted)
 		UUID tenantUserId = leaseTenant.getTenant() != null
 				? leaseTenant.getTenant().getUser().getId()
 				: null;
@@ -224,13 +225,14 @@ public class LeaseTenantService {
 			throw new IllegalStateException("You must accept the lease invite before signing");
 		}
 
-		// Already signed the current version — nothing to do
+		// Already signed the current content version — nothing to do
 		if (leaseTenant.getStatus() == LeaseTenantStatus.SIGNED
-				&& lease.getVersion().equals(leaseTenant.getAcceptedLeaseVersion())) {
+				&& lease.getContentVersion().equals(leaseTenant.getAcceptedLeaseVersion())) {
 			throw new IllegalStateException("You have already signed the current version of this lease");
 		}
 
-		// At this point: REGISTERED (first-time sign) or SIGNED with stale version (re-sign after revert)
+		// At this point: REGISTERED (first-time sign) or SIGNED with stale version
+		// (re-sign after revert)
 
 		// Verify the caller is the tenant linked to this slot
 		User caller = jwtUserResolver.resolve();
@@ -241,19 +243,19 @@ public class LeaseTenantService {
 
 		leaseTenant.setStatus(LeaseTenantStatus.SIGNED);
 		leaseTenant.setSignedDate(LocalDate.now());
-		leaseTenant.setAcceptedLeaseVersion(lease.getVersion());
+		leaseTenant.setAcceptedLeaseVersion(lease.getContentVersion());
 		LeaseTenant saved = leaseTenantRepository.save(leaseTenant);
 
-		// Count tenants that still need to sign for the current lease version.
-		// Status-only check is insufficient: after a revert, all slots are SIGNED but stale.
-		long remaining = leaseTenantRepository.countNotSignedForVersion(leaseId, lease.getVersion());
+		// Count tenants that still need to sign for the current content version.
+		// Status-only check is insufficient: after a revert+resubmit, all slots are
+		// SIGNED but tied to a stale contentVersion.
+		eventPublisher.publishEvent(
+				new LeaseLifecycleEvent(leaseId, LeaseLifecycleEventType.TENANT_SIGNED, caller.getId()));
 
+		long remaining = leaseTenantRepository.countNotSignedForVersion(leaseId, lease.getContentVersion());
 		if (remaining == 0) {
 			leaseService.advanceToSigned(leaseId);
 			eventPublisher.publishEvent(new LeaseLifecycleEvent(leaseId, LeaseLifecycleEventType.TENANT_ALL_SIGNED));
-		} else {
-			eventPublisher.publishEvent(
-					new LeaseLifecycleEvent(leaseId, LeaseLifecycleEventType.TENANT_SIGNED, caller.getId()));
 		}
 
 		log.info("LeaseTenant {} signed lease {} (remaining unsigned: {})", leaseTenantId, leaseId, remaining);

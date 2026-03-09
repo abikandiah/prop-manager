@@ -208,6 +208,7 @@ public class LeaseService {
 		}
 
 		stateMachine.submitForReview(lease);
+		lease.setContentVersion(lease.getContentVersion() + 1);
 		if (lease.getLeaseTemplate() != null) {
 			LeaseTemplate t = lease.getLeaseTemplate();
 			lease.setExecutedContentMarkdown(renderer.stampMarkdownFromLease(
@@ -238,7 +239,7 @@ public class LeaseService {
 				throw new IllegalStateException(
 						"Cannot activate: " + lt.getInvite().getEmail() + " has not signed.");
 			}
-			if (!lease.getVersion().equals(lt.getAcceptedLeaseVersion())) {
+			if (!lease.getContentVersion().equals(lt.getAcceptedLeaseVersion())) {
 				throw new IllegalStateException(
 						"Cannot activate: " + lt.getInvite().getEmail()
 						+ " signed a previous version. They must re-sign.");

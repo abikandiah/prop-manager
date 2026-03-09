@@ -631,6 +631,12 @@ databaseChangeLog:
                   name: template_parameters
                   type: jsonb
               - column:
+                  name: content_version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
                   name: version
                   type: int
                   defaultValueNumeric: 0

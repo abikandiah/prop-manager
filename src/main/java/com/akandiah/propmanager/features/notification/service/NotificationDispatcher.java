@@ -11,19 +11,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import com.akandiah.propmanager.config.AppProperties;
 import com.akandiah.propmanager.common.notification.NotificationChannel;
 import com.akandiah.propmanager.common.notification.NotificationReferenceType;
 import com.akandiah.propmanager.common.notification.NotificationType;
+import com.akandiah.propmanager.config.AppProperties;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteEmailRequestedEvent;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEvent;
+import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenant;
 import com.akandiah.propmanager.features.lease.domain.LeaseTenantRepository;
-import com.akandiah.propmanager.features.lease.domain.LeaseTenantStatus;
-import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.membership.domain.MembershipRepository;
 import com.akandiah.propmanager.features.user.domain.User;
 import com.akandiah.propmanager.features.user.domain.UserRegisteredEvent;
@@ -34,15 +33,20 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Central dispatcher that listens to domain events and delegates delivery
- * to {@link NotificationDeliveryService} and {@link NotificationDeliverySender}.
+ * to {@link NotificationDeliveryService} and
+ * {@link NotificationDeliverySender}.
  *
- * <p>Outbox pattern: each handler runs synchronously on the committing thread
+ * <p>
+ * Outbox pattern: each handler runs synchronously on the committing thread
  * (AFTER_COMMIT, no @Async). It first commits a PENDING row via
- * {@code deliveryService.createPending()} (REQUIRES_NEW), then enqueues the async
- * send via {@code notificationSender.sendAsync()}. A JVM crash between commit and
+ * {@code deliveryService.createPending()} (REQUIRES_NEW), then enqueues the
+ * async
+ * send via {@code notificationSender.sendAsync()}. A JVM crash between commit
+ * and
  * enqueue leaves a recoverable PENDING row that the scheduler will pick up.
  *
- * <p>No {@code @Transactional} here — each call to the delivery service opens its
+ * <p>
+ * No {@code @Transactional} here — each call to the delivery service opens its
  * own {@code REQUIRES_NEW} transaction, isolating failures per recipient.
  */
 @Component
@@ -119,8 +123,9 @@ public class NotificationDispatcher {
 					userRepository.findById(event.subjectId())
 							.ifPresent(u -> signCtx.put("signingTenantName", u.getName()));
 				}
-				// Use version-aware count so stale-SIGNED slots after a revert are counted as pending
-			long remaining = leaseTenantRepository.countNotSignedForVersion(
+				// Use version-aware count so stale-SIGNED slots after a revert are counted as
+				// pending
+				long remaining = leaseTenantRepository.countNotSignedForVersion(
 						event.leaseId(), lease.getVersion());
 				signCtx.put("remainingSignatures", remaining);
 				notifyManager(lease, NotificationType.LEASE_TENANT_SIGNED, signCtx);
@@ -180,7 +185,10 @@ public class NotificationDispatcher {
 
 	// ─────────────────────────── Helpers ───────────────────────────
 
-	/** Builds the shared context map included in all lease lifecycle notification templates. */
+	/**
+	 * Builds the shared context map included in all lease lifecycle notification
+	 * templates.
+	 */
 	private Map<String, Object> baseContext(Lease lease) {
 		Map<String, Object> ctx = new HashMap<>();
 		ctx.put("propertyName", lease.getProperty().getLegalName());
@@ -191,7 +199,10 @@ public class NotificationDispatcher {
 		return ctx;
 	}
 
-	/** Sends a notification to all accepted (REGISTERED or SIGNED) tenants on this lease. */
+	/**
+	 * Sends a notification to all accepted (REGISTERED or SIGNED) tenants on this
+	 * lease.
+	 */
 	private void notifyTenants(Lease lease, NotificationType type, Map<String, Object> ctx) {
 		List<LeaseTenant> tenants = leaseTenantRepository.findByLease_IdWithTenantUser(lease.getId());
 		if (tenants.isEmpty()) {
@@ -214,12 +225,16 @@ public class NotificationDispatcher {
 					notificationSender.sendAsync(deliveryId);
 				}
 			} catch (Exception e) {
-				log.error("Failed to dispatch tenant notification: leaseId={}, userId={}", lease.getId(), user.getId(), e);
+				log.error("Failed to dispatch tenant notification: leaseId={}, userId={}", lease.getId(), user.getId(),
+						e);
 			}
 		}
 	}
 
-	/** Sends a notification to all org members (managers/admins) of the lease's property. */
+	/**
+	 * Sends a notification to all org members (managers/admins) of the lease's
+	 * property.
+	 */
 	private void notifyManager(Lease lease, NotificationType type, Map<String, Object> ctx) {
 		UUID orgId = lease.getProperty().getOrganization().getId();
 		List<User> managers = membershipRepository.findUsersByOrganizationId(orgId);
@@ -243,7 +258,8 @@ public class NotificationDispatcher {
 					notificationSender.sendAsync(deliveryId);
 				}
 			} catch (Exception e) {
-				log.error("Failed to dispatch manager notification: leaseId={}, userId={}", lease.getId(), manager.getId(), e);
+				log.error("Failed to dispatch manager notification: leaseId={}, userId={}", lease.getId(),
+						manager.getId(), e);
 			}
 		}
 	}
