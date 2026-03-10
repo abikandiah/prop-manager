@@ -39,8 +39,7 @@ app:
     enabled: true
   cors:
     enabled: true
-    allowed-origins:
-      - ${CORS_ALLOWED_ORIGIN:https://localhost}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://localhost,http://localhost:3000}
     allow-credentials: true
     max-age: 3600
   audit:

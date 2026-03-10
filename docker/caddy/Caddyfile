@@ -1,19 +1,46 @@
 # CORS is handled entirely by the Spring Boot app — do not add CORS headers here.
 
-# --- AUTHENTIK IDP ---
-# http:// prefix binds to :80 — TLS is terminated by Cloudflare Tunnel.
-http://{$AUTH_DOMAIN} {
-	reverse_proxy authentik:9000
-}
-
-# --- API GATEWAY ---
-http://{$API_DOMAIN} {
-	# 1. PUBLIC: Authentik outpost endpoints (forward auth callback, login redirect)
+# --- LOCAL ACCESS (bypasses Cloudflare Tunnel; no forward auth required) ---
+# API: http://localhost/api/...   Authentik admin: http://localhost:9000/if/admin/
+http://localhost {
 	handle /outpost.goauthentik.io/* {
 		reverse_proxy authentik:9000
 	}
 
-	# 2. CORS preflight — bypass auth, let Spring Boot handle OPTIONS
+	handle /api/* {
+		reverse_proxy app:8080
+	}
+
+	handle /swagger-ui* {
+		reverse_proxy app:8080
+	}
+
+	handle /v3/api-docs* {
+		reverse_proxy app:8080
+	}
+
+	handle /actuator/* {
+		reverse_proxy app:8080
+	}
+
+	handle / {
+		respond "PropMange API Gateway is running (local)." 200
+	}
+}
+
+
+# --- AUTHENTIK IDP ---
+# http:// prefix binds to :80 — TLS is terminated by Cloudflare Tunnel.
+http://{$AUTH_DOMAIN} {
+	reverse_proxy authentik:9000 {
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-Host {host}
+	}
+}
+
+# --- API GATEWAY ---
+http://{$API_DOMAIN} {
+	# 1. CORS preflight — bypass auth, let Spring Boot handle OPTIONS
 	@preflight {
 		method OPTIONS
 		path /api/*
@@ -30,30 +57,21 @@ http://{$API_DOMAIN} {
 		reverse_proxy app:8080
 	}
 
-	# 4. PROTECTED: API and internal tools
-	@protected {
-		path /api/*
-		path /swagger-ui*
-		path /actuator/metrics*
-		path /actuator/prometheus*
-		path /v3/api-docs*
+	# 4. API and internal tools — auth enforced by Spring Boot JWT validation
+	handle /api/* {
+		reverse_proxy app:8080
 	}
-	handle @protected {
-		forward_auth authentik:9000 {
-			uri /outpost.goauthentik.io/auth/caddy
-			copy_headers X-Authentik-Username X-Authentik-Groups X-Authentik-Email X-Authentik-Name X-Authentik-Uid X-Authentik-Jwt
-			trusted_proxies private_ranges
-		}
 
-		handle /api/* {
-			reverse_proxy app:8080 {
-				header_up Authorization "Bearer {header.X-Authentik-Jwt}"
-			}
-		}
+	handle /swagger-ui* {
+		reverse_proxy app:8080
+	}
 
-		handle {
-			reverse_proxy app:8080
-		}
+	handle /actuator/* {
+		reverse_proxy app:8080
+	}
+
+	handle /v3/api-docs* {
+		reverse_proxy app:8080
 	}
 
 	# 5. Root

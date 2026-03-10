@@ -85,7 +85,11 @@ In Authentik Admin:
 
 ## Networking & Security
 
-- **No open ports on host**: Only `cloudflared` connects to Caddy via the `public` Docker network. Ports 80/443 are not bound to the host.
+- **Local access (host ports)**:
+  - `localhost:80` — Caddy gateway (API at `http://localhost/api/...`, no forward auth required locally)
+  - `localhost:9000` — Authentik admin UI (`http://localhost:9000/if/admin/`)
+  - `localhost:5432` — PostgreSQL (for DB tools; user: `propmanager`, db: `propmanager`)
+- **External access**: Only `cloudflared` connects to Caddy via the `public` Docker network.
 - **CORS**: Handled entirely by the Spring Boot app (`CorsConfig`). Do not add CORS headers in Caddy.
 - **JWT validation**: Spring Boot validates `Authorization: Bearer` tokens against Authentik's JWKS. Caddy's forward auth adds a gateway-level pre-check (defence in depth).
 - **AUTHENTIK_HOST**: Derived from `AUTH_DOMAIN` so JWTs contain the correct external issuer URL.

@@ -49,6 +49,8 @@ services:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.4.4}
     container_name: authentik-server
     command: server
+    ports:
+      - "9000:9000"
     environment:
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?set AUTHENTIK_SECRET_KEY in .env}
       AUTHENTIK_REDIS__HOST: redis
@@ -58,10 +60,10 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
       # Must be set so JWT 'iss' claims use the external domain, not the internal container hostname.
       AUTHENTIK_HOST: https://${AUTH_DOMAIN}
+      AUTHENTIK_CSRF_TRUSTED_ORIGINS: https://${AUTH_DOMAIN}
     volumes:
       - authentik_media:/media
       - authentik_templates:/templates
-    env_file: .env
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -81,11 +83,11 @@ services:
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
       AUTHENTIK_HOST: https://${AUTH_DOMAIN}
+      AUTHENTIK_CSRF_TRUSTED_ORIGINS: https://${AUTH_DOMAIN}
     volumes:
       - authentik_media:/media
       - authentik_certs:/certs
       - authentik_templates:/templates
-    env_file: .env
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -97,6 +99,8 @@ services:
   caddy:
     image: caddy:2-alpine
     container_name: prop-manager-caddy
+    ports:
+      - "80:80"
     environment:
       API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env}
       AUTH_DOMAIN: ${AUTH_DOMAIN:?set AUTH_DOMAIN in .env}
@@ -124,12 +128,17 @@ services:
       POSTGRES_USER: propmanager
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # Derived from AUTH_DOMAIN — must match the 'iss' claim in JWTs issued by Authentik
-      AUTH_ISSUER_URI: https://${AUTH_DOMAIN}/application/o/prop-manager/
+      AUTH_ISSUER_URI: https://${AUTH_DOMAIN}/application/o/prop-mange/
       # Internal JWKS URL — Spring Boot fetches public keys directly from Authentik container (avoids round-trip through tunnel)
-      JWKS_URI: http://authentik:9000/application/o/prop-manager/jwks/
-      CORS_ALLOWED_ORIGIN: https://${UI_DOMAIN}
+      JWKS_URI: http://authentik:9000/application/o/prop-mange/jwks/
+      CORS_ALLOWED_ORIGINS: https://${UI_DOMAIN},http://localhost,http://localhost:3000,http://localhost:3001
       APP_BASE_URL: https://${API_DOMAIN}
-      AUTH_LOGOUT_URL: https://${AUTH_DOMAIN}/application/o/prop-manager/end-session/
+      AUTH_LOGOUT_URL: https://${AUTH_DOMAIN}/application/o/prop-mange/end-session/
+      MAIL_HOST: ${MAIL_HOST:-smtp.resend.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-resend}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:?set MAIL_PASSWORD in .env}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@propmanager.com}
     healthcheck:
       test:
         [
