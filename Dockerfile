@@ -6,6 +6,7 @@ WORKDIR /app
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
+COPY lombok.config .
 RUN chmod +x mvnw
 
 # Download dependencies (cached unless pom changes)
@@ -27,4 +28,8 @@ COPY --from=build /app/target/prop-manager-*.jar app.jar
 ENV SPRING_PROFILES_ACTIVE=prod
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-XX:+ExitOnOutOfMemoryError", \
+  "-jar", "app.jar"]

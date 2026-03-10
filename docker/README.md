@@ -12,16 +12,22 @@ Architecture:
 ### 1. Create `.env` from `.env.example`
 
 Fill in all required values:
-- `DOMAIN` — your API domain (e.g. `api.propmanager.com`)
-- `CORS_ALLOWED_ORIGIN` — your Cloudflare Pages URL (e.g. `https://propmanager.pages.dev`)
+- `UI_DOMAIN` — your Cloudflare Pages hostname (e.g. `propmanager.pages.dev`)
+- `API_DOMAIN` — your API subdomain (e.g. `api.propmanager.com`)
+- `AUTH_DOMAIN` — your Authentik subdomain (e.g. `auth.propmanager.com`)
 - `TUNNEL_TOKEN` — from Cloudflare Zero Trust > Networks > Tunnels
 - `POSTGRES_PASSWORD` — generate: `openssl rand -base64 36 | tr -d '\n'`
 - `AUTHENTIK_SECRET_KEY` — generate: `openssl rand -base64 60 | tr -d '\n'`
-- `AUTH_ISSUER_URI` — set this **after** Authentik initial setup (see below)
+
+`CORS_ALLOWED_ORIGIN`, `AUTH_ISSUER_URI`, `AUTH_LOGOUT_URL`, and `AUTHENTIK_HOST` are derived automatically in `docker-compose.yml` from these three domain variables — do not set them in `.env`.
 
 ### 2. Configure Cloudflare Tunnel
 
-In the Cloudflare Zero Trust dashboard, configure the tunnel to route your API domain to `http://caddy:80`. The `cloudflared` container connects to Caddy via the `public` Docker network.
+In the Cloudflare Zero Trust dashboard, add **two Public Hostnames** pointing to `http://caddy:80`:
+1. `API_DOMAIN` (e.g. `api.propmanager.com`) → `http://caddy:80`
+2. `AUTH_DOMAIN` (e.g. `auth.propmanager.com`) → `http://caddy:80`
+
+The `cloudflared` container connects to Caddy via the `public` Docker network.
 
 ### 3. Start the stack
 
@@ -35,13 +41,13 @@ Wait for Authentik to initialize (check with `docker compose logs -f authentik`)
 
 Access the Authentik setup wizard:
 ```
-https://<DOMAIN>/if/flow/initial-setup/
+https://<AUTH_DOMAIN>/if/flow/initial-setup/
 ```
 Set the admin password.
 
 ### 5. Create an OAuth2 Provider and Application
 
-In **Authentik Admin UI** (https://`<DOMAIN>`/if/admin/):
+In **Authentik Admin UI** (https://`<AUTH_DOMAIN>`/if/admin/):
 
 1. Go to **Applications > Providers > Create** → choose **OAuth2/OpenID Provider**
    - Name: `prop-manager`
@@ -59,14 +65,9 @@ In **Authentik Admin UI** (https://`<DOMAIN>`/if/admin/):
    - Provider: select the provider you just created
    - Click **Save**
 
-3. Note the **Issuer URL** from the provider settings (e.g. `https://api.propmanager.com/application/o/prop-manager/`).
+3. Note the **Issuer URL** from the provider settings — it should be `https://<AUTH_DOMAIN>/application/o/prop-manager/`, which is automatically derived in `docker-compose.yml` from `AUTH_DOMAIN`.
 
-### 6. Set `AUTH_ISSUER_URI` and restart
-
-Update `.env`:
-```env
-AUTH_ISSUER_URI=https://api.propmanager.com/application/o/prop-manager/
-```
+### 6. Restart the app
 
 The `JWKS_URI` in `docker-compose.yml` is hardcoded to the internal Authentik URL (`http://authentik:9000/...`) — Spring Boot uses this path for key fetching to avoid a round-trip through the tunnel.
 
@@ -87,7 +88,7 @@ In Authentik Admin:
 - **No open ports on host**: Only `cloudflared` connects to Caddy via the `public` Docker network. Ports 80/443 are not bound to the host.
 - **CORS**: Handled entirely by the Spring Boot app (`CorsConfig`). Do not add CORS headers in Caddy.
 - **JWT validation**: Spring Boot validates `Authorization: Bearer` tokens against Authentik's JWKS. Caddy's forward auth adds a gateway-level pre-check (defence in depth).
-- **AUTHENTIK_HOST**: Set to `https://${DOMAIN}` so JWTs contain the correct external issuer URL.
+- **AUTHENTIK_HOST**: Derived from `AUTH_DOMAIN` so JWTs contain the correct external issuer URL.
 
 ## Authentik: Local Accounts vs Google OIDC
 

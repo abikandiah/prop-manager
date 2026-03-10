@@ -15,7 +15,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-db:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres && pg_isready -U propmanager -d propmanager && pg_isready -U authentik -d authentik"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U postgres -d postgres && pg_isready -U propmanager -d propmanager && pg_isready -U authentik -d authentik",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -53,7 +57,7 @@ services:
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
       # Must be set so JWT 'iss' claims use the external domain, not the internal container hostname.
-      AUTHENTIK_HOST: https://${DOMAIN}
+      AUTHENTIK_HOST: https://${AUTH_DOMAIN}
     volumes:
       - authentik_media:/media
       - authentik_templates:/templates
@@ -76,7 +80,7 @@ services:
       AUTHENTIK_POSTGRESQL__USER: authentik
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
-      AUTHENTIK_HOST: https://${DOMAIN}
+      AUTHENTIK_HOST: https://${AUTH_DOMAIN}
     volumes:
       - authentik_media:/media
       - authentik_certs:/certs
@@ -94,12 +98,8 @@ services:
     image: caddy:2-alpine
     container_name: prop-manager-caddy
     environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
-    # Ports are NOT exposed to the host — traffic enters exclusively via Cloudflare Tunnel.
-    # Uncomment temporarily for local debugging only.
-    # ports:
-    #   - "80:80"
-    #   - "443:443"
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env}
+      AUTH_DOMAIN: ${AUTH_DOMAIN:?set AUTH_DOMAIN in .env}
     volumes:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -123,15 +123,19 @@ services:
       POSTGRES_DB: propmanager
       POSTGRES_USER: propmanager
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      # External Authentik issuer URL — must match the 'iss' claim in JWTs (set AUTHENTIK_HOST=https://${DOMAIN})
-      AUTH_ISSUER_URI: ${AUTH_ISSUER_URI:?set AUTH_ISSUER_URI in .env}
+      # Derived from AUTH_DOMAIN — must match the 'iss' claim in JWTs issued by Authentik
+      AUTH_ISSUER_URI: https://${AUTH_DOMAIN}/application/o/prop-manager/
       # Internal JWKS URL — Spring Boot fetches public keys directly from Authentik container (avoids round-trip through tunnel)
       JWKS_URI: http://authentik:9000/application/o/prop-manager/jwks/
-      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN}
-      APP_BASE_URL: https://${DOMAIN}
-      AUTH_LOGOUT_URL: https://${DOMAIN}/application/o/prop-manager/end-session/
+      CORS_ALLOWED_ORIGIN: https://${UI_DOMAIN}
+      APP_BASE_URL: https://${API_DOMAIN}
+      AUTH_LOGOUT_URL: https://${AUTH_DOMAIN}/application/o/prop-manager/end-session/
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/liveness || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8080/actuator/health/liveness || exit 1",
+        ]
       interval: 15s
       timeout: 5s
       retries: 5
