@@ -13,13 +13,14 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "units")
+@Table(name = "units", uniqueConstraints = @UniqueConstraint(name = "uk_units_prop_unit_number", columnNames = {"property_id", "unit_number"}))
 @Getter
 @Setter
 @SuperBuilder

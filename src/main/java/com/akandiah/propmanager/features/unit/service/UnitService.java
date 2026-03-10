@@ -9,6 +9,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.common.exception.DuplicateNameException;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.AccessListUtil.ScopedAccessFilter;
 import com.akandiah.propmanager.common.permission.ResourceType;
@@ -69,6 +70,9 @@ public class UnitService {
 	public UnitResponse create(CreateUnitRequest request) {
 		Prop prop = propRepository.findById(request.propertyId())
 				.orElseThrow(() -> new ResourceNotFoundException("Prop", request.propertyId()));
+		if (unitRepository.existsByProp_IdAndUnitNumberIgnoreCase(request.propertyId(), request.unitNumber())) {
+			throw new DuplicateNameException("unitNumber", request.unitNumber());
+		}
 		Unit unit = Unit.builder()
 				.id(request.id())
 				.prop(prop)
@@ -100,6 +104,11 @@ public class UnitService {
 			unit.setProp(prop);
 		}
 		if (request.unitNumber() != null) {
+			UUID effectivePropId = request.propertyId() != null ? request.propertyId() : unit.getProp().getId();
+			if (unitRepository.existsByProp_IdAndUnitNumberIgnoreCaseAndIdNot(effectivePropId, request.unitNumber(),
+					id)) {
+				throw new DuplicateNameException("unitNumber", request.unitNumber());
+			}
 			unit.setUnitNumber(request.unitNumber());
 		}
 		if (request.status() != null) {

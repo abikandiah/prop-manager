@@ -10,13 +10,14 @@ import com.akandiah.propmanager.common.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@Table(name = "organizations")
+@Table(name = "organizations", uniqueConstraints = @UniqueConstraint(name = "uk_organizations_name", columnNames = "name"))
 @Getter
 @Setter
 @SuperBuilder

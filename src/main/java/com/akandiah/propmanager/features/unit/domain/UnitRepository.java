@@ -13,6 +13,11 @@ public interface UnitRepository extends JpaRepository<Unit, UUID> {
 
 	List<Unit> findByProp_IdOrderByUnitNumberAsc(UUID propId);
 
+	boolean existsByProp_IdAndUnitNumberIgnoreCase(UUID propId, String unitNumber);
+
+	boolean existsByProp_IdAndUnitNumberIgnoreCaseAndIdNot(UUID propId, String unitNumber, UUID excludeId);
+
+
 	long countByProp_Id(UUID propId);
 
 	boolean existsByIdAndProp_Organization_Id(UUID id, UUID organizationId);

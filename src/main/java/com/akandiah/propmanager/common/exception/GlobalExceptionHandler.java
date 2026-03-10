@@ -131,6 +131,13 @@ public class GlobalExceptionHandler {
 				ex.getMessage(), request.getRequestURI(), null, null);
 	}
 
+	/** 409: Duplicate name conflict */
+	@ExceptionHandler(DuplicateNameException.class)
+	public ResponseEntity<ProblemDetail> handleDuplicateName(DuplicateNameException ex, HttpServletRequest request) {
+		List<FieldErrorDto> errors = List.of(new FieldErrorDto(ex.getField(), ex.getMessage()));
+		return problem(HttpStatus.CONFLICT, "Conflict", ex.getMessage(), request.getRequestURI(), errors, null);
+	}
+
 	/** 409: Optimistic Lock Conflict */
 	@ExceptionHandler(OptimisticLockException.class)
 	public ResponseEntity<ProblemDetail> handleOptimisticLock(OptimisticLockException ex, HttpServletRequest request) {

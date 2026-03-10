@@ -22,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.akandiah.propmanager.common.exception.DuplicateNameException;
 import com.akandiah.propmanager.common.exception.HasChildrenException;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilter;
@@ -215,6 +216,45 @@ class PropServiceTest {
 		assertThat(capturedAddress.getAddressLine1()).isEqualTo("456 Oak Avenue");
 		assertThat(capturedAddress.getCity()).isEqualTo("Vancouver");
 		assertThat(capturedAddress.getPostalCode()).isEqualTo("V6B 1A1");
+	}
+
+	@Test
+	void shouldThrowDuplicateNameWhenCreatingPropWithExistingName() {
+		UUID orgId = UUID.randomUUID();
+		Organization org = Organization.builder().id(orgId).build();
+		CreatePropRequest request = prop().organization(org).buildCreateRequest();
+
+		when(organizationRepository.findById(orgId)).thenReturn(Optional.of(org));
+		when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		when(propRepository.existsByOrganization_IdAndLegalNameIgnoreCase(orgId, request.legalName()))
+				.thenReturn(true);
+
+		assertThatThrownBy(() -> propService.create(request, orgId))
+				.isInstanceOf(DuplicateNameException.class)
+				.hasMessageContaining(request.legalName());
+
+		verify(propRepository, never()).save(any(Prop.class));
+	}
+
+	@Test
+	void shouldThrowDuplicateNameWhenUpdatingPropToExistingName() {
+		UUID propId = UUID.randomUUID();
+		UUID orgId = UUID.randomUUID();
+		Organization org = Organization.builder().id(orgId).build();
+		Prop existingProp = prop().id(propId).legalName("Old Name").organization(org).version(0).build();
+
+		UpdatePropRequest request = new UpdatePropRequest(
+				"Taken Name", null, null, null, null, null, null, null, null, 0);
+
+		when(propRepository.findById(propId)).thenReturn(Optional.of(existingProp));
+		when(propRepository.existsByOrganization_IdAndLegalNameIgnoreCaseAndIdNot(orgId, "Taken Name", propId))
+				.thenReturn(true);
+
+		assertThatThrownBy(() -> propService.update(propId, request))
+				.isInstanceOf(DuplicateNameException.class)
+				.hasMessageContaining("Taken Name");
+
+		verify(propRepository, never()).save(any(Prop.class));
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════

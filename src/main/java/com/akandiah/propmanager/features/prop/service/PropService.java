@@ -9,6 +9,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.common.exception.DuplicateNameException;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.AccessListUtil.PropAccessFilter;
 import com.akandiah.propmanager.common.permission.ResourceType;
@@ -66,6 +67,9 @@ public class PropService {
 		address = addressRepository.save(address);
 		Organization organization = organizationRepository.findById(orgId)
 				.orElseThrow(() -> new ResourceNotFoundException("Organization", orgId));
+		if (repository.existsByOrganization_IdAndLegalNameIgnoreCase(orgId, request.legalName())) {
+			throw new DuplicateNameException("legalName", request.legalName());
+		}
 		Prop prop = Prop.builder()
 				.id(request.id())
 				.legalName(request.legalName())
@@ -116,6 +120,12 @@ public class PropService {
 		OptimisticLockingUtil.requireVersionMatch("Prop", id, prop.getVersion(), request.version());
 
 		if (request.legalName() != null) {
+			UUID effectiveOrgId = request.organizationId() != null ? request.organizationId()
+					: (prop.getOrganization() != null ? prop.getOrganization().getId() : null);
+			if (effectiveOrgId != null && repository.existsByOrganization_IdAndLegalNameIgnoreCaseAndIdNot(
+					effectiveOrgId, request.legalName(), id)) {
+				throw new DuplicateNameException("legalName", request.legalName());
+			}
 			prop.setLegalName(request.legalName());
 		}
 		if (request.address() != null) {

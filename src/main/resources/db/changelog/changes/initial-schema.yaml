@@ -20,6 +20,8 @@ databaseChangeLog:
                   type: varchar(255)
                   constraints:
                     nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_organizations_name
               - column:
                   name: tax_id
                   type: varchar(64)
@@ -280,6 +282,10 @@ databaseChangeLog:
             columns:
               - column:
                   name: organization_id
+        - addUniqueConstraint:
+            tableName: prop
+            columnNames: organization_id, legal_name
+            constraintName: uk_prop_org_legal_name
 
         # units
         - createTable:
@@ -358,6 +364,10 @@ databaseChangeLog:
             constraintName: fk_units_property
             referencedTableName: prop
             referencedColumnNames: id
+        - addUniqueConstraint:
+            tableName: units
+            columnNames: property_id, unit_number
+            constraintName: uk_units_prop_unit_number
 
         # tenants
         - createTable:

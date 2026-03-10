@@ -12,6 +12,11 @@ import com.akandiah.propmanager.features.lease.domain.LeaseStatus;
 
 public interface OrganizationRepository extends JpaRepository<Organization, UUID> {
 
+	boolean existsByNameIgnoreCase(String name);
+
+	boolean existsByNameIgnoreCaseAndIdNot(String name, UUID id);
+
+
 	/**
 	 * Finds all organizations that the given user belongs to through any relationship.
 	 * 1. As a Member (via the Membership table)

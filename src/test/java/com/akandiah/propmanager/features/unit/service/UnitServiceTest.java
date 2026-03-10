@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -20,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import com.akandiah.propmanager.TestDataFactory;
+import com.akandiah.propmanager.common.exception.DuplicateNameException;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.AccessListUtil.ScopedAccessFilter;
 import com.akandiah.propmanager.common.permission.ResourceType;
@@ -29,7 +31,11 @@ import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
 import com.akandiah.propmanager.features.membership.domain.PolicyAssignment;
 import com.akandiah.propmanager.features.membership.domain.PolicyAssignmentRepository;
 import com.akandiah.propmanager.features.membership.domain.Membership;
+import com.akandiah.propmanager.features.prop.domain.Prop;
+import com.akandiah.propmanager.features.prop.domain.PropRepository;
+import com.akandiah.propmanager.features.unit.api.dto.CreateUnitRequest;
 import com.akandiah.propmanager.features.unit.api.dto.UnitResponse;
+import com.akandiah.propmanager.features.unit.domain.UnitStatus;
 import com.akandiah.propmanager.features.unit.domain.Unit;
 import com.akandiah.propmanager.features.unit.domain.UnitRepository;
 import com.akandiah.propmanager.features.user.domain.User;
@@ -39,6 +45,8 @@ class UnitServiceTest {
 
 	@Mock
 	private UnitRepository unitRepository;
+	@Mock
+	private PropRepository propRepository;
 	@Mock
 	private PolicyAssignmentRepository assignmentRepository;
 	@Mock
@@ -126,5 +134,40 @@ class UnitServiceTest {
 
 		assertThatThrownBy(() -> service.deleteById(unitId))
 				.isInstanceOf(ResourceNotFoundException.class);
+	}
+
+	@Test
+	void create_throwsDuplicateNameWhenUnitNumberAlreadyExistsInProp() {
+		UUID propId = UUID.randomUUID();
+		Prop prop = TestDataFactory.prop().id(propId).build();
+		CreateUnitRequest request = new CreateUnitRequest(
+				null, propId, "101", UnitStatus.VACANT, null, null, null, null, null, null, null, null, null, null);
+
+		when(propRepository.findById(propId)).thenReturn(Optional.of(prop));
+		when(unitRepository.existsByProp_IdAndUnitNumberIgnoreCase(propId, "101")).thenReturn(true);
+
+		assertThatThrownBy(() -> service.create(request))
+				.isInstanceOf(DuplicateNameException.class)
+				.hasMessageContaining("101");
+
+		verify(unitRepository, never()).save(any(Unit.class));
+	}
+
+	@Test
+	void create_succeedsWhenUnitNumberIsUniqueInProp() {
+		UUID propId = UUID.randomUUID();
+		Prop prop = TestDataFactory.prop().id(propId).build();
+		Unit unit = TestDataFactory.unit().prop(prop).unitNumber("102").build();
+		CreateUnitRequest request = new CreateUnitRequest(
+				null, propId, "102", UnitStatus.VACANT, null, null, null, null, null, null, null, null, null, null);
+
+		when(propRepository.findById(propId)).thenReturn(Optional.of(prop));
+		when(unitRepository.existsByProp_IdAndUnitNumberIgnoreCase(propId, "102")).thenReturn(false);
+		when(unitRepository.save(any(Unit.class))).thenReturn(unit);
+
+		UnitResponse response = service.create(request);
+
+		assertThat(response.unitNumber()).isEqualTo("102");
+		verify(unitRepository).save(any(Unit.class));
 	}
 }

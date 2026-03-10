@@ -7,6 +7,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.akandiah.propmanager.common.exception.DuplicateNameException;
 import com.akandiah.propmanager.common.exception.ResourceNotFoundException;
 import com.akandiah.propmanager.common.permission.ResourceType;
 import com.akandiah.propmanager.common.util.DeleteGuardUtil;
@@ -76,6 +77,9 @@ public class OrganizationService {
 	 */
 	@Transactional
 	public OrganizationResponse create(CreateOrganizationRequest request, UUID creatorUserId) {
+		if (repository.existsByNameIgnoreCase(request.name())) {
+			throw new DuplicateNameException("name", request.name());
+		}
 		Organization org = Organization.builder()
 				.id(request.id())
 				.name(request.name())
@@ -107,6 +111,9 @@ public class OrganizationService {
 		OptimisticLockingUtil.requireVersionMatch("Organization", id, org.getVersion(), request.version());
 
 		if (request.name() != null) {
+			if (repository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
+				throw new DuplicateNameException("name", request.name());
+			}
 			org.setName(request.name());
 		}
 		if (request.taxId() != null) {

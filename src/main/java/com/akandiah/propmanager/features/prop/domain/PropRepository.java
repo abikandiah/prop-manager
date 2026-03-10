@@ -11,6 +11,11 @@ public interface PropRepository extends JpaRepository<Prop, UUID> {
 
 	long countByOrganization_Id(UUID organizationId);
 
+	boolean existsByOrganization_IdAndLegalNameIgnoreCase(UUID orgId, String legalName);
+
+	boolean existsByOrganization_IdAndLegalNameIgnoreCaseAndIdNot(UUID orgId, String legalName, UUID excludeId);
+
+
 	boolean existsByIdAndOrganization_Id(UUID id, UUID organizationId);
 
 	@Query("SELECT p FROM Prop p JOIN FETCH p.organization WHERE p.ownerId = :userId AND p.organization IS NOT NULL")
