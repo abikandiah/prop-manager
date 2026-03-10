@@ -1,12 +1,13 @@
 # CORS is handled entirely by the Spring Boot app — do not add CORS headers here.
 
 # --- AUTHENTIK IDP ---
-{$AUTH_DOMAIN} {
+# http:// prefix binds to :80 — TLS is terminated by Cloudflare Tunnel.
+http://{$AUTH_DOMAIN} {
 	reverse_proxy authentik:9000
 }
 
 # --- API GATEWAY ---
-{$API_DOMAIN} {
+http://{$API_DOMAIN} {
 	# 1. PUBLIC: Authentik outpost endpoints (forward auth callback, login redirect)
 	handle /outpost.goauthentik.io/* {
 		reverse_proxy authentik:9000
