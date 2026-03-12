@@ -1,9 +1,9 @@
 # PropMange Production Stack
-# Services: PostgreSQL, Redis, Authentik (OIDC), Caddy (Reverse Proxy), Spring Boot API, Cloudflare Tunnel.
+# Services: PostgreSQL, Logto (OIDC), Caddy (Reverse Proxy), Spring Boot API, Cloudflare Tunnel.
 # The UI is served via Cloudflare Pages and connects to this API.
 
 services:
-  # --- Single Postgres: propmanager DB (app) + authentik DB (Authentik) ---
+  # --- Single Postgres: propmanager DB (app) + logto DB (Logto) ---
   postgres:
     image: postgres:17-alpine
     container_name: prop-manager-db
@@ -18,7 +18,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U postgres -d postgres && pg_isready -U propmanager -d propmanager && pg_isready -U authentik -d authentik",
+          "pg_isready -U postgres -d postgres && pg_isready -U propmanager -d propmanager && pg_isready -U logto -d logto",
         ]
       interval: 5s
       timeout: 5s
@@ -28,69 +28,21 @@ services:
     networks:
       - internal
 
-  redis:
-    image: redis:alpine
-    container_name: prop-manager-redis
-    command: --save 60 1 --loglevel warning
-    volumes:
-      - authentik_redis:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-    networks:
-      - internal
-
-  # --- Authentik (OIDC Provider) ---
-  authentik:
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.4.4}
-    container_name: authentik-server
-    command: server
+  # --- Logto (OIDC Provider) ---
+  logto:
+    image: svhd/logto:latest
+    container_name: prop-manager-logto
+    # Seeds the DB on first run (no-op if already seeded), then starts the server.
+    entrypoint: ["sh", "-c", "npx @logto/cli db seed --db-url $$DB_URL || true && cd /etc/logto/packages/core && NODE_ENV=production node ."]
     ports:
-      - "9000:9000"
+      - "3002:3002" # Admin console — access directly, not exposed via Caddy
     environment:
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?set AUTHENTIK_SECRET_KEY in .env}
-      AUTHENTIK_REDIS__HOST: redis
-      AUTHENTIK_POSTGRESQL__HOST: postgres
-      AUTHENTIK_POSTGRESQL__USER: authentik
-      AUTHENTIK_POSTGRESQL__NAME: authentik
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
-      # Must be set so JWT 'iss' claims use the external domain, not the internal container hostname.
-      AUTHENTIK_HOST: https://${AUTH_DOMAIN}
-      AUTHENTIK_CSRF_TRUSTED_ORIGINS: https://${AUTH_DOMAIN}
-    volumes:
-      - authentik_media:/media
-      - authentik_templates:/templates
+      DB_URL: postgresql://logto:${POSTGRES_PASSWORD}@postgres:5432/logto
+      # Public-facing OIDC endpoint; must match the 'iss' claim in issued JWTs.
+      ENDPOINT: https://${AUTH_DOMAIN}
+      TRUST_PROXY_HEADER: 1
     depends_on:
       postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
-    restart: unless-stopped
-    networks:
-      - internal
-
-  authentik-worker:
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.4.4}
-    container_name: authentik-worker
-    command: worker
-    environment:
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
-      AUTHENTIK_REDIS__HOST: redis
-      AUTHENTIK_POSTGRESQL__HOST: postgres
-      AUTHENTIK_POSTGRESQL__USER: authentik
-      AUTHENTIK_POSTGRESQL__NAME: authentik
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD}
-      AUTHENTIK_HOST: https://${AUTH_DOMAIN}
-      AUTHENTIK_CSRF_TRUSTED_ORIGINS: https://${AUTH_DOMAIN}
-    volumes:
-      - authentik_media:/media
-      - authentik_certs:/certs
-      - authentik_templates:/templates
-    depends_on:
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
     restart: unless-stopped
     networks:
       - internal
@@ -108,7 +60,7 @@ services:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
     depends_on:
-      authentik: { condition: service_started }
+      logto: { condition: service_started }
       app: { condition: service_healthy }
     restart: unless-stopped
     networks:
@@ -127,13 +79,13 @@ services:
       POSTGRES_DB: propmanager
       POSTGRES_USER: propmanager
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      # Derived from AUTH_DOMAIN — must match the 'iss' claim in JWTs issued by Authentik
-      AUTH_ISSUER_URI: https://${AUTH_DOMAIN}/application/o/prop-mange/
-      # Internal JWKS URL — Spring Boot fetches public keys directly from Authentik container (avoids round-trip through tunnel)
-      JWKS_URI: http://authentik:9000/application/o/prop-mange/jwks/
+      # Must match the 'iss' claim in JWTs issued by Logto (ENDPOINT + /oidc)
+      AUTH_ISSUER_URI: https://${AUTH_DOMAIN}/oidc
+      # Internal JWKS URL — fetched directly from Logto container (avoids round-trip through tunnel)
+      JWKS_URI: http://logto:3001/oidc/jwks
       CORS_ALLOWED_ORIGINS: https://${UI_DOMAIN},http://localhost,http://localhost:3000,http://localhost:3001
       APP_BASE_URL: https://${UI_DOMAIN}
-      AUTH_LOGOUT_URL: https://${AUTH_DOMAIN}/application/o/prop-mange/end-session/
+      AUTH_LOGOUT_URL: https://${AUTH_DOMAIN}/oidc/session/end
       MAIL_HOST: ${MAIL_HOST:-smtp.resend.com}
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-resend}
@@ -174,8 +126,4 @@ networks:
 
 volumes:
   postgres_data:
-  authentik_redis:
-  authentik_media:
-  authentik_certs:
-  authentik_templates:
   caddy_data:

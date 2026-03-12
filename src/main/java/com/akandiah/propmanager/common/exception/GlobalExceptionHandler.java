@@ -151,7 +151,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ProblemDetail> handleDataIntegrityViolation(DataIntegrityViolationException ex,
 			HttpServletRequest request) {
-		log.warn("Data integrity violation at {}: {}", request.getRequestURI(), ex.getMessage());
+		log.warn("Data integrity violation at {}", request.getRequestURI(), ex);
 		return problem(HttpStatus.CONFLICT, "Conflict",
 				"Operation failed due to a referential integrity constraint. A related record may have been created concurrently.",
 				request.getRequestURI(), null, null);
@@ -160,7 +160,7 @@ public class GlobalExceptionHandler {
 	/** 503: Notification delivery failed (e.g. email send or template render) */
 	@ExceptionHandler(NotificationException.class)
 	public ResponseEntity<ProblemDetail> handleNotification(NotificationException ex, HttpServletRequest request) {
-		log.warn("Notification failed at {}: {}", request.getRequestURI(), ex.getMessage());
+		log.warn("Notification failed at {}", request.getRequestURI(), ex);
 		return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable",
 				"Notification could not be sent. Please try again later.", request.getRequestURI(), null, null);
 	}

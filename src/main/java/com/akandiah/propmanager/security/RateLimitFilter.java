@@ -5,7 +5,6 @@ import java.net.URI;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -75,10 +74,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
 		problem.setType(URI.create("about:blank"));
 		problem.setProperty("retryAfterSeconds", retryAfter);
 
-		response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
 		response.setHeader("Retry-After", String.valueOf(retryAfter));
-		response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-		objectMapper.writeValue(response.getOutputStream(), problem);
+		FilterProblemResponse.write(response, problem, objectMapper);
 	}
 
 	private String resolveClientKey(HttpServletRequest request) {
