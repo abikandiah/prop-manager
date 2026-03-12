@@ -132,7 +132,7 @@ services:
       # Internal JWKS URL — Spring Boot fetches public keys directly from Authentik container (avoids round-trip through tunnel)
       JWKS_URI: http://authentik:9000/application/o/prop-mange/jwks/
       CORS_ALLOWED_ORIGINS: https://${UI_DOMAIN},http://localhost,http://localhost:3000,http://localhost:3001
-      APP_BASE_URL: https://${API_DOMAIN}
+      APP_BASE_URL: https://${UI_DOMAIN}
       AUTH_LOGOUT_URL: https://${AUTH_DOMAIN}/application/o/prop-mange/end-session/
       MAIL_HOST: ${MAIL_HOST:-smtp.resend.com}
       MAIL_PORT: ${MAIL_PORT:-587}

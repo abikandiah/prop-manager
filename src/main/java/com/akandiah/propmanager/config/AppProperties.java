@@ -8,5 +8,5 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * Contains settings that are not specific to any single sub-system.
  */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(@DefaultValue("http://localhost:8080") String baseUrl) {
+public record AppProperties(@DefaultValue("http://localhost:3000") String baseUrl) {
 }

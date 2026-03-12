@@ -18,6 +18,7 @@ import com.akandiah.propmanager.config.AppProperties;
 import com.akandiah.propmanager.features.invite.domain.Invite;
 import com.akandiah.propmanager.features.invite.domain.InviteEmailRequestedEvent;
 import com.akandiah.propmanager.features.invite.domain.InviteRepository;
+import com.akandiah.propmanager.features.invite.domain.TargetType;
 import com.akandiah.propmanager.features.lease.domain.Lease;
 import com.akandiah.propmanager.features.lease.domain.LeaseLifecycleEvent;
 import com.akandiah.propmanager.features.lease.domain.LeaseRepository;
@@ -81,7 +82,12 @@ public class NotificationDispatcher {
 		context.put("inviteLink", appProperties.baseUrl() + "/invite/" + invite.getToken());
 		context.put("expiresAt", INVITE_DATE_FORMAT.format(invite.getExpiresAt()));
 
-		NotificationType type = NotificationType.INVITE_LEASE;
+		// Flatten the nested preview snapshot so templates can use ${propertyName} etc.
+		flattenPreview(context);
+
+		NotificationType type = invite.getTargetType() == TargetType.MEMBERSHIP
+				? NotificationType.INVITE_ORG
+				: NotificationType.INVITE_LEASE;
 
 		if (event.isResend()) {
 			deliveryService.cancelActiveDeliveriesForReference(NotificationReferenceType.INVITE, invite.getId());
@@ -261,6 +267,34 @@ public class NotificationDispatcher {
 				log.error("Failed to dispatch manager notification: leaseId={}, userId={}", lease.getId(),
 						manager.getId(), e);
 			}
+		}
+	}
+
+	/**
+	 * Extracts the nested {@code preview} snapshot (written by lease/membership
+	 * services at invite-creation time) into flat, template-friendly keys.
+	 *
+	 * <p>Lease invites store: {@code preview.property.legalName → propertyName},
+	 * {@code preview.unit.unitNumber → unitName}.
+	 * Membership invites store {@code organizationName} directly — no flattening needed.
+	 */
+	@SuppressWarnings("unchecked")
+	private void flattenPreview(Map<String, Object> context) {
+		Object preview = context.get("preview");
+		if (!(preview instanceof Map)) return;
+
+		Map<String, Object> previewMap = (Map<String, Object>) preview;
+
+		Object property = previewMap.get("property");
+		if (property instanceof Map) {
+			Map<String, Object> propMap = (Map<String, Object>) property;
+			context.putIfAbsent("propertyName", propMap.get("legalName"));
+		}
+
+		Object unit = previewMap.get("unit");
+		if (unit instanceof Map) {
+			Map<String, Object> unitMap = (Map<String, Object>) unit;
+			context.putIfAbsent("unitName", unitMap.get("unitNumber"));
 		}
 	}
 }

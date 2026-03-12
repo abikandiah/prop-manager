@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import com.akandiah.propmanager.config.AppProperties;
 import com.akandiah.propmanager.config.NotificationProperties;
 
 import jakarta.mail.MessagingException;
@@ -31,6 +32,7 @@ public class EmailNotificationService {
 	private final JavaMailSender mailSender;
 	private final TemplateEngine templateEngine;
 	private final NotificationProperties notificationProperties;
+	private final AppProperties appProperties;
 
 	@Value("${spring.mail.properties.mail.from:noreply@propmanager.local}")
 	private String fromEmail;
@@ -68,6 +70,7 @@ public class EmailNotificationService {
 
 			// Add common variables available to all templates
 			thymeleafContext.setVariable("appName", "PropMange");
+			thymeleafContext.setVariable("appUrl", appProperties.baseUrl());
 
 			// Globally transform Instants to ZonedDateTime so #temporals can read them
 			context.forEach((key, value) -> {
