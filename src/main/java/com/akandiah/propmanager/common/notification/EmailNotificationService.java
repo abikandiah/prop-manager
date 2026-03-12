@@ -32,7 +32,7 @@ public class EmailNotificationService {
 	private final TemplateEngine templateEngine;
 	private final NotificationProperties notificationProperties;
 
-	@Value("${spring.mail.from:noreply@propmanager.local}")
+	@Value("${spring.mail.properties.mail.from:noreply@propmanager.local}")
 	private String fromEmail;
 
 	/**

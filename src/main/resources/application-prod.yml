@@ -16,7 +16,7 @@ spring:
     password: ${MAIL_PASSWORD:}
     properties:
       mail:
-        from: ${MAIL_FROM:no-reply@propmanger.com}
+        from: ${MAIL_FROM:no-reply@propmanager.com}
         smtp:
           auth: true
           starttls:
