@@ -111,7 +111,6 @@ class SelfLockoutGuardTest {
 		UUID userId = UUID.randomUUID();
 		UUID membershipId = UUID.randomUUID();
 		Membership m = membership(membershipId, UUID.randomUUID(), user(userId));
-		UUID orgId = m.getOrganization().getId();
 		PolicyAssignment target = orgAssignment(UUID.randomUUID(), m, Map.of("o", "r"));
 		PolicyAssignment other = orgAssignment(UUID.randomUUID(), m, Map.of("o", "r"));
 
