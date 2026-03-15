@@ -35,9 +35,9 @@ public class JwtConfig {
 		return converter;
 	}
 
-	/** Prod JwtDecoder — supports ES384 (Logto's algorithm) and at+jwt typ (RFC 9068). */
+	/** Logto JwtDecoder — supports ES384 (Logto's algorithm) and at+jwt typ (RFC 9068). */
 	@Bean
-	@Profile("prod")
+	@Profile({"prod", "dev-oidc"})
 	JwtDecoder jwtDecoder(
 			@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwksUri,
 			@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuerUri) {

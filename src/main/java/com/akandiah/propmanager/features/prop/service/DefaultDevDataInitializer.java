@@ -47,7 +47,7 @@ import com.akandiah.propmanager.features.user.service.UserService;
  * {@link #STATUS_CYCLE} to produce a realistic occupancy mix.
  */
 @Component
-@Profile("dev")
+@Profile({"dev", "dev-oidc"})
 @Order(2)
 public class DefaultDevDataInitializer implements ApplicationRunner {
 
