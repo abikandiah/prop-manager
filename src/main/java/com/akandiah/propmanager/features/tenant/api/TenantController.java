@@ -49,13 +49,15 @@ public class TenantController {
 	@Operation(summary = "List tenants",
 			description = "Admins see all tenants. Authenticated users with LEASES:READ access see only tenants on their managed properties/units. Pass activeOnly=false to include tenants from expired leases.")
 	public ResponseEntity<List<TenantResponse>> list(
+			@RequestParam UUID orgId,
 			@RequestParam(defaultValue = "true") boolean activeOnly,
 			HttpServletRequest request) {
 		if (SecurityUtils.isGlobalAdmin()) {
 			return ResponseEntity.ok(tenantService.findAll());
 		}
-		ScopedAccessFilter filter = AccessListUtil.forScopedResources(
-				AccessListUtil.fromRequest(request), PermissionDomains.PEOPLE, Actions.READ);
+		ScopedAccessFilter filter = AccessListUtil.narrowToOrg(
+				AccessListUtil.forScopedResources(AccessListUtil.fromRequest(request), PermissionDomains.PEOPLE, Actions.READ),
+				orgId);
 		return ResponseEntity.ok(tenantService.findAll(filter, activeOnly));
 	}
 

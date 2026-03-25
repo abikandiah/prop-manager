@@ -50,9 +50,10 @@ public class PropController {
 	@GetMapping
 	@PreAuthorize("isAuthenticated()")
 	@Operation(summary = "List props visible to the caller")
-	public List<PropResponse> list(HttpServletRequest request) {
-		PropAccessFilter filter = AccessListUtil.forProps(
-				AccessListUtil.fromRequest(request), PermissionDomains.PORTFOLIO, Actions.READ);
+	public List<PropResponse> list(@RequestParam UUID orgId, HttpServletRequest request) {
+		PropAccessFilter filter = AccessListUtil.narrowToOrg(
+				AccessListUtil.forProps(AccessListUtil.fromRequest(request), PermissionDomains.PORTFOLIO, Actions.READ),
+				orgId);
 		return propService.findAll(filter);
 	}
 

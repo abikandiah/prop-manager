@@ -50,11 +50,13 @@ public class LeaseController {
 	@PreAuthorize("isAuthenticated()")
 	@Operation(summary = "List leases", description = "Optionally filter by ?unitId= or ?propertyId=. Results are restricted to leases the caller is authorized to see.")
 	public ResponseEntity<List<LeaseResponse>> list(
+			@RequestParam UUID orgId,
 			@RequestParam(required = false) UUID unitId,
 			@RequestParam(required = false) UUID propertyId,
 			HttpServletRequest request) {
-		ScopedAccessFilter baseFilter = AccessListUtil.forScopedResources(
-				AccessListUtil.fromRequest(request), PermissionDomains.LEASES, Actions.READ);
+		ScopedAccessFilter baseFilter = AccessListUtil.narrowToOrg(
+				AccessListUtil.forScopedResources(AccessListUtil.fromRequest(request), PermissionDomains.LEASES, Actions.READ),
+				orgId);
 		if (unitId != null) {
 			ScopedAccessFilter unitFilter = new ScopedAccessFilter(
 					baseFilter.orgIds(), baseFilter.propIds(), Set.of(unitId));

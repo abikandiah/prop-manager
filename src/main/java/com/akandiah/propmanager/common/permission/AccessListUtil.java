@@ -77,6 +77,20 @@ public final class AccessListUtil {
 		return new ScopedAccessFilter(orgIds, propIds, unitIds);
 	}
 
+	// ──────────────────────── Scope narrowing ────────────────────────
+
+	/** Restricts a prop filter to a single org (for multi-org users). */
+	public static PropAccessFilter narrowToOrg(PropAccessFilter filter, UUID orgId) {
+		Set<UUID> orgIds = filter.orgIds().contains(orgId) ? Set.of(orgId) : Set.of();
+		return new PropAccessFilter(orgIds, filter.propIds());
+	}
+
+	/** Restricts a scoped filter to a single org (for multi-org users). */
+	public static ScopedAccessFilter narrowToOrg(ScopedAccessFilter filter, UUID orgId) {
+		Set<UUID> orgIds = filter.orgIds().contains(orgId) ? Set.of(orgId) : Set.of();
+		return new ScopedAccessFilter(orgIds, filter.propIds(), filter.unitIds());
+	}
+
 	// ──────────────────────── Request helper ────────────────────────
 
 	@SuppressWarnings("unchecked")
