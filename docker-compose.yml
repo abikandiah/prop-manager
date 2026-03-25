@@ -105,6 +105,28 @@ services:
     networks:
       - internal
 
+  # --- DB Scheduler ---
+  # Truncates all propmanager app tables on a cron schedule.
+  # Default: 0 3 * * 0  → Sundays at 03:00 UTC
+  # Override via DB_CLEAR_SCHEDULE in .env (standard cron syntax).
+  db-scheduler:
+    image: postgres:17-alpine
+    container_name: prop-manager-db-scheduler
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      PGHOST: postgres
+      PGDATABASE: propmanager
+      PGUSER: propmanager
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      DB_CLEAR_SCHEDULE: ${DB_CLEAR_SCHEDULE:-0 3 * * 0}
+    entrypoint: ["/bin/sh", "/db-scheduler/entrypoint.sh"]
+    volumes:
+      - ./docker/db-scheduler:/db-scheduler:ro
+    restart: unless-stopped
+    networks:
+      - internal
+
   # --- Cloudflare Tunnel ---
   cloudflared:
     image: cloudflare/cloudflared:latest
