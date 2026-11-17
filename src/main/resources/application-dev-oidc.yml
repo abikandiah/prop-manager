@@ -1,7 +1,5 @@
 # dev-oidc profile: Postgres + Logto OIDC (no H2, no local JWT).
-# Start supporting services first:
-#   docker compose -f .devcontainer/docker-compose.yml --profile dev-oidc up -d postgres logto
-# Then run the app:
+# Postgres + Logto start with the devcontainer (.devcontainer/docker-compose.yml). Run the app:
 #   SPRING_PROFILES_ACTIVE=dev-oidc ./mvnw spring-boot:run
 spring:
   datasource:

@@ -5,14 +5,16 @@
 services:
   # --- Single Postgres: propmanager DB (app) + logto DB (Logto) ---
   postgres:
-    image: postgres:17-alpine
+    # Major stays pinned: upgrading needs a dump/restore (see docker/README.md)
+    image: postgres:18-alpine
     container_name: prop-manager-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # 18+ images keep data under /var/lib/postgresql/<major>/docker
+      - pgdata:/var/lib/postgresql
       - ./docker/init-db:/docker-entrypoint-initdb.d
     healthcheck:
       test:
@@ -35,7 +37,7 @@ services:
     # Seeds the DB on first run (no-op if already seeded), then starts the server.
     entrypoint: ["sh", "-c", "npx @logto/cli db seed --db-url $$DB_URL || true && cd /etc/logto/packages/core && NODE_ENV=production node ."]
     ports:
-      - "3002:3002" # Admin console — access directly, not exposed via Caddy
+      - "127.0.0.1:3002:3002" # Admin console — host-local only; reach it via SSH tunnel
     environment:
       DB_URL: postgresql://logto:${POSTGRES_PASSWORD}@postgres:5432/logto
       # Public-facing OIDC endpoint; must match the 'iss' claim in issued JWTs.
@@ -49,7 +51,7 @@ services:
 
   # --- Caddy (Reverse Proxy + Forward Auth) ---
   caddy:
-    image: caddy:2-alpine
+    image: caddy:alpine
     container_name: prop-manager-caddy
     ports:
       - "80:80"
@@ -110,7 +112,7 @@ services:
   # Default: 0 3 * * 0  → Sundays at 03:00 UTC
   # Override via DB_CLEAR_SCHEDULE in .env (standard cron syntax).
   db-scheduler:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: prop-manager-db-scheduler
     depends_on:
       postgres: { condition: service_healthy }
@@ -147,5 +149,5 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
+  pgdata:
   caddy_data:

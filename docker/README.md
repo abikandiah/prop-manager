@@ -1,110 +1,96 @@
-# PropMange Production Stack: Authentik + Caddy + Cloudflare Tunnel
+# PropMange Production Stack: Logto + Caddy + Cloudflare Tunnel
 
 Architecture:
-- **Frontend**: Hosted on **Cloudflare Pages** (external to this stack). Authenticates via PKCE directly with Authentik.
-- **Backend API**: Spring Boot + Java 21, running in Docker. Validates JWTs via Authentik JWKS.
-- **Gateway**: **Caddy** (Reverse Proxy + Forward Auth) — routes API traffic, optionally pre-validates tokens via Authentik outpost.
-- **Auth**: **Authentik** (OIDC Provider) — issues JWTs, supports local accounts, Google SSO, and more.
+
+- **Frontend**: Hosted on **Cloudflare Pages** (external to this stack). Authenticates via PKCE directly with Logto.
+- **Backend API**: Spring Boot + Java 25, running in Docker. Validates JWTs via Logto's JWKS.
+- **Gateway**: **Caddy** — reverse proxy for the API and Logto. Auth is enforced by Spring Boot, not Caddy.
+- **Auth**: **Logto** (OIDC Provider) — issues JWTs, supports local accounts and social sign-in.
+- **Database**: **PostgreSQL 18** — one instance holding the `propmanager` and `logto` databases.
 - **Connectivity**: **Cloudflare Tunnel** (`cloudflared`) — exposes the stack without opening firewall ports.
 
 ## Quick Start
 
 ### 1. Create `.env` from `.env.example`
 
-Fill in all required values:
+Required values:
+
 - `UI_DOMAIN` — your Cloudflare Pages hostname (e.g. `propmanager.pages.dev`)
 - `API_DOMAIN` — your API subdomain (e.g. `api.propmanager.com`)
-- `AUTH_DOMAIN` — your Authentik subdomain (e.g. `auth.propmanager.com`)
+- `AUTH_DOMAIN` — your Logto subdomain (e.g. `auth.propmanager.com`)
 - `TUNNEL_TOKEN` — from Cloudflare Zero Trust > Networks > Tunnels
 - `POSTGRES_PASSWORD` — generate: `openssl rand -base64 36 | tr -d '\n'`
-- `AUTHENTIK_SECRET_KEY` — generate: `openssl rand -base64 60 | tr -d '\n'`
+- `MAIL_PASSWORD` — SMTP password (Resend API key by default)
 
-`CORS_ALLOWED_ORIGIN`, `AUTH_ISSUER_URI`, `AUTH_LOGOUT_URL`, and `AUTHENTIK_HOST` are derived automatically in `docker-compose.yml` from these three domain variables — do not set them in `.env`.
+Optional: `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_FROM`, `DB_CLEAR_SCHEDULE` (cron, default Sundays 03:00 UTC).
+
+`AUTH_ISSUER_URI`, `AUTH_LOGOUT_URL`, `CORS_ALLOWED_ORIGINS` and `APP_BASE_URL` are derived in `docker-compose.yml` from the domain variables — do not set them in `.env`.
 
 ### 2. Configure Cloudflare Tunnel
 
 In the Cloudflare Zero Trust dashboard, add **two Public Hostnames** pointing to `http://caddy:80`:
-1. `API_DOMAIN` (e.g. `api.propmanager.com`) → `http://caddy:80`
-2. `AUTH_DOMAIN` (e.g. `auth.propmanager.com`) → `http://caddy:80`
 
-The `cloudflared` container connects to Caddy via the `public` Docker network.
+1. `API_DOMAIN` → `http://caddy:80`
+2. `AUTH_DOMAIN` → `http://caddy:80`
+
+The `cloudflared` container reaches Caddy via the `public` Docker network.
 
 ### 3. Start the stack
 
 ```bash
 docker compose up -d
+docker compose logs -f logto   # first start seeds the Logto DB
 ```
 
-Wait for Authentik to initialize (check with `docker compose logs -f authentik`).
+### 4. Configure Logto
 
-### 4. Initial Authentik setup
+The admin console is bound to the host's `127.0.0.1:3002`. From your machine, open a tunnel and browse to `http://localhost:3002`, then create the admin account on first visit:
 
-Access the Authentik setup wizard:
-```
-https://<AUTH_DOMAIN>/if/flow/initial-setup/
-```
-Set the admin password.
-
-### 5. Create an OAuth2 Provider and Application
-
-In **Authentik Admin UI** (https://`<AUTH_DOMAIN>`/if/admin/):
-
-1. Go to **Applications > Providers > Create** → choose **OAuth2/OpenID Provider**
-   - Name: `prop-manager`
-   - Client type: `Public` (PKCE, no client secret)
-   - Client ID: copy this — needed by the frontend
-   - Redirect URIs: `https://propmanager.pages.dev/auth/callback` (your Pages URL)
-   - Signing Key: select the default RSA key
-   - Scopes: `openid`, `email`, `profile`, `groups` (or `offline_access` if using refresh tokens)
-   - Subject mode: `Based on the hashed User ID` (recommended)
-   - Click **Save**
-
-2. Go to **Applications > Applications > Create**
-   - Name: `PropMange API`
-   - Slug: `prop-manager`
-   - Provider: select the provider you just created
-   - Click **Save**
-
-3. Note the **Issuer URL** from the provider settings — it should be `https://<AUTH_DOMAIN>/application/o/prop-manager/`, which is automatically derived in `docker-compose.yml` from `AUTH_DOMAIN`.
-
-### 6. Restart the app
-
-The `JWKS_URI` in `docker-compose.yml` is hardcoded to the internal Authentik URL (`http://authentik:9000/...`) — Spring Boot uses this path for key fetching to avoid a round-trip through the tunnel.
-
-Restart the app:
 ```bash
-docker compose up -d app
+ssh -L 3002:localhost:3002 <host>
 ```
 
-### 7. (Optional) Add Google SSO
+1. **API resource** — _API resources > Create_
+   - Identifier: e.g. `https://<API_DOMAIN>` (this becomes `VITE_OIDC_RESOURCE`)
+   - Add a permission named `access` (the frontend requests the `<resource>/access` scope)
+2. **Application** — _Applications > Create > Single page app_
+   - Redirect URI: `https://<UI_DOMAIN>/auth/callback` and `https://<UI_DOMAIN>/auth/silent-callback`
+   - Post sign-out redirect URI: `https://<UI_DOMAIN>`
+   - CORS allowed origin: `https://<UI_DOMAIN>`
+   - Copy the **App ID** (this becomes `VITE_OIDC_CLIENT_ID`)
 
-In Authentik Admin:
-1. Go to **Directory > Federation & Social login > Create** → choose **Google OAuth Source**
-2. Fill in your Google OAuth client ID and secret (from Google Cloud Console)
-3. Users can now sign in with Google. Authentik brokers the identity and issues its own JWT — the backend sees only Authentik tokens regardless of login method.
+### 5. Configure the frontend (Cloudflare Pages env vars)
+
+```
+VITE_OIDC_AUTHORITY=https://<AUTH_DOMAIN>/oidc
+VITE_OIDC_CLIENT_ID=<App ID>
+VITE_OIDC_REDIRECT_URI=https://<UI_DOMAIN>/auth/callback
+VITE_OIDC_RESOURCE=<API resource identifier>
+```
+
+The backend needs no Logto-specific config: `AUTH_ISSUER_URI` is `https://<AUTH_DOMAIN>/oidc`, and `JWKS_URI` points at the internal `http://logto:3001/oidc/jwks` to avoid a round-trip through the tunnel.
+
+Logto tokens carry no `groups` claim, so the backend builds authorities from the database (see `JwtConfig` / `JwtAccessHydrationFilter`).
+
+## Image Versions
+
+Images use floating tags (`latest`, `alpine`, `25-jre-alpine`) — `docker compose pull && docker compose up -d --build` picks up updates.
+
+**Exception: Postgres is pinned to a major version** (`postgres:18-alpine`). A new major cannot read the previous major's data directory, so once there is live data, bumping it needs a `pg_dumpall` / restore.
 
 ## Networking & Security
 
-- **Local access (host ports)**:
-  - `localhost:80` — Caddy gateway (API at `http://localhost/api/...`, no forward auth required locally)
-  - `localhost:9000` — Authentik admin UI (`http://localhost:9000/if/admin/`)
-  - `localhost:5432` — PostgreSQL (for DB tools; user: `propmanager`, db: `propmanager`)
-- **External access**: Only `cloudflared` connects to Caddy via the `public` Docker network.
-- **CORS**: Handled entirely by the Spring Boot app (`CorsConfig`). Do not add CORS headers in Caddy.
-- **JWT validation**: Spring Boot validates `Authorization: Bearer` tokens against Authentik's JWKS. Caddy's forward auth adds a gateway-level pre-check (defence in depth).
-- **AUTHENTIK_HOST**: Derived from `AUTH_DOMAIN` so JWTs contain the correct external issuer URL.
-
-## Authentik: Local Accounts vs Google OIDC
-
-Both work simultaneously — Authentik is an identity broker:
-- **Local accounts**: username/password managed in Authentik (good for admins and service accounts)
-- **Google OIDC**: users sign in with Google; Authentik creates/links a local user record and issues its own JWT
-
-From the Spring Boot API's perspective, all tokens are Authentik JWTs — it doesn't matter which login method was used.
+- **Host ports**:
+  - `:80` — Caddy (`http://localhost/api/...` works locally without the tunnel)
+  - `127.0.0.1:3002` — Logto admin console (host-local only; not exposed via Caddy or the tunnel — use an SSH tunnel)
+- **External access**: Only `cloudflared` reaches Caddy, via the `public` Docker network. Postgres is not published.
+- **CORS**: Handled entirely by Spring Boot (`CorsConfig`). Do not add CORS headers in Caddy.
+- **JWT validation**: Spring Boot validates `Authorization: Bearer` tokens against Logto's JWKS and the issuer `https://<AUTH_DOMAIN>/oidc`. Logto's `ENDPOINT` must match the public URL so the `iss` claim lines up.
 
 ## File Structure
 
 - `docker-compose.yml` — full stack definition
-- `docker/caddy/Caddyfile` — Caddy routing and forward auth config
-- `docker/caddy/Dockerfile` — (unused; image is pulled directly)
-- `docker/init-db/01-create-databases.sh` — creates `propmanager` and `authentik` Postgres users/DBs
+- `docker/caddy/Caddyfile` — Caddy routing
+- `docker/caddy/Dockerfile` — unused; the compose file pulls `caddy:alpine` directly
+- `docker/init-db/01-create-databases.sh` — creates the `propmanager` and `logto` Postgres users/DBs
+- `docker/db-scheduler/` — cron container that truncates app tables on `DB_CLEAR_SCHEDULE`

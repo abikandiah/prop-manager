@@ -1,19 +1,6 @@
-🤖 AI Collaboration Protocol
-
-You (Claude) are the Primary Implementer. You are paired with the Gemini CLI, which acts as your High-Context Research Assistant.
-When to use Gemini via CLI:
-
-    Massive Context: If you need to analyze patterns across the entire codebase (which exceeds your current context window).
-
-    Needle-in-a-Haystack: When searching for specific logic or variable flows across many directories.
-
-    Architectural Review: When a plan .md needs a "second opinion" based on global project knowledge.
-
-    Usage: Run gemini -p "@src/ [your query]" to get a summary of global patterns.
-
 # prop-manager — Spring Boot API
 
-Property management REST API. Spring Boot 4.0.2, Java 21, stateless JWT auth (Spring Security OAuth2 Resource Server). Feature-based package structure.
+Property management REST API. Spring Boot 4.0.3, Java 25, stateless JWT auth (Spring Security OAuth2 Resource Server). Feature-based package structure.
 
 > Cross-cutting architecture decisions (IDs, optimistic locking, error contract, auth) are in the root [`../CLAUDE.md`](../CLAUDE.md).
 
