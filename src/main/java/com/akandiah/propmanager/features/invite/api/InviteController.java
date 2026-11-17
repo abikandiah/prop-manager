@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.akandiah.propmanager.common.util.SecurityUtils;
 import com.akandiah.propmanager.features.invite.api.dto.InvitePreviewResponse;
 import com.akandiah.propmanager.features.invite.api.dto.InviteResponse;
 import com.akandiah.propmanager.features.invite.domain.TargetType;
@@ -88,8 +89,7 @@ public class InviteController {
 
 		if (email != null) {
 			User currentUser = jwtUserResolver.resolve(jwt);
-			boolean isAdmin = jwt.getClaimAsStringList("groups") != null
-					&& jwt.getClaimAsStringList("groups").contains("ADMIN");
+			boolean isAdmin = SecurityUtils.isGlobalAdmin();
 			if (!isAdmin && !currentUser.getEmail().equalsIgnoreCase(email)) {
 				throw new AccessDeniedException("Cannot list invites for another user's email");
 			}

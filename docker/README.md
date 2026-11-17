@@ -70,7 +70,9 @@ VITE_OIDC_RESOURCE=<API resource identifier>
 
 The backend needs no Logto-specific config: `AUTH_ISSUER_URI` is `https://<AUTH_DOMAIN>/oidc`, and `JWKS_URI` points at the internal `http://logto:3001/oidc/jwks` to avoid a round-trip through the tunnel.
 
-Logto tokens carry no `groups` claim, so the backend builds authorities from the database (see `JwtConfig` / `JwtAccessHydrationFilter`).
+`AUTH_AUDIENCE` must equal the API resource identifier (the same value as `VITE_OIDC_RESOURCE`). It defaults to `https://<API_DOMAIN>`, so set it in `.env` if your identifier is different. The backend refuses to start in prod without it, and it rejects tokens Logto issued for other apps.
+
+Org, property and unit permissions come from the database (see `JwtAccessHydrationFilter`). The global admin bypass reads a `roles` claim (`roles: ["ADMIN"]` → `ROLE_ADMIN`), which Logto only emits if you add a custom JWT claim. Without one, no user is a global admin.
 
 ## Image Versions
 

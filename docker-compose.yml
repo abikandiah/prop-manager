@@ -85,6 +85,8 @@ services:
       AUTH_ISSUER_URI: https://${AUTH_DOMAIN}/oidc
       # Internal JWKS URL — fetched directly from Logto container (avoids round-trip through tunnel)
       JWKS_URI: http://logto:3001/oidc/jwks
+      # Logto API resource identifier (= VITE_OIDC_RESOURCE); tokens for other apps are rejected
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE:-https://${API_DOMAIN}}
       CORS_ALLOWED_ORIGINS: https://${UI_DOMAIN},http://localhost,http://localhost:3000,http://localhost:3001
       APP_BASE_URL: https://${UI_DOMAIN}
       AUTH_LOGOUT_URL: https://${AUTH_DOMAIN}/oidc/session/end

@@ -15,7 +15,7 @@ import static org.mockito.Mockito.mock;
  * Test-only security config: provides a mock {@link JwtDecoder} so tests run
  * without a real OIDC issuer. Any non-blank Bearer token is accepted and
  * mapped to a principal with claim {@code sub=test-user} and
- * {@code groups=[USER]}.
+ * {@code roles=[USER]}.
  * <p>
  * Import via {@code @Import(TestSecurityConfig.class)} on test classes.
  */
@@ -30,7 +30,7 @@ public class TestSecurityConfig {
 
 	/**
 	 * Decoder that accepts any non-blank token and returns a minimal JWT with
-	 * claims compatible with {@link JwtConfig} (e.g. "groups" for ROLE_USER).
+	 * claims compatible with {@link JwtConfig} (e.g. "roles" for ROLE_USER).
 	 */
 	@Bean
 	JwtDecoder jwtDecoder() {
@@ -42,7 +42,7 @@ public class TestSecurityConfig {
 					.header("alg", "RS256")
 					.claim("iss", "https://test")
 					.claim("sub", "test-user")
-					.claim("groups", List.of("USER"))
+					.claim(JwtConfig.ROLES_CLAIM, List.of("USER"))
 					.build();
 		};
 	}

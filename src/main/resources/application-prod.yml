@@ -35,6 +35,9 @@ spring:
           issuer-uri: ${AUTH_ISSUER_URI}
 
 app:
+  auth:
+    # Logto API resource identifier; tokens whose 'aud' lacks it are rejected.
+    audience: ${AUTH_AUDIENCE}
   rate-limit:
     enabled: true
   cors:

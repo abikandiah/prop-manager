@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.config.DevJwtConfig;
+import com.akandiah.propmanager.config.JwtConfig;
 import com.akandiah.propmanager.features.auth.service.JwtHydrationService;
 import com.akandiah.propmanager.features.user.domain.UserRepository;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -78,7 +79,7 @@ public class DevAuthController {
 				.expirationTime(new Date(new Date().getTime() + 3600 * 1000)) // 1 hour
 				.claim("name", request.email())
 				.claim("email", request.email())
-				.claim("groups", request.roles());
+				.claim(JwtConfig.ROLES_CLAIM, request.roles());
 		if (!accessClaim.isEmpty()) {
 			claimsBuilder.claim("access", accessClaim);
 		}
@@ -110,9 +111,11 @@ public class DevAuthController {
 				.map(AccessEntry::toClaimMap)
 				.collect(Collectors.toList());
 
-		// Preserve the original groups (strip ROLE_ prefix added by Spring Security)
-		List<String> groups = authentication.getAuthorities().stream()
-				.map(a -> a.getAuthority().replaceFirst("^ROLE_", ""))
+		// Preserve the original roles (strip ROLE_ prefix added by Spring Security)
+		List<String> roles = authentication.getAuthorities().stream()
+				.map(a -> a.getAuthority())
+				.filter(a -> a.startsWith("ROLE_"))
+				.map(a -> a.substring("ROLE_".length()))
 				.collect(Collectors.toList());
 
 		JWSSigner signer = new MACSigner(jwtSecret.getBytes());
@@ -123,7 +126,7 @@ public class DevAuthController {
 				.expirationTime(new Date(new Date().getTime() + 3600 * 1000)) // 1 hour
 				.claim("name", email)
 				.claim("email", email)
-				.claim("groups", groups);
+				.claim(JwtConfig.ROLES_CLAIM, roles);
 		if (!accessClaim.isEmpty()) {
 			claimsBuilder.claim("access", accessClaim);
 		}

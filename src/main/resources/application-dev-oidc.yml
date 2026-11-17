@@ -41,6 +41,8 @@ app:
   base-url: ${APP_BASE_URL:http://localhost:3000}
   auth:
     logout-url: ${AUTH_LOGOUT_URL:http://localhost:3001/oidc/session/end}
+    # Logto API resource identifier (= VITE_OIDC_RESOURCE). Blank disables the audience check locally.
+    audience: ${AUTH_AUDIENCE:}
   rate-limit:
     enabled: false
   cors:

@@ -283,7 +283,7 @@ Role-based access:
 @DeleteMapping("/{id}")
 public ResponseEntity<Void> delete(@PathVariable UUID id) { ... }
 
-// Available roles (from JWT groups claim):
+// Available roles (from JWT roles claim):
 // ROLE_ADMIN, ROLE_USER — defined in JwtConfig
 ```
 
@@ -380,7 +380,7 @@ Set `SPRING_PROFILES_ACTIVE=prod` in production.
 src/test/java mirrors src/main/java package structure.
 
 Available test infrastructure:
-- TestSecurityConfig   — mock JwtDecoder (any non-blank token → sub=test-user, groups=[USER])
+- TestSecurityConfig   — mock JwtDecoder (any non-blank token → sub=test-user, roles=[USER])
 - TestDataFactory      — builder-based factory for entity defaults
 ```
 
