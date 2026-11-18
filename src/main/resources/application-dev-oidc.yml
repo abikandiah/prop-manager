@@ -39,7 +39,7 @@ spring:
 app:
   base-url: ${APP_BASE_URL:http://localhost:3000}
   dev-seed:
-    # Your Logto account email, so signing in links to the seeded org (forwarded from the host)
+    # Your Logto account email, so signing in links to the seeded org (set in .devcontainer/.env)
     email: ${DEV_SEED_EMAIL:}
   auth:
     logout-url: ${AUTH_LOGOUT_URL:https://auth.akandiah.ca/oidc/session/end}
