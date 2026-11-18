@@ -52,11 +52,7 @@ public class CurrentUserController {
 		String issuer = UserService.getIssuerString(jwt);
 		String sub = jwt.getSubject();
 		String name = jwt.getClaimAsString("name");
-		String email = jwt.getClaimAsString("email");
-
-		if (email == null || email.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email claim is missing from JWT");
-		}
+		String email = UserService.requireVerifiedEmail(jwt);
 
 		User dbUser = userService.getOrCreateUser(issuer, sub, name, email);
 

@@ -8,9 +8,11 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.common.permission.Actions;
@@ -33,6 +35,9 @@ import lombok.extern.slf4j.Slf4j;
 public class UserService {
 
 	private static final String ISSUER_LEGACY_OR_MISSING = "legacy";
+
+	/** OIDC claim the IdP sets once it has verified the email address. */
+	public static final String EMAIL_VERIFIED_CLAIM = "email_verified";
 
 	private final UserRepository userRepository;
 	private final UserIdentityRepository userIdentityRepository;
@@ -64,6 +69,21 @@ public class UserService {
 			// e.g. IllegalArgumentException when iss cannot be converted to URL
 		}
 		return jwt.getClaimAsString("iss");
+	}
+
+	/**
+	 * Returns the JWT's email, requiring the IdP to have verified it: accounts are linked
+	 * and invites claimed by email, so an unverified one could take over another account.
+	 */
+	public static String requireVerifiedEmail(Jwt jwt) {
+		String email = jwt.getClaimAsString("email");
+		if (email == null || email.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email claim is missing from JWT");
+		}
+		if (!Boolean.TRUE.equals(jwt.getClaimAsBoolean(EMAIL_VERIFIED_CLAIM))) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email address is not verified");
+		}
+		return email;
 	}
 
 	private static String normalizeIssuer(String issuer) {

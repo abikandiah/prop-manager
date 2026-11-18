@@ -72,7 +72,7 @@ The backend needs no Logto-specific config: `AUTH_ISSUER_URI` is `https://<AUTH_
 
 `AUTH_AUDIENCE` must equal the API resource identifier (the same value as `VITE_OIDC_RESOURCE`). It defaults to `https://<API_DOMAIN>`, so set it in `.env` if your identifier is different. The backend refuses to start in prod without it, and it rejects tokens Logto issued for other apps.
 
-Org, property and unit permissions come from the database (see `JwtAccessHydrationFilter`). The global admin bypass reads a `roles` claim (`roles: ["ADMIN"]` → `ROLE_ADMIN`), which Logto only emits if you add a custom JWT claim. Without one, no user is a global admin.
+Org, property and unit permissions come from the database (see `JwtAccessHydrationFilter`). The global admin bypass reads a `roles` claim (`roles: ["ADMIN"]` → `ROLE_ADMIN`), which Logto only emits if you add a custom JWT claim. Without one, no user is a global admin. The same custom JWT script must add `email`, `email_verified` and `name`: Logto access tokens have no profile claims by default, and `/api/me` rejects tokens without a verified email.
 
 ## Image Versions
 

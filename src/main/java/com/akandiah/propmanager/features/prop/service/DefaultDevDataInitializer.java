@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.ApplicationEventPublisher;
@@ -38,9 +39,10 @@ import com.akandiah.propmanager.features.user.service.UserService;
 /**
  * Seeds default properties and units for local development.
  *
- * <p>Only active in the 'dev' profile. Idempotent — skips seeding if any props
- * already exist. Creates a dev user (identity prop-manager-dev / dev@example.com) if none is found, so
- * seeded props always have a real ownerId.
+ * <p>Active in 'dev' and 'dev-oidc'. Idempotent — skips seeding if any props already exist.
+ * Creates the seed user (identity prop-manager-dev / {@code app.dev-seed.email}) if none is found, so
+ * seeded props always have a real ownerId. Under dev-oidc, set DEV_SEED_EMAIL to your Logto email so
+ * signing in links to the seed user.
  *
  * <p>Props and units are defined declaratively via {@link PropBlueprint} and
  * {@link UnitBlueprint}. Unit statuses are assigned by cycling through
@@ -54,7 +56,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	private static final Logger log = LoggerFactory.getLogger(DefaultDevDataInitializer.class);
 
 	private static final String DEV_ISSUER = "https://prop-manager-dev";
-	private static final String DEV_EMAIL = "dev@example.com";
+	private static final String DEFAULT_DEV_EMAIL = "dev@example.com";
 
 	/**
 	 * Cycles across units to produce a realistic ~65% occupied / 20% vacant /
@@ -210,6 +212,7 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	private final PolicyAssignmentService policyAssignmentService;
 	private final MembershipRepository membershipRepository;
 	private final ApplicationEventPublisher eventPublisher;
+	private final String devEmail;
 
 	public DefaultDevDataInitializer(
 			UserService userService,
@@ -220,7 +223,8 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 			MembershipService membershipService,
 			PolicyAssignmentService policyAssignmentService,
 			MembershipRepository membershipRepository,
-			ApplicationEventPublisher eventPublisher) {
+			ApplicationEventPublisher eventPublisher,
+			@Value("${app.dev-seed.email:}") String devEmail) {
 		this.userService = userService;
 		this.propRepository = propRepository;
 		this.addressRepository = addressRepository;
@@ -230,6 +234,8 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 		this.policyAssignmentService = policyAssignmentService;
 		this.membershipRepository = membershipRepository;
 		this.eventPublisher = eventPublisher;
+		// Blank when DEV_SEED_EMAIL is forwarded but unset on the host
+		this.devEmail = devEmail.isBlank() ? DEFAULT_DEV_EMAIL : devEmail.trim();
 	}
 
 	// -------------------------------------------------------------------------
@@ -288,11 +294,11 @@ public class DefaultDevDataInitializer implements ApplicationRunner {
 	}
 
 	/**
-	 * Finds the dev user by identity (prop-manager-dev / dev@example.com) or creates one if absent.
+	 * Finds the dev user by identity (prop-manager-dev / seed email), links by email, or creates one.
 	 * Matches the issuer and subject used by DevAuthController's dev login.
 	 */
 	private User resolveDevUser() {
-		return userService.getOrCreateUser(DEV_ISSUER, DEV_EMAIL, "Dev User", DEV_EMAIL);
+		return userService.getOrCreateUser(DEV_ISSUER, devEmail, "Dev User", devEmail);
 	}
 
 	/**

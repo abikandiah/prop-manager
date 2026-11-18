@@ -18,6 +18,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.akandiah.propmanager.common.permission.AccessEntry;
 import com.akandiah.propmanager.common.permission.Actions;
@@ -54,7 +57,42 @@ class UserServiceTest {
 		return new AccessEntry(ORG_ID, ResourceType.UNIT, UUID.randomUUID(), permissions);
 	}
 
+	private static Jwt.Builder jwt() {
+		return Jwt.withTokenValue("t").header("alg", "none").subject("sub1");
+	}
+
+	private static HttpStatus statusOf(Throwable t) {
+		return HttpStatus.valueOf(((ResponseStatusException) t).getStatusCode().value());
+	}
+
 	// --- tests ---
+
+	@Test
+	void shouldReturnVerifiedEmail() {
+		Jwt token = jwt().claim("email", "a@b.com").claim(UserService.EMAIL_VERIFIED_CLAIM, true).build();
+		assertThat(UserService.requireVerifiedEmail(token)).isEqualTo("a@b.com");
+	}
+
+	@Test
+	void shouldRejectUnverifiedEmail() {
+		Jwt token = jwt().claim("email", "a@b.com").claim(UserService.EMAIL_VERIFIED_CLAIM, false).build();
+		assertThatThrownBy(() -> UserService.requireVerifiedEmail(token))
+				.satisfies(t -> assertThat(statusOf(t)).isEqualTo(HttpStatus.FORBIDDEN));
+	}
+
+	@Test
+	void shouldRejectEmailWithoutVerifiedClaim() {
+		Jwt token = jwt().claim("email", "a@b.com").build();
+		assertThatThrownBy(() -> UserService.requireVerifiedEmail(token))
+				.satisfies(t -> assertThat(statusOf(t)).isEqualTo(HttpStatus.FORBIDDEN));
+	}
+
+	@Test
+	void shouldRejectMissingEmail() {
+		Jwt token = jwt().claim(UserService.EMAIL_VERIFIED_CLAIM, true).build();
+		assertThatThrownBy(() -> UserService.requireVerifiedEmail(token))
+				.satisfies(t -> assertThat(statusOf(t)).isEqualTo(HttpStatus.BAD_REQUEST));
+	}
 
 	@Test
 	void shouldDeriveAdminRoleForSystemAdmin() {

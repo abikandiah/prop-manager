@@ -21,6 +21,7 @@ import com.akandiah.propmanager.config.DevJwtConfig;
 import com.akandiah.propmanager.config.JwtConfig;
 import com.akandiah.propmanager.features.auth.service.JwtHydrationService;
 import com.akandiah.propmanager.features.user.domain.UserRepository;
+import com.akandiah.propmanager.features.user.service.UserService;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -79,6 +80,7 @@ public class DevAuthController {
 				.expirationTime(new Date(new Date().getTime() + 3600 * 1000)) // 1 hour
 				.claim("name", request.email())
 				.claim("email", request.email())
+				.claim(UserService.EMAIL_VERIFIED_CLAIM, true)
 				.claim(JwtConfig.ROLES_CLAIM, request.roles());
 		if (!accessClaim.isEmpty()) {
 			claimsBuilder.claim("access", accessClaim);
@@ -126,6 +128,7 @@ public class DevAuthController {
 				.expirationTime(new Date(new Date().getTime() + 3600 * 1000)) // 1 hour
 				.claim("name", email)
 				.claim("email", email)
+				.claim(UserService.EMAIL_VERIFIED_CLAIM, true)
 				.claim(JwtConfig.ROLES_CLAIM, roles);
 		if (!accessClaim.isEmpty()) {
 			claimsBuilder.claim("access", accessClaim);

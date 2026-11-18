@@ -1,6 +1,6 @@
 # dev-oidc profile: devcontainer Postgres + the shared homelab Logto (dev app + dev API resource).
-# Requires AUTH_AUDIENCE (the dev API resource identifier). Run the app:
-#   AUTH_AUDIENCE=<dev resource> ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev-oidc
+# All values below are public, so the dev defaults live here. Run the app:
+#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev-oidc
 spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:propmanager}
@@ -38,10 +38,13 @@ spring:
 
 app:
   base-url: ${APP_BASE_URL:http://localhost:3000}
+  dev-seed:
+    # Your Logto account email, so signing in links to the seeded org (forwarded from the host)
+    email: ${DEV_SEED_EMAIL:}
   auth:
     logout-url: ${AUTH_LOGOUT_URL:https://auth.akandiah.ca/oidc/session/end}
-    # Dev Logto API resource identifier (= VITE_OIDC_RESOURCE); startup fails if unset.
-    audience: ${AUTH_AUDIENCE:}
+    # Dev Logto API resource identifier (= VITE_OIDC_RESOURCE)
+    audience: ${AUTH_AUDIENCE:https://prop-mange-api-dev}
   rate-limit:
     enabled: false
   cors:

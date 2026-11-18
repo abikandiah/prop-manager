@@ -19,18 +19,11 @@
     },
     {
       "type": "java",
-      "name": "Spring: Prod (Authentik)",
+      "name": "Spring: Dev OIDC (homelab Logto)",
       "request": "launch",
-      "mainClass": "com.yourpackage.PropManagerApplication",
+      "mainClass": "com.akandiah.propmanager.PropManagerApplication",
       "projectName": "prop-manager",
-      "vmArgs": "-Dspring.profiles.active=prod",
-      "env": {
-        "POSTGRES_HOST": "localhost",
-        "POSTGRES_DB": "propmanager",
-        "POSTGRES_USER": "admin",
-        "POSTGRES_PASSWORD": "password123",
-        "AUTH_ISSUER_URI": "https://authentik.your-domain.com/application/o/app-slug/"
-      }
+      "vmArgs": "-Dspring.profiles.active=dev-oidc"
     }
   ]
 }
