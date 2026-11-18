@@ -1,12 +1,9 @@
 package com.akandiah.propmanager.config;
 
-import java.util.Arrays;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.env.Environment;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
@@ -24,10 +21,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier;
 
-import lombok.extern.slf4j.Slf4j;
-
 @Configuration
-@Slf4j
 public class JwtConfig {
 
 	/** JWT claim holding global roles; {@code roles: ["ADMIN"]} becomes {@code ROLE_ADMIN}. */
@@ -54,8 +48,10 @@ public class JwtConfig {
 	JwtDecoder jwtDecoder(
 			@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwksUri,
 			@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuerUri,
-			@Value("${app.auth.audience:}") String audience,
-			Environment environment) {
+			@Value("${app.auth.audience:}") String audience) {
+		if (audience.isBlank()) {
+			throw new IllegalStateException("AUTH_AUDIENCE must be set (the Logto API resource identifier)");
+		}
 		NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwksUri)
 				.jwsAlgorithm(SignatureAlgorithm.ES384)
 				.jwtProcessorCustomizer(p -> p.setJWSTypeVerifier(
@@ -69,20 +65,8 @@ public class JwtConfig {
 		decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
 				new JwtIssuerValidator(issuerUri),
 				new JwtTimestampValidator(),
-				audienceValidatorFor(audience, environment)));
+				audienceValidator(audience)));
 		return decoder;
-	}
-
-	/** Audience is mandatory in prod; dev-oidc may skip it so local setups keep working. */
-	private static OAuth2TokenValidator<Jwt> audienceValidatorFor(String audience, Environment environment) {
-		if (!audience.isBlank()) {
-			return audienceValidator(audience);
-		}
-		if (Arrays.asList(environment.getActiveProfiles()).contains("prod")) {
-			throw new IllegalStateException("AUTH_AUDIENCE must be set in prod (the Logto API resource identifier)");
-		}
-		log.warn("AUTH_AUDIENCE is not set — JWT audience check is DISABLED. Tokens issued for other apps will be accepted.");
-		return jwt -> OAuth2TokenValidatorResult.success();
 	}
 
 	/** Rejects tokens not issued for this API, so tokens from other apps on the same Logto are refused. */

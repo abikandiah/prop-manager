@@ -357,6 +357,7 @@ The master changelog (`db.changelog-master.yaml`) includes only this one file an
 | Profile         | DB           | JWT                               | CORS               | Liquibase |
 | --------------- | ------------ | --------------------------------- | ------------------ | --------- |
 | `dev` (default) | H2 in-memory | Local HS256 (DevAuthController)   | localhost:3000     | Disabled  |
+| `dev-oidc`      | PostgreSQL (devcontainer) | Homelab Logto, dev API resource (`AUTH_AUDIENCE` required) | localhost:3000 | Enabled   |
 | `prod`          | PostgreSQL   | External OIDC (`AUTH_ISSUER_URI`) | Configured domains | Enabled   |
 
 Set `SPRING_PROFILES_ACTIVE=prod` in production.
