@@ -1,4 +1,4 @@
-# Prod profile: docker-compose + PostgreSQL + Logto (OIDC only).
+# Prod profile: homelab compose, shared PostgreSQL, shared Logto (OIDC only).
 spring:
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST}:5432/${POSTGRES_DB}
@@ -28,11 +28,17 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # Overrides issuer-uri JWKS resolution — fetches keys from Logto directly
-          # (avoids a round-trip through the Cloudflare Tunnel for key validation).
+          # Internal Logto URL on the homelab edge network; skips the tunnel round-trip.
           jwk-set-uri: ${JWKS_URI}
           # Used for 'iss' claim validation (must match the external domain).
           issuer-uri: ${AUTH_ISSUER_URI}
+
+# Only health is exposed in prod; metrics/prometheus stay off the web entirely.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
 
 app:
   auth:

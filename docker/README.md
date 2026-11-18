@@ -1,98 +1,47 @@
-# PropMange Production Stack: Logto + Caddy + Cloudflare Tunnel
+# PropMange Deployment
 
-Architecture:
+The prod stack is defined in the **homelab repo**, not here. bee-hive pulls this repo and builds the API image from `prop-manager/Dockerfile`. This file describes what that compose has to provide.
 
-- **Frontend**: Hosted on **Cloudflare Pages** (external to this stack). Authenticates via PKCE directly with Logto.
-- **Backend API**: Spring Boot + Java 25, running in Docker. Validates JWTs via Logto's JWKS.
-- **Gateway**: **Caddy** — reverse proxy for the API and Logto. Auth is enforced by Spring Boot, not Caddy.
-- **Auth**: **Logto** (OIDC Provider) — issues JWTs, supports local accounts and social sign-in.
-- **Database**: **PostgreSQL 18** — one instance holding the `propmanager` and `logto` databases.
-- **Connectivity**: **Cloudflare Tunnel** (`cloudflared`) — exposes the stack without opening firewall ports.
+## Architecture
 
-## Quick Start
+- **Frontend**: Cloudflare Pages builds `prop-manager-ui`. It authenticates with Logto directly (PKCE).
+- **API**: this repo's `Dockerfile` (Spring Boot, `SPRING_PROFILES_ACTIVE=prod`).
+- **Edge** (homelab): a shared compose with cloudflared, Caddy and Logto on a public network. The API container joins that network.
+- **Database** (homelab): a shared PostgreSQL instance on a separate db network. The API container joins that network as well.
 
-### 1. Create `.env` from `.env.example`
+## API container environment
 
-Required values:
+| Variable               | Value                                                     |
+| ---------------------- | --------------------------------------------------------- |
+| `POSTGRES_HOST`        | Shared Postgres container name                            |
+| `POSTGRES_DB`          | `propmanager`                                             |
+| `POSTGRES_USER`        | Dedicated prop-mange role (not the superuser)             |
+| `POSTGRES_PASSWORD`    | That role's password                                      |
+| `AUTH_ISSUER_URI`      | `https://auth.akandiah.ca/oidc` (must match the `iss` claim) |
+| `JWKS_URI`             | `http://<logto-container>:3001/oidc/jwks` (internal)      |
+| `AUTH_AUDIENCE`        | Prod Logto API resource identifier (= `VITE_OIDC_RESOURCE`) |
+| `CORS_ALLOWED_ORIGINS` | `https://<UI_DOMAIN>`                                     |
+| `APP_BASE_URL`         | `https://<UI_DOMAIN>`                                     |
+| `AUTH_LOGOUT_URL`      | `https://auth.akandiah.ca/oidc/session/end`               |
+| `MAIL_PASSWORD`        | SMTP password (Resend API key by default)                 |
 
-- `UI_DOMAIN` — your Cloudflare Pages hostname (e.g. `propmanager.pages.dev`)
-- `API_DOMAIN` — your API subdomain (e.g. `api.propmanager.com`)
-- `AUTH_DOMAIN` — your Logto subdomain (e.g. `auth.propmanager.com`)
-- `TUNNEL_TOKEN` — from Cloudflare Zero Trust > Networks > Tunnels
-- `POSTGRES_PASSWORD` — generate: `openssl rand -base64 36 | tr -d '\n'`
-- `MAIL_PASSWORD` — SMTP password (Resend API key by default)
+Optional: `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_FROM`. The app refuses to start without `AUTH_AUDIENCE`.
 
-Optional: `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_FROM`, `DB_CLEAR_SCHEDULE` (cron, default Sundays 03:00 UTC).
+Liquibase creates the schema on first start (`ddl-auto: validate`). The DB role needs to own the `propmanager` database.
 
-`AUTH_ISSUER_URI`, `AUTH_LOGOUT_URL`, `CORS_ALLOWED_ORIGINS` and `APP_BASE_URL` are derived in `docker-compose.yml` from the domain variables — do not set them in `.env`.
+Healthcheck: `wget -qO- http://localhost:8080/actuator/health/liveness || exit 1`.
 
-### 2. Configure Cloudflare Tunnel
+## Edge routing (`API_DOMAIN` → `app:8080`)
 
-In the Cloudflare Zero Trust dashboard, add **two Public Hostnames** pointing to `http://caddy:80`:
+- Forward only `/api/*` and `/actuator/health*`. Return 404 for everything else, including Swagger, `/v3/api-docs` and the rest of `/actuator`.
+- TLS ends at Cloudflare. Caddy listens on `http://` and passes `X-Forwarded-Proto https`.
+- Spring Boot handles CORS. Don't add CORS headers in Caddy.
 
-1. `API_DOMAIN` → `http://caddy:80`
-2. `AUTH_DOMAIN` → `http://caddy:80`
+## Logto (shared tenant)
 
-The `cloudflared` container reaches Caddy via the `public` Docker network.
+Prod has its own SPA app and its own API resource on the shared tenant. The API resource identifier must equal `AUTH_AUDIENCE` and `VITE_OIDC_RESOURCE`, and it needs an `access` permission because the frontend requests the `<resource>/access` scope. The tenant-wide custom JWT script adds `email`, `email_verified`, `name` and `roles`. `/api/me` rejects tokens that don't carry a verified email.
 
-### 3. Start the stack
+## Files here
 
-```bash
-docker compose up -d
-docker compose logs -f logto   # first start seeds the Logto DB
-```
-
-### 4. Configure Logto
-
-The admin console is bound to the host's `127.0.0.1:3002`. From your machine, open a tunnel and browse to `http://localhost:3002`, then create the admin account on first visit:
-
-```bash
-ssh -L 3002:localhost:3002 <host>
-```
-
-1. **API resource** — _API resources > Create_
-   - Identifier: e.g. `https://<API_DOMAIN>` (this becomes `VITE_OIDC_RESOURCE`)
-   - Add a permission named `access` (the frontend requests the `<resource>/access` scope)
-2. **Application** — _Applications > Create > Single page app_
-   - Redirect URI: `https://<UI_DOMAIN>/auth/callback` and `https://<UI_DOMAIN>/auth/silent-callback`
-   - Post sign-out redirect URI: `https://<UI_DOMAIN>`
-   - CORS allowed origin: `https://<UI_DOMAIN>`
-   - Copy the **App ID** (this becomes `VITE_OIDC_CLIENT_ID`)
-
-### 5. Configure the frontend (Cloudflare Pages env vars)
-
-```
-VITE_OIDC_AUTHORITY=https://<AUTH_DOMAIN>/oidc
-VITE_OIDC_CLIENT_ID=<App ID>
-VITE_OIDC_REDIRECT_URI=https://<UI_DOMAIN>/auth/callback
-VITE_OIDC_RESOURCE=<API resource identifier>
-```
-
-The backend needs no Logto-specific config: `AUTH_ISSUER_URI` is `https://<AUTH_DOMAIN>/oidc`, and `JWKS_URI` points at the internal `http://logto:3001/oidc/jwks` to avoid a round-trip through the tunnel.
-
-`AUTH_AUDIENCE` must equal the API resource identifier (the same value as `VITE_OIDC_RESOURCE`). It defaults to `https://<API_DOMAIN>`, so set it in `.env` if your identifier is different. The backend refuses to start in prod without it, and it rejects tokens Logto issued for other apps.
-
-Org, property and unit permissions come from the database (see `JwtAccessHydrationFilter`). The global admin bypass reads a `roles` claim (`roles: ["ADMIN"]` → `ROLE_ADMIN`), which Logto only emits if you add a custom JWT claim. Without one, no user is a global admin. The same custom JWT script must add `email`, `email_verified` and `name`: Logto access tokens have no profile claims by default, and `/api/me` rejects tokens without a verified email.
-
-## Image Versions
-
-Images use floating tags (`latest`, `alpine`, `25-jre-alpine`) — `docker compose pull && docker compose up -d --build` picks up updates.
-
-**Exception: Postgres is pinned to a major version** (`postgres:18-alpine`). A new major cannot read the previous major's data directory, so once there is live data, bumping it needs a `pg_dumpall` / restore.
-
-## Networking & Security
-
-- **Host ports**:
-  - `:80` — Caddy (`http://localhost/api/...` works locally without the tunnel)
-  - `127.0.0.1:3002` — Logto admin console (host-local only; not exposed via Caddy or the tunnel — use an SSH tunnel)
-- **External access**: Only `cloudflared` reaches Caddy, via the `public` Docker network. Postgres is not published.
-- **CORS**: Handled entirely by Spring Boot (`CorsConfig`). Do not add CORS headers in Caddy.
-- **JWT validation**: Spring Boot validates `Authorization: Bearer` tokens against Logto's JWKS and the issuer `https://<AUTH_DOMAIN>/oidc`. Logto's `ENDPOINT` must match the public URL so the `iss` claim lines up.
-
-## File Structure
-
-- `docker-compose.yml` — full stack definition
-- `docker/caddy/Caddyfile` — Caddy routing
-- `docker/caddy/Dockerfile` — unused; the compose file pulls `caddy:alpine` directly
-- `docker/init-db/01-create-databases.sh` — creates the `propmanager` and `logto` Postgres users/DBs
-- `docker/db-scheduler/` — cron container that truncates app tables on `DB_CLEAR_SCHEDULE`
+- `init-db/01-create-databases.sh`: creates the `propmanager` user and DB for the devcontainer Postgres.
+- `clear-app-db.sh`: truncates the dev-oidc app tables.
