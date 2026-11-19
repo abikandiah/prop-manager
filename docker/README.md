@@ -1,13 +1,14 @@
 # PropMange Deployment
 
-The prod stack is defined in the **homelab repo**, not here. bee-hive pulls this repo and builds the API image from `prop-manager/Dockerfile`. This file describes what that compose has to provide.
+The prod stack is defined in the **homelab repo**, not here. bee-hive clones this repo (to `~/apps/prop-manager`). The homelab's `deploy.sh` pulls it, builds the image from the `Dockerfile` (tagged `prop-mange-api:<commit>` and `:current`) and restarts the stack. This file describes what that compose has to provide.
 
 ## Architecture
 
 - **Frontend**: Cloudflare Pages builds `prop-manager-ui`. It authenticates with Logto directly (PKCE).
 - **API**: this repo's `Dockerfile` (Spring Boot, `SPRING_PROFILES_ACTIVE=prod`).
-- **Edge** (homelab): a shared compose with cloudflared, Caddy and Logto on a public network. The API container joins that network.
-- **Database** (homelab): a shared PostgreSQL instance on a separate db network. The API container joins that network as well.
+- **Edge** (homelab): cloudflared and Caddy on the `public` network. Caddy also joins `prop-mange` to reach the API, which is not on `public`.
+- **Auth** (homelab): the shared Logto. The API reaches it for JWKS over the `auth` network.
+- **Database** (homelab): a shared PostgreSQL 18 instance on the `db` network.
 
 ## API container environment
 
@@ -18,7 +19,7 @@ The prod stack is defined in the **homelab repo**, not here. bee-hive pulls this
 | `POSTGRES_USER`        | Dedicated prop-mange role (not the superuser)             |
 | `POSTGRES_PASSWORD`    | That role's password                                      |
 | `AUTH_ISSUER_URI`      | `https://auth.akandiah.ca/oidc` (must match the `iss` claim) |
-| `JWKS_URI`             | `http://<logto-container>:3001/oidc/jwks` (internal)      |
+| `JWKS_URI`             | `http://logto:3001/oidc/jwks` (over the `auth` network) |
 | `AUTH_AUDIENCE`        | Prod Logto API resource identifier (= `VITE_OIDC_RESOURCE`) |
 | `CORS_ALLOWED_ORIGINS` | `https://<UI_DOMAIN>`                                     |
 | `APP_BASE_URL`         | `https://<UI_DOMAIN>`                                     |
