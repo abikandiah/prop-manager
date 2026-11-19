@@ -16,7 +16,8 @@ spring:
     password: ${MAIL_PASSWORD:}
     properties:
       mail:
-        from: ${MAIL_FROM:no-reply@propmanager.com}
+        # Required in prod (ProdSettingsValidator); must be on a Resend-verified domain.
+        from: ${MAIL_FROM:}
         smtp:
           auth: true
           starttls:
@@ -33,6 +34,10 @@ spring:
           # Used for 'iss' claim validation (must match the external domain).
           issuer-uri: ${AUTH_ISSUER_URI}
 
+# Trust X-Forwarded-* from private-range proxies (edge Caddy), so getRemoteAddr() is the client IP.
+server:
+  forward-headers-strategy: native
+
 # Only health is exposed in prod; metrics/prometheus stay off the web entirely.
 management:
   endpoints:
@@ -41,6 +46,8 @@ management:
         include: health
 
 app:
+  # Required in prod (ProdSettingsValidator); base for links in emails.
+  base-url: ${APP_BASE_URL:}
   auth:
     # Logto API resource identifier; tokens whose 'aud' lacks it are rejected.
     audience: ${AUTH_AUDIENCE}

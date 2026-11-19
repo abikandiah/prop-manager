@@ -3,8 +3,8 @@
 #   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev-oidc
 spring:
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:propmanager}
-    username: ${POSTGRES_USER:propmanager}
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:propmange}
+    username: ${POSTGRES_USER:propmange}
     password: ${POSTGRES_PASSWORD:devpassword}
     driver-class-name: org.postgresql.Driver
   jpa:

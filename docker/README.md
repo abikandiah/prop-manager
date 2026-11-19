@@ -14,7 +14,7 @@ The prod stack is defined in the **homelab repo**, not here. bee-hive pulls this
 | Variable               | Value                                                     |
 | ---------------------- | --------------------------------------------------------- |
 | `POSTGRES_HOST`        | Shared Postgres container name                            |
-| `POSTGRES_DB`          | `propmanager`                                             |
+| `POSTGRES_DB`          | `propmange`                                               |
 | `POSTGRES_USER`        | Dedicated prop-mange role (not the superuser)             |
 | `POSTGRES_PASSWORD`    | That role's password                                      |
 | `AUTH_ISSUER_URI`      | `https://auth.akandiah.ca/oidc` (must match the `iss` claim) |
@@ -24,10 +24,13 @@ The prod stack is defined in the **homelab repo**, not here. bee-hive pulls this
 | `APP_BASE_URL`         | `https://<UI_DOMAIN>`                                     |
 | `AUTH_LOGOUT_URL`      | `https://auth.akandiah.ca/oidc/session/end`               |
 | `MAIL_PASSWORD`        | SMTP password (Resend API key by default)                 |
+| `MAIL_FROM`            | Sender address on a domain verified in Resend             |
 
-Optional: `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_FROM`. The app refuses to start without `AUTH_AUDIENCE`.
+Optional, with defaults: `MAIL_HOST` (`smtp.resend.com`), `MAIL_PORT` (`587`), `MAIL_USERNAME` (`resend`), `NOTIFICATION_EMAIL_ENABLED` (`true`), `INVITE_EXPIRY_HOURS` (`72`), `INVITE_RESEND_COOLDOWN_MINUTES` (`15`), `INVITE_MAX_EMAIL_RETRIES` (`3`), `INVITE_EMAIL_RETRY_INTERVAL_MINUTES` (`15`), `CACHE_PERMISSIONS_MAX_SIZE` (`10000`), `CACHE_PERMISSIONS_TTL_MINUTES` (`60`).
 
-Liquibase creates the schema on first start (`ddl-auto: validate`). The DB role needs to own the `propmanager` database.
+The app refuses to start without `AUTH_AUDIENCE`. The root filesystem can be read-only if `/tmp` is a tmpfs.
+
+Liquibase creates the schema on first start (`ddl-auto: validate`). The DB role needs to own the `propmange` database.
 
 Healthcheck: `wget -qO- http://localhost:8080/actuator/health/liveness || exit 1`.
 
@@ -35,6 +38,7 @@ Healthcheck: `wget -qO- http://localhost:8080/actuator/health/liveness || exit 1
 
 - Forward only `/api/*` and `/actuator/health*`. Return 404 for everything else, including Swagger, `/v3/api-docs` and the rest of `/actuator`.
 - TLS ends at Cloudflare. Caddy listens on `http://` and passes `X-Forwarded-Proto https`.
+- Set `X-Forwarded-For` to `{http.request.header.Cf-Connecting-IP}`. Prod trusts forwarded headers from private-range proxies, so this is how per-IP rate limiting and audit logs get the real client IP.
 - Spring Boot handles CORS. Don't add CORS headers in Caddy.
 
 ## Logto (shared tenant)
@@ -43,5 +47,5 @@ Prod has its own SPA app and its own API resource on the shared tenant. The API 
 
 ## Files here
 
-- `init-db/01-create-databases.sh`: creates the `propmanager` user and DB for the devcontainer Postgres.
+- `init-db/01-create-databases.sh`: creates the `propmange` user and DB for the devcontainer Postgres.
 - `clear-app-db.sh`: truncates the dev-oidc app tables.

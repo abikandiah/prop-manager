@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Clears all app data from the dev-oidc propmanager database (Liquibase changelog kept).
+# Clears all app data from the dev-oidc propmange database (Liquibase changelog kept).
 # Run from a host terminal (the devcontainer has no Docker access):
 #   ./prop-manager/docker/clear-app-db.sh
 #   CONTAINER=my-container ./prop-manager/docker/clear-app-db.sh
@@ -8,8 +8,8 @@
 set -euo pipefail
 
 CONTAINER="${CONTAINER:-prop-mange-dev-postgres-1}"
-PGUSER="${PGUSER:-propmanager}"
-PGDATABASE="${PGDATABASE:-propmanager}"
+PGUSER="${PGUSER:-propmange}"
+PGDATABASE="${PGDATABASE:-propmange}"
 
 echo "Connecting via docker exec into ${CONTAINER} (db=${PGDATABASE}, user=${PGUSER})"
 echo "This will DELETE all app data. The Liquibase changelog is preserved."
